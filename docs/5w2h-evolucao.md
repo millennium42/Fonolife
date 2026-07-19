@@ -19,3 +19,13 @@
 - **Who:** Admin e Operador registram e acompanham pacientes.
 - **How:** SQL com constraints, optimistic locking e formulários progressivos.
 - **How much:** impacto técnico moderado e redução operacional de retrabalho; sem custo financeiro estimado.
+
+## PR 3 — Pós-atendimento
+
+- **What:** tarefas, filas de hoje/atrasados/próximos, adaptação e sem contato.
+- **Why:** tornar o cuidado após o atendimento visível e acionável.
+- **Where:** ficha, Acompanhamento, API, domínio, banco e timeline.
+- **When:** após CRM e antes da automação gerada por vendas.
+- **Who:** Admin e Operador agendam e encerram retornos.
+- **How:** estado histórico, datas de São Paulo e próxima ação derivada.
+- **How much:** impacto positivo na fila diária; sem custo financeiro estimado.
