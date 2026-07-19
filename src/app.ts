@@ -46,6 +46,13 @@ const attempts = new Map<string, { count: number; reset: number }>();
 export function buildApp() {
   const app = Fastify({ logger: true });
   app.register(cookie);
+  app.addHook("onSend", async (_request, reply, payload) => {
+    reply.header("x-content-type-options", "nosniff");
+    reply.header("referrer-policy", "no-referrer");
+    reply.header("content-security-policy", "default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; frame-ancestors 'none'; base-uri 'self'; form-action 'self'");
+    if (config.production) reply.header("strict-transport-security", "max-age=31536000; includeSubDomains");
+    return payload;
+  });
   app.setErrorHandler((error, request, reply) => {
     const failure = error as Error & { statusCode?: number };
     const status = Number(failure.statusCode ?? 500);
@@ -122,6 +129,7 @@ export function buildApp() {
       const key = request.ip;
       const now = Date.now();
       const state = attempts.get(key);
+      if (state && state.reset <= now) attempts.delete(key);
       if (state && state.reset > now && state.count >= 5)
         return reply
           .code(429)
@@ -867,7 +875,7 @@ export function buildApp() {
           [90, "Acompanhamento pós-venda (90 dias)"],
         ] as const)
           await client.query(
-            `INSERT INTO follow_up_tasks(id,patient_id,title,due_on,notes,created_by,sale_id) VALUES($1,$2,$3,$4::date+$5,'Gerado automaticamente pela venda',$6,$7)`,
+            `INSERT INTO follow_up_tasks(id,patient_id,title,due_on,notes,created_by,sale_id) VALUES($1,$2,$3,$4::date+$5::integer,'Gerado automaticamente pela venda',$6,$7)`,
             [
               randomUUID(),
               body.patientId,

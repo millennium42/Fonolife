@@ -46,4 +46,19 @@ Em 18/07/2026, `npm run typecheck` passou sem erros e `npm test` aprovou 9/9 tes
 - Dashboard consulta atrasados, hoje, tarefas abertas, adaptação, vendas do mês e fila priorizada.
 - A resposta do Operador não contém `financial`; o Admin recebe realizado consolidado, por CNPJ e entradas/saídas do mês.
 - Cards levam ao Acompanhamento e itens da fila abrem a ficha do paciente; não há gráficos.
-- `npm run typecheck`, `npm test` e `npm run build`: executar após a implementação.
+- `npm run typecheck`, 11/11 testes e `npm run build`: aprovados.
+
+## PR 7 — QA e release
+
+- Docker 29.6.1 e Compose: `app` e PostgreSQL 18 saudáveis.
+- Migrações e seed DEMO executados duas vezes sem duplicação ou divergência.
+- `npm audit`: zero vulnerabilidades.
+- Smokes HTTP de dashboard e financeiro: aprovados.
+- Playwright + axe: 3/3 jornadas aprovadas em 360, 768 e 1440 px, sem violação automatizável ou rolagem horizontal.
+- Jornada E2E: login, cadastro, venda integral, follow-ups gerados e Financeiro.
+- P1 encontrados no loop: cast D+7/D+30/D+90, formatação de data PostgreSQL e feedback pós-venda; todos corrigidos e revalidados.
+- DevSec smoke: CSP/HSTS/nosniff, cookie HttpOnly/Secure/SameSite, CSRF por Origin, sessão invalidada no logout, RBAC, Problem Details, consulta parametrizada e rate limit aprovados.
+- Dependências: `npm audit --audit-level=high` sem vulnerabilidades; CI limita `packages: write` ao job de publicação.
+- Graphify estrutural atualizado; documentação semântica permanece sem backend externo e não faz parte do produto.
+
+Backlog P2: importação CSV idempotente, estoque/catálogo, WhatsApp, anexos, prontuário clínico completo, configuração dos prazos e evolução de privacidade/LGPD. Nenhum item bloqueia os critérios desta release.

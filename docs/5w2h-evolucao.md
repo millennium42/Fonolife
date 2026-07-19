@@ -58,3 +58,13 @@
 - **Who:** Admin e Operador veem operação; somente Admin vê valores agregados.
 - **How:** consultas SQL diretas, cards compactos e links para ficha ou Acompanhamento.
 - **How much:** uma rota e uma tela sem migration ou dependência; impacto operacional imediato e baixo impacto técnico.
+
+## PR 7 — QA, documentação e release
+
+- **What:** regressão P0/P1, acessibilidade, Playwright/axe, CI, Docker, documentação e evidências finais.
+- **Why:** tornar a release reproduzível e impedir regressões nos fluxos críticos.
+- **Where:** frontend, testes E2E, workflow, operação e documentação viva.
+- **When:** após as seis entregas funcionais e antes da publicação da imagem.
+- **Who:** equipe técnica valida; Admin e Operador executam as jornadas cobertas.
+- **How:** três viewports, Compose real, seed/migrations repetidos, smoke API, axe e artefatos.
+- **How much:** duas dependências exclusivas de desenvolvimento e maior tempo de CI; sem impacto no contêiner de produção nem custo financeiro inventado.
