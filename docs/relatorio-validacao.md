@@ -14,3 +14,11 @@ Escopo: compilação TypeScript, testes de senha/token/CNPJ, migrador, autentica
 - Revisão independente: quatro P1 iniciais corrigidos; a proteção concorrente do último administrador passou a usar advisory lock transacional.
 
 Limitação consciente: os testes de PostgreSQL real ainda são smoke do Compose; a suíte de integração será ampliada nas entregas que introduzem CRM e ledger. CRM, vendas e financeiro não pertencem a esta PR.
+
+## PR 2
+
+- Typecheck, 6 testes e build aprovados.
+- Domínio valida nome, telefone, status, origem e tipos de evento.
+- Migration cria pacientes arquiváveis e eventos imutáveis.
+- API cobre busca/filtro, cadastro, ficha, edição com conflito 409, arquivamento, interação e timeline.
+- Interface cobre cadastro básico, campos adicionais progressivos, lista e ficha responsiva.
