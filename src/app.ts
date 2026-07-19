@@ -7,6 +7,7 @@ import { resolve } from 'node:path';
 import { pool } from './db/pool.js';
 import { config } from './config.js';
 import { hashPassword, hashToken, validCnpj, verifyPassword } from './domain/security.js';
+import { CONTACT_SOURCES, isOneOf, normalizePhone, PATIENT_EVENT_TYPES, PATIENT_STATUSES, validPatientName, validPatientPhone } from './domain/patients.js';
 
 type User = { id: string; name: string; email: string; role: 'admin'|'operator'; must_change_password: boolean };
 declare module 'fastify' { interface FastifyRequest { currentUser?: User } }
@@ -72,6 +73,47 @@ export function buildApp() {
     const id=randomUUID(); await pool.query('INSERT INTO users(id,name,email,password_hash,role,must_change_password) VALUES($1,$2,$3,$4,$5,true)',[id,name.trim(),email.trim().toLowerCase(),await hashPassword(password),role]);
     await audit(request.currentUser!.id,'create','user',id,{role}); return reply.code(201).send({id});
   });
+
+  app.get<{Querystring:{search?:string;status?:string;overdue?:string;archived?:string}}>('/api/patients', { preHandler: authenticated }, async request => {
+    const {search='',status,overdue,archived}=request.query;
+    if(status && !isOneOf(status,PATIENT_STATUSES)) throw Object.assign(new Error('Status inválido'),{statusCode:400});
+    const terms:string[]=[]; const values:unknown[]=[];
+    if(archived!=='true') terms.push('p.archived_at IS NULL');
+    if(status){values.push(status);terms.push(`p.journey_status=$${values.length}`);}
+    if(search.trim()){values.push(`%${search.trim()}%`);terms.push(`(p.name ILIKE $${values.length} OR p.phone LIKE regexp_replace($${values.length}, '\\D', '', 'g'))`);}
+    if(overdue==='true') terms.push("p.next_contact_on < (now() AT TIME ZONE 'America/Sao_Paulo')::date");
+    const patients=await pool.query(`SELECT p.id,p.name,p.phone,p.journey_status,p.contact_source,p.care_alert,p.next_contact_on,p.archived_at,p.version,u.name assigned_user_name FROM patients p JOIN users u ON u.id=p.assigned_user_id ${terms.length?'WHERE '+terms.join(' AND '):''} ORDER BY (p.next_contact_on < (now() AT TIME ZONE 'America/Sao_Paulo')::date) DESC,p.next_contact_on NULLS LAST,p.name LIMIT 200`,values);
+    return {patients:patients.rows};
+  });
+  app.post<{Body:{name?:string;phone?:string;birthDate?:string;guardianName?:string;contactSource?:string;status?:string;notes?:string;careAlert?:string;nextContactOn?:string;assignedUserId?:string}}>('/api/patients',{preHandler:authenticated},async(request,reply)=>{
+    const body=request.body??{}; const phone=normalizePhone(body.phone); const source=body.contactSource??'other'; const status=body.status??'new_lead';
+    if(!validPatientName(body.name)||!validPatientPhone(phone)||!isOneOf(source,CONTACT_SOURCES)||!isOneOf(status,PATIENT_STATUSES)) return reply.code(400).type('application/problem+json').send({title:'Informe nome, telefone válido, origem e status',status:400});
+    const assigned=body.assignedUserId??request.currentUser!.id; const duplicate=await pool.query('SELECT id,name FROM patients WHERE phone=$1 AND archived_at IS NULL LIMIT 1',[phone]); const id=randomUUID();
+    await pool.query(`WITH created AS (INSERT INTO patients(id,name,phone,birth_date,guardian_name,contact_source,journey_status,notes,care_alert,next_contact_on,assigned_user_id,created_by) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12) RETURNING id) INSERT INTO audit_events(user_id,action,entity_type,entity_id,details) SELECT $12,'create','patient',id,jsonb_build_object('status',$6::text) FROM created`,[id,body.name!.trim(),phone,body.birthDate||null,body.guardianName?.trim()||null,source,status,body.notes?.trim()||'',body.careAlert?.trim()||'',body.nextContactOn||null,assigned,request.currentUser!.id]);
+    return reply.code(201).send({id,warning:duplicate.rows[0]?`Telefone também usado por ${duplicate.rows[0].name}`:null});
+  });
+  app.get<{Params:{id:string}}>('/api/patients/:id',{preHandler:authenticated},async(request,reply)=>{
+    const patient=await pool.query(`SELECT p.*,u.name assigned_user_name FROM patients p JOIN users u ON u.id=p.assigned_user_id WHERE p.id=$1`,[request.params.id]);
+    if(!patient.rowCount)return reply.code(404).type('application/problem+json').send({title:'Paciente não encontrado',status:404}); return {patient:patient.rows[0]};
+  });
+  app.patch<{Params:{id:string};Body:{version?:number;name?:string;phone?:string;birthDate?:string|null;guardianName?:string|null;contactSource?:string;status?:string;notes?:string;careAlert?:string;nextContactOn?:string|null;assignedUserId?:string}}>('/api/patients/:id',{preHandler:authenticated},async(request,reply)=>{
+    const body=request.body??{}; const phone=normalizePhone(body.phone);
+    if(!Number.isInteger(body.version)||!validPatientName(body.name)||!validPatientPhone(phone)||!isOneOf(body.contactSource,CONTACT_SOURCES)||!isOneOf(body.status,PATIENT_STATUSES)) return reply.code(400).type('application/problem+json').send({title:'Confira os dados do paciente',status:400});
+    const result=await pool.query(`WITH updated AS (UPDATE patients SET name=$1,phone=$2,birth_date=$3,guardian_name=$4,contact_source=$5,journey_status=$6,notes=$7,care_alert=$8,next_contact_on=$9,assigned_user_id=COALESCE($10,assigned_user_id),version=version+1,updated_at=now() WHERE id=$11 AND version=$12 AND archived_at IS NULL RETURNING id,version), audited AS (INSERT INTO audit_events(user_id,action,entity_type,entity_id,details) SELECT $13,'update','patient',id,jsonb_build_object('version',version) FROM updated) SELECT version FROM updated`,[body.name!.trim(),phone,body.birthDate||null,body.guardianName?.trim()||null,body.contactSource,body.status,body.notes?.trim()||'',body.careAlert?.trim()||'',body.nextContactOn||null,body.assignedUserId||null,request.params.id,body.version,request.currentUser!.id]);
+    if(!result.rowCount){const exists=await pool.query('SELECT 1 FROM patients WHERE id=$1',[request.params.id]);return reply.code(exists.rowCount?409:404).type('application/problem+json').send({title:exists.rowCount?'Esta ficha foi alterada por outra pessoa. Recarregue antes de salvar.':'Paciente não encontrado',status:exists.rowCount?409:404});}
+    return {version:result.rows[0].version};
+  });
+  app.post<{Params:{id:string};Body:{version?:number}}>('/api/patients/:id/archive',{preHandler:authenticated},async(request,reply)=>{
+    if(!Number.isInteger(request.body?.version)) return reply.code(400).type('application/problem+json').send({title:'Versão da ficha obrigatória',status:400});
+    const result=await pool.query(`WITH archived AS (UPDATE patients SET archived_at=now(),journey_status='inactive',version=version+1,updated_at=now() WHERE id=$1 AND version=$2 AND archived_at IS NULL RETURNING id), audited AS (INSERT INTO audit_events(user_id,action,entity_type,entity_id) SELECT $3,'archive','patient',id FROM archived) SELECT id FROM archived`,[request.params.id,request.body.version,request.currentUser!.id]);
+    if(!result.rowCount){const exists=await pool.query('SELECT 1 FROM patients WHERE id=$1',[request.params.id]);return reply.code(exists.rowCount?409:404).type('application/problem+json').send({title:exists.rowCount?'A ficha mudou. Recarregue antes de arquivar.':'Paciente não encontrado',status:exists.rowCount?409:404});} return reply.code(204).send();
+  });
+  app.post<{Params:{id:string};Body:{eventType?:string;description?:string;occurredAt?:string}}>('/api/patients/:id/events',{preHandler:authenticated},async(request,reply)=>{
+    const {eventType,description,occurredAt}=request.body??{}; if(!isOneOf(eventType,PATIENT_EVENT_TYPES)||!description?.trim()||description.trim().length<2)return reply.code(400).type('application/problem+json').send({title:'Escolha o tipo e descreva a interação',status:400});
+    const event=await pool.query(`WITH created AS (INSERT INTO patient_events(id,patient_id,event_type,description,occurred_at,created_by) SELECT $1,p.id,$3,$4,COALESCE($5::timestamptz,now()),$6 FROM patients p WHERE p.id=$2 AND p.archived_at IS NULL RETURNING id), audited AS (INSERT INTO audit_events(user_id,action,entity_type,entity_id,details) SELECT $6,'create','patient_event',id,jsonb_build_object('patientId',$2::text,'eventType',$3::text) FROM created) SELECT id FROM created`,[randomUUID(),request.params.id,eventType,description.trim(),occurredAt||null,request.currentUser!.id]);
+    if(!event.rowCount)return reply.code(404).type('application/problem+json').send({title:'Paciente não encontrado',status:404}); return reply.code(201).send({id:event.rows[0].id});
+  });
+  app.get<{Params:{id:string}}>('/api/patients/:id/timeline',{preHandler:authenticated},async(request)=>({items:(await pool.query(`SELECT e.id,'event' kind,e.event_type type,e.description,e.occurred_at occurred_at,u.name author FROM patient_events e JOIN users u ON u.id=e.created_by WHERE e.patient_id=$1 UNION ALL SELECT p.id,'patient_created','patient_created','Paciente cadastrado',p.created_at,u.name FROM patients p JOIN users u ON u.id=p.created_by WHERE p.id=$1 ORDER BY occurred_at DESC`,[request.params.id])).rows}));
   app.patch<{Params:{id:string};Body:{active?:boolean;role?:'admin'|'operator';temporaryPassword?:string}}>('/api/admin/users/:id', { preHandler: admin }, async (request,reply) => {
     const {active,role,temporaryPassword}=request.body ?? {}; if(role!==undefined&&!['admin','operator'].includes(role)) return reply.code(400).type('application/problem+json').send({title:'Perfil inválido',status:400});
     if(temporaryPassword!==undefined&&temporaryPassword.length<8) return reply.code(400).type('application/problem+json').send({title:'A senha temporária deve ter ao menos 8 caracteres',status:400});
