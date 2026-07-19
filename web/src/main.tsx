@@ -128,10 +128,12 @@ const eventTypes: { [key: string]: string } = {
   clinical_note: "Observação clínica",
   scheduled_return: "Retorno programado",
 };
-const date = (value: string | null | undefined) =>
-  value
-    ? new Intl.DateTimeFormat("pt-BR").format(new Date(`${value}T12:00:00`))
-    : "Não informado";
+const date = (value: string | null | undefined) => {
+  if (!value) return "Não informado";
+  const civil = value.slice(0, 10);
+  const parsed = new Date(/^\d{4}-\d{2}-\d{2}$/.test(civil) ? `${civil}T12:00:00` : value);
+  return Number.isNaN(parsed.valueOf()) ? "Não informado" : new Intl.DateTimeFormat("pt-BR").format(parsed);
+};
 async function api(path: string, options?: RequestInit) {
   const response = await fetch(path, options);
   if (response.status === 204) return null;
@@ -921,8 +923,8 @@ function Patients({ initialPatientId }: { initialPatientId?: string | null }) {
   if (selected)
     return (
       <>
+        {message && <p className="success" role="status">{message}</p>}
         <PatientRecord
-          key={message}
           id={selected}
           onBack={() => {
             setSelected(null);
@@ -931,9 +933,7 @@ function Patients({ initialPatientId }: { initialPatientId?: string | null }) {
         />
         <SaleForm
           patientId={selected}
-          onDone={() =>
-            setMessage(`Venda registrada em ${new Date().toISOString()}`)
-          }
+          onDone={() => setMessage("Venda registrada.")}
         />
       </>
     );
@@ -1406,11 +1406,11 @@ function Finance({ user }: { user: User }) {
         )}
       </section>
       {showForm && (
-        <div
+        <dialog
+          open
           className="modal"
-          role="dialog"
-          aria-modal="true"
           aria-labelledby="finance-form-title"
+          onCancel={() => setShowForm(false)}
         >
           <form className="panel form" onSubmit={createEntry}>
             <h2 id="finance-form-title">Novo lançamento</h2>
@@ -1434,7 +1434,7 @@ function Finance({ user }: { user: User }) {
               </label>
               <label>
                 Valor (R$)
-                <input name="amount" inputMode="decimal" required />
+                <input name="amount" inputMode="decimal" required autoFocus />
               </label>
               <label>
                 Competência
@@ -1495,7 +1495,7 @@ function Finance({ user }: { user: User }) {
               </button>
             </div>
           </form>
-        </div>
+        </dialog>
       )}
     </>
   );
