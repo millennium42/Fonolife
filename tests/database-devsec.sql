@@ -9,11 +9,13 @@ DECLARE
   inactive_doctor uuid := gen_random_uuid();
 BEGIN
   SELECT id INTO actor FROM users WHERE role = 'admin' AND active LIMIT 1;
-  SELECT id INTO patient FROM patients WHERE archived_at IS NULL LIMIT 1;
   SELECT id INTO account FROM company_accounts WHERE active LIMIT 1;
-  IF actor IS NULL OR patient IS NULL OR account IS NULL THEN
-    RAISE EXCEPTION 'seed/paciente necessário para o smoke de banco';
+  IF actor IS NULL OR account IS NULL THEN
+    RAISE EXCEPTION 'seed necessário para o smoke de banco';
   END IF;
+  INSERT INTO patients(id,name,phone,assigned_user_id,created_by)
+  VALUES(gen_random_uuid(),'Paciente sintético DevSec','11900000000',actor,actor)
+  RETURNING id INTO patient;
 
   BEGIN
     INSERT INTO financial_entries(
