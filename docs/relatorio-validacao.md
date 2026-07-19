@@ -61,4 +61,14 @@ Em 18/07/2026, `npm run typecheck` passou sem erros e `npm test` aprovou 9/9 tes
 - Dependências: `npm audit --audit-level=high` sem vulnerabilidades; CI limita `packages: write` ao job de publicação.
 - Graphify estrutural atualizado; documentação semântica permanece sem backend externo e não faz parte do produto.
 
-Backlog P2: importação CSV idempotente, estoque/catálogo, WhatsApp, anexos, prontuário clínico completo, configuração dos prazos e evolução de privacidade/LGPD. Nenhum item bloqueia os critérios desta release.
+Backlog P2: importação CSV idempotente, estoque/catálogo, WhatsApp, anexos, prontuário clínico completo e configuração dos prazos. Nenhum item bloqueia os critérios desta release.
+
+## PR 8 — Médicos, serviços, UX e LGPD
+
+- `npm run typecheck`, 14/14 testes de domínio/estrutura, build e `npm audit --audit-level=high`: aprovados; zero vulnerabilidades.
+- Docker 29.6.1: imagem reconstruída na partição C; app e PostgreSQL 18 saudáveis. Migration e seed executados duas vezes sobre volume existente. Um PostgreSQL 18 temporário e vazio confirmou 7 migrations, 2 médicos e 2 caixas, também sem duplicação; contêiner e rede de prova foram removidos ao final.
+- Smokes de dashboard e financeiro: aprovados. Smoke PostgreSQL em transação comprovou rejeição de serviço/retorno sem médico, médico inativo e `UPDATE` financeiro.
+- DevSec: CSP/HSTS/nosniff, cookie, CSRF/Origin, SQL injection, Operador sem saída, Médico sem IDOR para CRM/financeiro/configuração, projeção mínima LGPD, logout e rate limit aprovados.
+- Playwright + axe: 6/6 jornadas em 360/768/1440 px. Cobriu fluxo paciente-venda-financeiro, XSS armazenado não executado, diálogos, login Médico, ausência de navegação privilegiada e recarga da sessão médica.
+- P1 encontrados no loop: trigger genérico acessava coluna inexistente de `sales`; refresh do Médico era bloqueado junto aos assets. Ambos receberam correção e regressão automatizada. Um feedback duplicado de sucesso também foi removido.
+- Revisão implementador/revisor: evidência de agentes independentes, sem alegação de aprovação humana. Resultado final exige zero P0/P1; P2 permanece backlog documentado.

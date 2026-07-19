@@ -7,8 +7,9 @@ type User = {
   id: string;
   name: string;
   email: string;
-  role: "admin" | "operator";
+  role: "admin" | "operator" | "doctor";
 };
+type Doctor = { id: string; name: string };
 type Patient = {
   id: string;
   name: string;
@@ -42,6 +43,7 @@ type FollowUp = {
   due_on: string | null;
   timing: string;
   last_contact_at: string | null;
+  doctor_name: string | null;
 };
 type CompanyAccount = {
   id: string;
@@ -60,6 +62,26 @@ type FinancialEntry = {
   company_account_label: string;
   reversal_of_id: string | null;
   reversed: boolean;
+  patient_name?: string | null;
+  doctor_name?: string | null;
+};
+type DoctorRecords = {
+  sales: {
+    id: string;
+    product: string;
+    sale_kind: "device" | "service";
+    quantity: number;
+    total_amount_cents: number;
+    sold_on: string;
+    patient_name: string;
+  }[];
+  services: {
+    id: string;
+    description: string;
+    amount_cents: number;
+    occurred_on: string;
+    patient_name: string | null;
+  }[];
 };
 type Receivable = {
   id: string;
@@ -92,10 +114,29 @@ type DashboardData = {
   open_tasks: number;
   adaptation: number;
   month_sales: number;
-  queue: Pick<FollowUp, "patient_id" | "patient_name" | "phone" | "task_id" | "title" | "due_on" | "timing">[];
+  queue: Pick<
+    FollowUp,
+    | "patient_id"
+    | "patient_name"
+    | "phone"
+    | "task_id"
+    | "title"
+    | "due_on"
+    | "timing"
+  >[];
   financial?: {
-    consolidated: { balance_cents: number; month_income_cents: number; month_expense_cents: number };
-    byAccount: { company_account_id: string; company_account_label: string; balance_cents: number; month_income_cents: number; month_expense_cents: number }[];
+    consolidated: {
+      balance_cents: number;
+      month_income_cents: number;
+      month_expense_cents: number;
+    };
+    byAccount: {
+      company_account_id: string;
+      company_account_label: string;
+      balance_cents: number;
+      month_income_cents: number;
+      month_expense_cents: number;
+    }[];
   };
 };
 const statuses: { [key: string]: string } = {
@@ -131,8 +172,12 @@ const eventTypes: { [key: string]: string } = {
 const date = (value: string | null | undefined) => {
   if (!value) return "Não informado";
   const civil = value.slice(0, 10);
-  const parsed = new Date(/^\d{4}-\d{2}-\d{2}$/.test(civil) ? `${civil}T12:00:00` : value);
-  return Number.isNaN(parsed.valueOf()) ? "Não informado" : new Intl.DateTimeFormat("pt-BR").format(parsed);
+  const parsed = new Date(
+    /^\d{4}-\d{2}-\d{2}$/.test(civil) ? `${civil}T12:00:00` : value,
+  );
+  return Number.isNaN(parsed.valueOf())
+    ? "Não informado"
+    : new Intl.DateTimeFormat("pt-BR").format(parsed);
 };
 async function api(path: string, options?: RequestInit) {
   const response = await fetch(path, options);
@@ -140,6 +185,34 @@ async function api(path: string, options?: RequestInit) {
   const body = await response.json();
   if (!response.ok) throw new Error(body.title ?? "Não foi possível concluir");
   return body;
+}
+function Modal({
+  children,
+  onClose,
+  labelledBy,
+}: {
+  children: React.ReactNode;
+  onClose: () => void;
+  labelledBy?: string;
+}) {
+  const ref = useRef<HTMLDialogElement>(null);
+  useEffect(() => {
+    ref.current?.showModal();
+    return () => ref.current?.close();
+  }, []);
+  return (
+    <dialog
+      ref={ref}
+      className="modal"
+      aria-labelledby={labelledBy}
+      onCancel={(event) => {
+        event.preventDefault();
+        onClose();
+      }}
+    >
+      {children}
+    </dialog>
+  );
 }
 const today = () =>
   new Intl.DateTimeFormat("en-CA", { timeZone: "America/Sao_Paulo" }).format(
@@ -174,13 +247,17 @@ function SaleForm({
 }) {
   const requestId = useRef(crypto.randomUUID());
   const [accounts, setAccounts] = useState<CompanyAccount[]>([]),
+    [doctors, setDoctors] = useState<Doctor[]>([]),
     [error, setError] = useState(""),
     [saving, setSaving] = useState(false);
   useEffect(() => {
-    api("/api/company-accounts")
-      .then((x) =>
-        setAccounts(x.accounts.filter((a: CompanyAccount) => a.active)),
-      )
+    Promise.all([api("/api/company-accounts"), api("/api/doctors")])
+      .then(([accountData, doctorData]) => {
+        setAccounts(
+          accountData.accounts.filter((a: CompanyAccount) => a.active),
+        );
+        setDoctors(doctorData.doctors);
+      })
       .catch((e) => setError(e.message));
   }, []);
   async function submit(event: React.FormEvent<HTMLFormElement>) {
@@ -226,6 +303,8 @@ function SaleForm({
         body: JSON.stringify({
           clientRequestId: requestId.current,
           patientId,
+          saleKind: v.saleKind,
+          doctorId: v.doctorId,
           product: v.product,
           quantity: Number(v.quantity),
           totalAmountCents: total,
@@ -254,11 +333,30 @@ function SaleForm({
           {error}
         </p>
       )}
-      <label>
-        Aparelho ou produto
-        <input name="product" required minLength={2} />
-      </label>
       <div className="fields">
+        <label>
+          Tipo
+          <select name="saleKind" defaultValue="device" required>
+            <option value="device">Venda de aparelho</option>
+            <option value="service">Serviço</option>
+          </select>
+        </label>
+        <label>
+          Médico responsável
+          <select name="doctorId" required>
+            <option value="">Escolha o médico</option>
+            {doctors.map((doctor) => (
+              <option key={doctor.id} value={doctor.id}>
+                {doctor.name}
+              </option>
+            ))}
+          </select>
+          <small>Obrigatório para os retornos de acompanhamento.</small>
+        </label>
+        <label className="wide">
+          Aparelho ou serviço
+          <input name="product" required minLength={2} />
+        </label>
         <label>
           Quantidade
           <input
@@ -530,7 +628,10 @@ function PatientForm({
 function PatientRecord({ id, onBack }: { id: string; onBack: () => void }) {
   const [patient, setPatient] = useState<Patient | null>(null),
     [timeline, setTimeline] = useState<TimelineItem[]>([]),
-    [editing, setEditing] = useState(false),
+    [doctors, setDoctors] = useState<Doctor[]>([]),
+    [popup, setPopup] = useState<"edit" | "event" | "return" | "sale" | null>(
+      null,
+    ),
     [message, setMessage] = useState(""),
     [error, setError] = useState("");
   async function load() {
@@ -547,6 +648,9 @@ function PatientRecord({ id, onBack }: { id: string; onBack: () => void }) {
   }
   useEffect(() => {
     load();
+    api("/api/doctors")
+      .then((data) => setDoctors(data.doctors))
+      .catch((reason) => setError((reason as Error).message));
   }, [id]);
   async function addEvent(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -560,6 +664,7 @@ function PatientRecord({ id, onBack }: { id: string; onBack: () => void }) {
       });
       form.reset();
       setMessage("Interação registrada.");
+      setPopup(null);
       await load();
     } catch (reason) {
       setError((reason as Error).message);
@@ -580,6 +685,7 @@ function PatientRecord({ id, onBack }: { id: string; onBack: () => void }) {
       });
       form.reset();
       setMessage("Retorno agendado.");
+      setPopup(null);
       await load();
     } catch (reason) {
       setError((reason as Error).message);
@@ -605,18 +711,6 @@ function PatientRecord({ id, onBack }: { id: string; onBack: () => void }) {
         {error || "Carregando ficha…"}
       </section>
     );
-  if (editing)
-    return (
-      <PatientForm
-        patient={patient}
-        onCancel={() => setEditing(false)}
-        onDone={async (_id, text) => {
-          setMessage(text ?? "Ficha salva.");
-          setEditing(false);
-          await load();
-        }}
-      />
-    );
   return (
     <>
       <button className="back" onClick={onBack}>
@@ -641,7 +735,7 @@ function PatientRecord({ id, onBack }: { id: string; onBack: () => void }) {
             </p>
           </div>
           <div className="actions">
-            <button className="secondary" onClick={() => setEditing(true)}>
+            <button className="secondary" onClick={() => setPopup("edit")}>
               Editar ficha
             </button>
             <button className="danger" onClick={archive}>
@@ -678,10 +772,81 @@ function PatientRecord({ id, onBack }: { id: string; onBack: () => void }) {
           </p>
         )}
       </section>
-      <div className="record-grid">
-        <div>
-          <form className="panel form" onSubmit={addEvent}>
-            <h2>Registrar interação</h2>
+      <section className="record-actions" aria-label="Ações do paciente">
+        <button onClick={() => setPopup("event")}>
+          <span>Registrar atendimento</span>
+          <small>Ligação, consulta, ajuste ou cuidado</small>
+        </button>
+        <button onClick={() => setPopup("return")}>
+          <span>Agendar retorno</span>
+          <small>Defina data e médico responsável</small>
+        </button>
+        <button onClick={() => setPopup("sale")}>
+          <span>Registrar venda ou serviço</span>
+          <small>Inclui pagamento e acompanhamento</small>
+        </button>
+      </section>
+      <section className="panel record-history">
+        <h2>Histórico do paciente</h2>
+        {timeline.length === 0 ? (
+          <div className="empty">
+            <h3>Nenhuma interação registrada</h3>
+            <p>Use uma das ações acima para começar o acompanhamento.</p>
+          </div>
+        ) : (
+          <ol className="timeline">
+            {timeline.map((item) => (
+              <li key={item.id}>
+                <strong>
+                  {eventTypes[item.type] ??
+                    (item.type === "follow_up_completed"
+                      ? "Retorno concluído"
+                      : item.type === "follow_up_cancelled"
+                        ? "Retorno cancelado"
+                        : item.type === "follow_up_scheduled"
+                          ? "Retorno agendado"
+                          : item.type === "sale"
+                            ? "Venda ou serviço"
+                            : item.type === "sale_cancelled"
+                              ? "Venda ou serviço cancelado"
+                              : "Paciente cadastrado")}
+                </strong>
+                <p>{item.description}</p>
+                <small>
+                  {new Date(item.occurred_at).toLocaleString("pt-BR")} ·{" "}
+                  {item.author}
+                </small>
+              </li>
+            ))}
+          </ol>
+        )}
+      </section>
+      {popup === "edit" && (
+        <Modal onClose={() => setPopup(null)}>
+          <PatientForm
+            patient={patient}
+            onCancel={() => setPopup(null)}
+            onDone={async (_id, text) => {
+              setMessage(text ?? "Ficha salva.");
+              setPopup(null);
+              await load();
+            }}
+          />
+        </Modal>
+      )}
+      {popup === "event" && (
+        <Modal onClose={() => setPopup(null)}>
+          <form className="panel form popup-card" onSubmit={addEvent}>
+            <div className="section-title">
+              <h2>Registrar atendimento</h2>
+              <button
+                type="button"
+                className="secondary"
+                onClick={() => setPopup(null)}
+              >
+                Fechar
+              </button>
+            </div>
             <label>
               Tipo
               <select name="eventType" defaultValue="call">
@@ -694,12 +859,31 @@ function PatientRecord({ id, onBack }: { id: string; onBack: () => void }) {
             </label>
             <label>
               O que aconteceu?
-              <textarea name="description" rows={4} minLength={2} required />
+              <textarea
+                name="description"
+                rows={4}
+                minLength={2}
+                required
+                autoFocus
+              />
             </label>
             <button>Registrar no histórico</button>
           </form>
-          <form className="panel form compact" onSubmit={schedule}>
-            <h2>Agendar retorno</h2>
+        </Modal>
+      )}
+      {popup === "return" && (
+        <Modal onClose={() => setPopup(null)}>
+          <form className="panel form popup-card" onSubmit={schedule}>
+            <div className="section-title">
+              <h2>Agendar retorno</h2>
+              <button
+                type="button"
+                className="secondary"
+                onClick={() => setPopup(null)}
+              >
+                Fechar
+              </button>
+            </div>
             <label>
               O que fazer?
               <input
@@ -707,48 +891,54 @@ function PatientRecord({ id, onBack }: { id: string; onBack: () => void }) {
                 defaultValue="Entrar em contato"
                 minLength={2}
                 required
+                autoFocus
               />
             </label>
-            <label>
-              Quando?
-              <input name="dueOn" type="date" required />
-            </label>
+            <div className="fields">
+              <label>
+                Quando?
+                <input name="dueOn" type="date" required />
+              </label>
+              <label>
+                Médico responsável
+                <select name="doctorId" required>
+                  <option value="">Escolha o médico</option>
+                  {doctors.map((doctor) => (
+                    <option key={doctor.id} value={doctor.id}>
+                      {doctor.name}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            </div>
             <label>
               Observação
               <input name="notes" />
             </label>
             <button>Agendar retorno</button>
           </form>
-        </div>
-        <section className="panel">
-          <h2>Histórico</h2>
-          {timeline.length === 0 ? (
-            <p>Nenhuma interação registrada.</p>
-          ) : (
-            <ol className="timeline">
-              {timeline.map((item) => (
-                <li key={item.id}>
-                  <strong>
-                    {eventTypes[item.type] ??
-                      (item.type === "follow_up_completed"
-                        ? "Retorno concluído"
-                        : item.type === "follow_up_cancelled"
-                          ? "Retorno cancelado"
-                          : item.type === "follow_up_scheduled"
-                            ? "Retorno agendado"
-                            : "Paciente cadastrado")}
-                  </strong>
-                  <p>{item.description}</p>
-                  <small>
-                    {new Date(item.occurred_at).toLocaleString("pt-BR")} ·{" "}
-                    {item.author}
-                  </small>
-                </li>
-              ))}
-            </ol>
-          )}
-        </section>
-      </div>
+        </Modal>
+      )}
+      {popup === "sale" && (
+        <Modal onClose={() => setPopup(null)}>
+          <div className="popup-card">
+            <button
+              className="secondary popup-close"
+              onClick={() => setPopup(null)}
+            >
+              Fechar
+            </button>
+            <SaleForm
+              patientId={id}
+              onDone={async () => {
+                setMessage("Venda ou serviço registrado.");
+                setPopup(null);
+                await load();
+              }}
+            />
+          </div>
+        </Modal>
+      )}
     </>
   );
 }
@@ -863,7 +1053,7 @@ function FollowUps() {
                 </strong>
                 <small>
                   {item.due_on
-                    ? `Para ${date(item.due_on)}`
+                    ? `Para ${date(item.due_on)} · ${item.doctor_name || "Sem médico histórico"}`
                     : item.last_contact_at
                       ? `Último contato ${new Date(item.last_contact_at).toLocaleDateString("pt-BR")}`
                       : "Sem interação registrada"}
@@ -901,6 +1091,7 @@ function Patients({ initialPatientId }: { initialPatientId?: string | null }) {
     [search, setSearch] = useState(""),
     [status, setStatus] = useState(""),
     [overdue, setOverdue] = useState(false),
+    [view, setView] = useState<"list" | "funnel">("list"),
     [message, setMessage] = useState(""),
     [error, setError] = useState("");
   async function load() {
@@ -922,20 +1113,14 @@ function Patients({ initialPatientId }: { initialPatientId?: string | null }) {
   }, [search, status, overdue]);
   if (selected)
     return (
-      <>
-        {message && <p className="success" role="status">{message}</p>}
-        <PatientRecord
-          id={selected}
-          onBack={() => {
-            setSelected(null);
-            load();
-          }}
-        />
-        <SaleForm
-          patientId={selected}
-          onDone={() => setMessage("Venda registrada.")}
-        />
-      </>
+      <PatientRecord
+        id={selected}
+        onBack={() => {
+          setSelected(null);
+          setMessage("");
+          load();
+        }}
+      />
     );
   if (creating)
     return (
@@ -986,51 +1171,104 @@ function Patients({ initialPatientId }: { initialPatientId?: string | null }) {
         </label>
         <button onClick={() => setCreating(true)}>+ Novo paciente</button>
       </div>
+      <div
+        className="filter-tabs view-switch"
+        role="group"
+        aria-label="Visualização do CRM"
+      >
+        <button
+          className={view === "list" ? "active" : ""}
+          onClick={() => setView("list")}
+        >
+          Lista
+        </button>
+        <button
+          className={view === "funnel" ? "active" : ""}
+          onClick={() => setView("funnel")}
+        >
+          Funil
+        </button>
+      </div>
       {error && (
         <p className="error" role="alert">
           {error}
         </p>
       )}
-      <section className="panel patient-list">
-        <h2>
-          {patients.length} paciente{patients.length === 1 ? "" : "s"}
-        </h2>
-        {patients.length === 0 ? (
-          <div className="empty">
-            <h3>Nenhum paciente encontrado</h3>
-            <p>Revise os filtros ou cadastre o primeiro paciente.</p>
-          </div>
-        ) : (
-          patients.map((patient) => (
-            <button
-              className="patient-row"
-              onClick={() => setSelected(patient.id)}
-              key={patient.id}
-            >
-              <span>
-                <strong>{patient.name}</strong>
-                <small>
-                  {patient.phone} · {statuses[patient.journey_status]}
-                </small>
-              </span>
-              <span
-                className={
-                  patient.next_contact_on &&
-                  patient.next_contact_on <
-                    new Date().toISOString().slice(0, 10)
-                    ? "overdue"
-                    : ""
-                }
+      {view === "list" ? (
+        <section className="panel patient-list">
+          <h2>
+            {patients.length} paciente{patients.length === 1 ? "" : "s"}
+          </h2>
+          {patients.length === 0 ? (
+            <div className="empty">
+              <h3>Nenhum paciente encontrado</h3>
+              <p>Revise os filtros ou cadastre o primeiro paciente.</p>
+            </div>
+          ) : (
+            patients.map((patient) => (
+              <button
+                className="patient-row"
+                onClick={() => setSelected(patient.id)}
+                key={patient.id}
               >
-                {patient.next_contact_on
-                  ? `Contato ${date(patient.next_contact_on)}`
-                  : "Sem contato agendado"}{" "}
-                →
-              </span>
-            </button>
-          ))
-        )}
-      </section>
+                <span>
+                  <strong>{patient.name}</strong>
+                  <small>
+                    {patient.phone} · {statuses[patient.journey_status]}
+                  </small>
+                </span>
+                <span
+                  className={
+                    patient.next_contact_on &&
+                    patient.next_contact_on <
+                      new Date().toISOString().slice(0, 10)
+                      ? "overdue"
+                      : ""
+                  }
+                >
+                  {patient.next_contact_on
+                    ? `Contato ${date(patient.next_contact_on)}`
+                    : "Sem contato agendado"}{" "}
+                  →
+                </span>
+              </button>
+            ))
+          )}
+        </section>
+      ) : (
+        <section className="funnel" aria-label="Funil da jornada">
+          {Object.entries(statuses).map(([statusValue, statusLabel]) => {
+            const stagePatients = patients.filter(
+              (patient) => patient.journey_status === statusValue,
+            );
+            return (
+              <article className="funnel-column" key={statusValue}>
+                <h2>
+                  {statusLabel} <span>{stagePatients.length}</span>
+                </h2>
+                {stagePatients.length === 0 ? (
+                  <p>Nenhum paciente</p>
+                ) : (
+                  stagePatients.map((patient) => (
+                    <button
+                      key={patient.id}
+                      onClick={() => setSelected(patient.id)}
+                    >
+                      <strong>{patient.name}</strong>
+                      <small>{patient.phone}</small>
+                      <small>
+                        {patient.next_contact_on
+                          ? `Próximo contato ${date(patient.next_contact_on)}`
+                          : "Sem contato agendado"}
+                      </small>
+                    </button>
+                  ))
+                )}
+              </article>
+            );
+          })}
+        </section>
+      )}
     </>
   );
 }
@@ -1069,8 +1307,11 @@ function Finance({ user }: { user: User }) {
     [entries, setEntries] = useState<FinancialEntry[]>([]),
     [receivables, setReceivables] = useState<Receivable[]>([]),
     [accounts, setAccounts] = useState<CompanyAccount[]>([]),
+    [patients, setPatients] = useState<Patient[]>([]),
+    [doctors, setDoctors] = useState<Doctor[]>([]),
     [summary, setSummary] = useState<FinanceSummary | null>(null),
     [showForm, setShowForm] = useState(false),
+    [entryCategory, setEntryCategory] = useState("hearing_aid_sale"),
     [error, setError] = useState(""),
     [message, setMessage] = useState(""),
     [filters, setFilters] = useState({
@@ -1088,20 +1329,30 @@ function Finance({ user }: { user: User }) {
   async function load() {
     try {
       const suffix = query();
-      const [entryData, receivableData, accountData, summaryData] =
-        await Promise.all([
-          api(`/api/finance/entries?${suffix}`),
-          api(
-            `/api/finance/receivables?${new URLSearchParams(Object.entries(filters).filter(([key, value]) => value && !["entryType", "category"].includes(key))).toString()}`,
-          ),
-          api("/api/company-accounts"),
-          user.role === "admin"
-            ? api(`/api/finance/summary?${suffix}`)
-            : Promise.resolve(null),
-        ]);
+      const [
+        entryData,
+        receivableData,
+        accountData,
+        patientData,
+        doctorData,
+        summaryData,
+      ] = await Promise.all([
+        api(`/api/finance/entries?${suffix}`),
+        api(
+          `/api/finance/receivables?${new URLSearchParams(Object.entries(filters).filter(([key, value]) => value && !["entryType", "category"].includes(key))).toString()}`,
+        ),
+        api("/api/company-accounts"),
+        api("/api/patients"),
+        api("/api/doctors"),
+        user.role === "admin"
+          ? api(`/api/finance/summary?${suffix}`)
+          : Promise.resolve(null),
+      ]);
       setEntries(entryData.entries);
       setReceivables(receivableData.receivables);
       setAccounts(accountData.accounts.filter((a: CompanyAccount) => a.active));
+      setPatients(patientData.patients);
+      setDoctors(doctorData.doctors);
       setSummary(summaryData);
       setError("");
     } catch (reason) {
@@ -1135,6 +1386,8 @@ function Finance({ user }: { user: User }) {
           occurredOn: value.occurredOn,
           paymentMethod: value.paymentMethod,
           companyAccountId: value.companyAccountId,
+          patientId: value.patientId || undefined,
+          doctorId: value.doctorId || undefined,
           notes: value.notes,
         }),
       });
@@ -1155,7 +1408,8 @@ function Finance({ user }: { user: User }) {
     )
       return;
     try {
-      const requestId = operationIds.current.get(item.id) ?? crypto.randomUUID();
+      const requestId =
+        operationIds.current.get(item.id) ?? crypto.randomUUID();
       operationIds.current.set(item.id, requestId);
       await api(`/api/finance/receivables/${item.id}/settle`, {
         method: "POST",
@@ -1183,7 +1437,8 @@ function Finance({ user }: { user: User }) {
       return;
     try {
       const operationKey = `reverse-${item.id}`;
-      const requestId = operationIds.current.get(operationKey) ?? crypto.randomUUID();
+      const requestId =
+        operationIds.current.get(operationKey) ?? crypto.randomUUID();
       operationIds.current.set(operationKey, requestId);
       await api(`/api/finance/entries/${item.id}/reverse`, {
         method: "POST",
@@ -1359,6 +1614,8 @@ function Finance({ user }: { user: User }) {
                   <small>
                     {date(item.occurred_on)} · {item.company_account_label} ·{" "}
                     {paymentLabels[item.payment_method]}
+                    {item.patient_name ? ` · ${item.patient_name}` : ""}
+                    {item.doctor_name ? ` · ${item.doctor_name}` : ""}
                   </small>
                 </div>
                 <strong className={item.entry_type}>
@@ -1406,11 +1663,9 @@ function Finance({ user }: { user: User }) {
         )}
       </section>
       {showForm && (
-        <dialog
-          open
-          className="modal"
-          aria-labelledby="finance-form-title"
-          onCancel={() => setShowForm(false)}
+        <Modal
+          onClose={() => setShowForm(false)}
+          labelledBy="finance-form-title"
         >
           <form className="panel form" onSubmit={createEntry}>
             <h2 id="finance-form-title">Novo lançamento</h2>
@@ -1419,12 +1674,19 @@ function Finance({ user }: { user: User }) {
                 Tipo
                 <select name="entryType" required>
                   <option value="income">Entrada</option>
-                  <option value="expense">Saída</option>
+                  {user.role === "admin" && (
+                    <option value="expense">Saída</option>
+                  )}
                 </select>
               </label>
               <label>
                 Categoria
-                <select name="category" required>
+                <select
+                  name="category"
+                  required
+                  value={entryCategory}
+                  onChange={(event) => setEntryCategory(event.target.value)}
+                >
                   {Object.entries(categoryLabels).map(([v, l]) => (
                     <option key={v} value={v}>
                       {l}
@@ -1475,6 +1737,30 @@ function Finance({ user }: { user: User }) {
                   ))}
                 </select>
               </label>
+              <label>
+                Paciente (opcional)
+                <select name="patientId">
+                  <option value="">Sem paciente associado</option>
+                  {patients.map((patient) => (
+                    <option key={patient.id} value={patient.id}>
+                      {patient.name} — {patient.phone}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              {entryCategory === "service" && (
+                <label>
+                  Médico responsável
+                  <select name="doctorId" required>
+                    <option value="">Escolha o médico</option>
+                    {doctors.map((doctor) => (
+                      <option key={doctor.id} value={doctor.id}>
+                        {doctor.name}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+              )}
             </div>
             <label>
               Descrição
@@ -1495,23 +1781,195 @@ function Finance({ user }: { user: User }) {
               </button>
             </div>
           </form>
-        </dialog>
+        </Modal>
       )}
     </>
   );
 }
 
-function Dashboard({ user, openPatient, openFollowUps }: { user: User; openPatient: (id: string) => void; openFollowUps: () => void }) {
-  const [data, setData] = useState<DashboardData | null>(null), [error, setError] = useState("");
-  useEffect(() => { api("/api/dashboard").then(setData).catch((reason) => setError((reason as Error).message)); }, []);
-  if (error) return <p className="error" role="alert">{error}</p>;
+function Dashboard({
+  user,
+  openPatient,
+  openFollowUps,
+}: {
+  user: User;
+  openPatient: (id: string) => void;
+  openFollowUps: () => void;
+}) {
+  const [data, setData] = useState<DashboardData | null>(null),
+    [error, setError] = useState("");
+  useEffect(() => {
+    api("/api/dashboard")
+      .then(setData)
+      .catch((reason) => setError((reason as Error).message));
+  }, []);
+  if (error)
+    return (
+      <p className="error" role="alert">
+        {error}
+      </p>
+    );
   if (!data) return <p aria-live="polite">Carregando resumo…</p>;
-  const cards = [["Contatos atrasados", data.overdue, openFollowUps], ["Retornos de hoje", data.today, openFollowUps], ["Tarefas abertas", data.open_tasks, openFollowUps], ["Em adaptação", data.adaptation, openFollowUps], ["Vendas no mês", data.month_sales, undefined]] as const;
-  return <>
-    <section className="dashboard-cards" aria-label="Resumo operacional">{cards.map(([label, value, action]) => <button className="dashboard-card" key={label} onClick={action} disabled={!action}><span>{label}</span><strong>{value}</strong></button>)}</section>
-    {user.role === "admin" && data.financial && <section className="panel"><h2>Financeiro realizado</h2><div className="dashboard-finance"><article><span>Saldo consolidado</span><strong>{money(data.financial.consolidated.balance_cents)}</strong></article><article><span>Entradas no mês</span><strong>{money(data.financial.consolidated.month_income_cents)}</strong></article><article><span>Saídas no mês</span><strong>{money(data.financial.consolidated.month_expense_cents)}</strong></article></div><ul className="account-balances">{data.financial.byAccount.map((account) => <li key={account.company_account_id}><span>{account.company_account_label}</span><strong>{money(account.balance_cents)}</strong></li>)}</ul></section>}
-    <section className="panel dashboard-queue"><div className="section-heading"><h2>Próximas ações</h2><button className="secondary" onClick={openFollowUps}>Ver acompanhamento</button></div>{data.queue.length === 0 ? <div className="empty"><h3>Nenhuma tarefa aberta</h3><p>Novos retornos aparecerão aqui por ordem de urgência.</p></div> : data.queue.map((item) => <button className="patient-row" onClick={() => openPatient(item.patient_id)} key={item.task_id}><span><strong>{item.patient_name}</strong><small>{item.title} · {item.phone}</small></span><span className={item.timing === "overdue" ? "overdue" : ""}>{item.timing === "overdue" ? "Atrasado" : item.timing === "today" ? "Hoje" : date(item.due_on)} →</span></button>)}</section>
-  </>;
+  const cards = [
+    ["Contatos atrasados", data.overdue, openFollowUps],
+    ["Retornos de hoje", data.today, openFollowUps],
+    ["Tarefas abertas", data.open_tasks, openFollowUps],
+    ["Em adaptação", data.adaptation, openFollowUps],
+    ["Vendas no mês", data.month_sales, undefined],
+  ] as const;
+  return (
+    <>
+      <section className="dashboard-cards" aria-label="Resumo operacional">
+        {cards.map(([label, value, action]) => (
+          <button
+            className="dashboard-card"
+            key={label}
+            onClick={action}
+            disabled={!action}
+          >
+            <span>{label}</span>
+            <strong>{value}</strong>
+          </button>
+        ))}
+      </section>
+      {user.role === "admin" && data.financial && (
+        <section className="panel">
+          <h2>Financeiro realizado</h2>
+          <div className="dashboard-finance">
+            <article>
+              <span>Saldo consolidado</span>
+              <strong>
+                {money(data.financial.consolidated.balance_cents)}
+              </strong>
+            </article>
+            <article>
+              <span>Entradas no mês</span>
+              <strong>
+                {money(data.financial.consolidated.month_income_cents)}
+              </strong>
+            </article>
+            <article>
+              <span>Saídas no mês</span>
+              <strong>
+                {money(data.financial.consolidated.month_expense_cents)}
+              </strong>
+            </article>
+          </div>
+          <ul className="account-balances">
+            {data.financial.byAccount.map((account) => (
+              <li key={account.company_account_id}>
+                <span>{account.company_account_label}</span>
+                <strong>{money(account.balance_cents)}</strong>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
+      <section className="panel dashboard-queue">
+        <div className="section-heading">
+          <h2>Próximas ações</h2>
+          <button className="secondary" onClick={openFollowUps}>
+            Ver acompanhamento
+          </button>
+        </div>
+        {data.queue.length === 0 ? (
+          <div className="empty">
+            <h3>Nenhuma tarefa aberta</h3>
+            <p>Novos retornos aparecerão aqui por ordem de urgência.</p>
+          </div>
+        ) : (
+          data.queue.map((item) => (
+            <button
+              className="patient-row"
+              onClick={() => openPatient(item.patient_id)}
+              key={item.task_id}
+            >
+              <span>
+                <strong>{item.patient_name}</strong>
+                <small>
+                  {item.title} · {item.phone}
+                </small>
+              </span>
+              <span className={item.timing === "overdue" ? "overdue" : ""}>
+                {item.timing === "overdue"
+                  ? "Atrasado"
+                  : item.timing === "today"
+                    ? "Hoje"
+                    : date(item.due_on)}{" "}
+                →
+              </span>
+            </button>
+          ))
+        )}
+      </section>
+    </>
+  );
+}
+
+function DoctorPortal() {
+  const [records, setRecords] = useState<DoctorRecords | null>(null),
+    [error, setError] = useState("");
+  useEffect(() => {
+    api("/api/doctor/records")
+      .then(setRecords)
+      .catch((reason) => setError((reason as Error).message));
+  }, []);
+  if (error)
+    return (
+      <p className="error" role="alert">
+        {error}
+      </p>
+    );
+  if (!records) return <p aria-live="polite">Carregando seus atendimentos…</p>;
+  return (
+    <div className="doctor-records">
+      <section className="panel">
+        <h2>Vendas associadas a você</h2>
+        {records.sales.length === 0 ? (
+          <p>Nenhuma venda associada.</p>
+        ) : (
+          records.sales.map((sale) => (
+            <article key={sale.id}>
+              <div>
+                <strong>{sale.patient_name}</strong>
+                <small>
+                  {sale.sale_kind === "service" ? "Serviço" : "Aparelho"} ·{" "}
+                  {date(sale.sold_on)}
+                </small>
+              </div>
+              <div>
+                <strong>{sale.product}</strong>
+                <small>
+                  {sale.quantity} unidade(s) · {money(sale.total_amount_cents)}
+                </small>
+              </div>
+            </article>
+          ))
+        )}
+      </section>
+      <section className="panel">
+        <h2>Serviços associados a você</h2>
+        {records.services.length === 0 ? (
+          <p>Nenhum serviço associado.</p>
+        ) : (
+          records.services.map((service) => (
+            <article key={service.id}>
+              <div>
+                <strong>
+                  {service.patient_name || "Paciente não associado"}
+                </strong>
+                <small>{date(service.occurred_on)}</small>
+              </div>
+              <div>
+                <strong>{service.description}</strong>
+                <small>{money(service.amount_cents)}</small>
+              </div>
+            </article>
+          ))
+        )}
+      </section>
+    </div>
+  );
 }
 
 function App() {
@@ -1593,10 +2051,35 @@ function App() {
               Admin: admin@demo.local / admin123
               <br />
               Operador: operador@demo.local / operador123
+              <br />
+              Médicos: dra.ana@demo.local ou dr.paulo@demo.local / medico123
             </p>
           </details>
         </section>
       </main>
+    );
+  if (user.role === "doctor")
+    return (
+      <div className="shell doctor-shell">
+        <header>
+          <span className="brand">Fonolife</span>
+          <div>
+            <span>{user.name}</span>
+            <button className="link" onClick={logout}>
+              Sair
+            </button>
+          </div>
+        </header>
+        <main>
+          <div className="title">
+            <div>
+              <h1>Meus atendimentos</h1>
+              <p>Somente vendas e serviços associados ao seu usuário.</p>
+            </div>
+          </div>
+          <DoctorPortal />
+        </main>
+      </div>
     );
   const pages = ["Início", "Pacientes", "Acompanhamento", "Financeiro"];
   return (
@@ -1642,7 +2125,16 @@ function App() {
           <FollowUps />
         ) : page === "Financeiro" ? (
           <Finance user={user} />
-        ) : <Dashboard user={user} openPatient={(id) => { setPatientId(id); setPage("Pacientes"); }} openFollowUps={() => setPage("Acompanhamento")} />}
+        ) : (
+          <Dashboard
+            user={user}
+            openPatient={(id) => {
+              setPatientId(id);
+              setPage("Pacientes");
+            }}
+            openFollowUps={() => setPage("Acompanhamento")}
+          />
+        )}
       </main>
     </div>
   );

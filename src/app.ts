@@ -33,7 +33,7 @@ type User = {
   id: string;
   name: string;
   email: string;
-  role: "admin" | "operator";
+  role: "admin" | "operator" | "doctor";
   must_change_password: boolean;
 };
 declare module "fastify" {
@@ -93,6 +93,21 @@ export function buildApp() {
         new Error("Troque a senha temporária para continuar"),
         { statusCode: 403 },
       );
+    const path = request.url.split("?")[0];
+    if (
+      request.currentUser?.role === "doctor" &&
+      path.startsWith("/api/") &&
+      ![
+        "/api/auth/login",
+        "/api/auth/me",
+        "/api/auth/change-password",
+        "/api/auth/logout",
+      ].includes(path) &&
+      !(request.method === "GET" && path === "/api/doctor/records")
+    )
+      throw Object.assign(new Error("Acesso restrito aos próprios registros"), {
+        statusCode: 403,
+      });
   });
   const authenticated = async (request: FastifyRequest) => {
     if (!request.currentUser)
@@ -256,14 +271,15 @@ export function buildApp() {
       name: string;
       email: string;
       password: string;
-      role: "admin" | "operator";
+      role: "admin" | "operator" | "doctor";
     };
   }>("/api/admin/users", { preHandler: admin }, async (request, reply) => {
     const { name, email, password, role } = request.body;
     if (
       !name?.trim() ||
       !email?.includes("@") ||
-      !["admin", "operator"].includes(role)
+      password?.length < 8 ||
+      !["admin", "operator", "doctor"].includes(role)
     )
       return reply
         .code(400)
@@ -282,6 +298,60 @@ export function buildApp() {
     await audit(request.currentUser!.id, "create", "user", id, { role });
     return reply.code(201).send({ id });
   });
+
+  app.get("/api/doctors", { preHandler: authenticated }, async () => ({
+    doctors: (
+      await pool.query(
+        "SELECT id,name FROM users WHERE role='doctor' AND active ORDER BY name",
+      )
+    ).rows,
+  }));
+
+  app.get(
+    "/api/doctor/records",
+    { preHandler: authenticated },
+    async (request, reply) => {
+      if (request.currentUser!.role !== "doctor")
+        return reply
+          .code(403)
+          .type("application/problem+json")
+          .send({ title: "Acesso restrito ao médico", status: 403 });
+      const [sales, services] = await Promise.all([
+        pool.query(
+          `SELECT s.id,s.product,s.sale_kind,s.quantity,s.total_amount_cents,s.sold_on,p.name patient_name
+           FROM sales s JOIN patients p ON p.id=s.patient_id
+           WHERE s.doctor_id=$1 AND s.cancelled_at IS NULL
+           ORDER BY s.sold_on DESC,s.created_at DESC`,
+          [request.currentUser!.id],
+        ),
+        pool.query(
+          `SELECT f.id,f.description,f.amount_cents,f.occurred_on,p.name patient_name
+           FROM financial_entries f LEFT JOIN patients p ON p.id=f.patient_id
+           WHERE f.doctor_id=$1 AND f.category='service' AND f.reversal_of_id IS NULL
+             AND NOT EXISTS(SELECT 1 FROM financial_entries reversal WHERE reversal.reversal_of_id=f.id)
+           ORDER BY f.occurred_on DESC,f.created_at DESC`,
+          [request.currentUser!.id],
+        ),
+      ]);
+      await audit(
+        request.currentUser!.id,
+        "view_own_records",
+        "doctor_records",
+        request.currentUser!.id,
+        { sales: sales.rowCount, services: services.rowCount },
+      );
+      return {
+        sales: sales.rows.map((row) => ({
+          ...row,
+          total_amount_cents: Number(row.total_amount_cents),
+        })),
+        services: services.rows.map((row) => ({
+          ...row,
+          amount_cents: Number(row.amount_cents),
+        })),
+      };
+    },
+  );
 
   app.get<{
     Querystring: {
@@ -536,7 +606,7 @@ export function buildApp() {
     async (request) => ({
       items: (
         await pool.query(
-          `SELECT e.id::text,'event' kind,e.event_type type,e.description,e.occurred_at occurred_at,u.name author FROM patient_events e JOIN users u ON u.id=e.created_by WHERE e.patient_id=$1 UNION ALL SELECT t.id::text,'follow_up','follow_up_scheduled',t.title||' — '||to_char(t.due_on,'DD/MM/YYYY'),t.created_at,u.name FROM follow_up_tasks t JOIN users u ON u.id=t.created_by WHERE t.patient_id=$1 UNION ALL SELECT t.id::text||'-closed','follow_up',CASE WHEN t.completed_at IS NOT NULL THEN 'follow_up_completed' ELSE 'follow_up_cancelled' END,t.title,COALESCE(t.completed_at,t.cancelled_at),u.name FROM follow_up_tasks t JOIN users u ON u.id=t.closed_by WHERE t.patient_id=$1 AND t.closed_by IS NOT NULL UNION ALL SELECT s.id::text,'sale',CASE WHEN s.cancelled_at IS NULL THEN 'sale' ELSE 'sale_cancelled' END,s.product||' · '||s.quantity||' un. · R$ '||to_char(s.total_amount_cents/100.0,'FM999G999G990D00'),COALESCE(s.cancelled_at,s.created_at),u.name FROM sales s JOIN users u ON u.id=COALESCE(s.cancelled_by,s.created_by) WHERE s.patient_id=$1 UNION ALL SELECT p.id::text,'patient_created','patient_created','Paciente cadastrado',p.created_at,u.name FROM patients p JOIN users u ON u.id=p.created_by WHERE p.id=$1 ORDER BY occurred_at DESC`,
+          `SELECT e.id::text,'event' kind,e.event_type type,e.description,e.occurred_at occurred_at,u.name author FROM patient_events e JOIN users u ON u.id=e.created_by WHERE e.patient_id=$1 UNION ALL SELECT t.id::text,'follow_up','follow_up_scheduled',t.title||' — '||to_char(t.due_on,'DD/MM/YYYY')||' · '||COALESCE(d.name,'Sem médico histórico'),t.created_at,u.name FROM follow_up_tasks t JOIN users u ON u.id=t.created_by LEFT JOIN users d ON d.id=t.doctor_id WHERE t.patient_id=$1 UNION ALL SELECT t.id::text||'-closed','follow_up',CASE WHEN t.completed_at IS NOT NULL THEN 'follow_up_completed' ELSE 'follow_up_cancelled' END,t.title||' · '||COALESCE(d.name,'Sem médico histórico'),COALESCE(t.completed_at,t.cancelled_at),u.name FROM follow_up_tasks t JOIN users u ON u.id=t.closed_by LEFT JOIN users d ON d.id=t.doctor_id WHERE t.patient_id=$1 AND t.closed_by IS NOT NULL UNION ALL SELECT s.id::text,'sale',CASE WHEN s.cancelled_at IS NULL THEN 'sale' ELSE 'sale_cancelled' END,s.product||' · '||s.quantity||' un. · R$ '||to_char(s.total_amount_cents/100.0,'FM999G999G990D00'),COALESCE(s.cancelled_at,s.created_at),u.name FROM sales s JOIN users u ON u.id=COALESCE(s.cancelled_by,s.created_by) WHERE s.patient_id=$1 UNION ALL SELECT p.id::text,'patient_created','patient_created','Paciente cadastrado',p.created_at,u.name FROM patients p JOIN users u ON u.id=p.created_by WHERE p.id=$1 ORDER BY occurred_at DESC`,
           [request.params.id],
         )
       ).rows,
@@ -562,11 +632,12 @@ export function buildApp() {
         "no-contact": `(COALESCE(last_event.occurred_on,p.created_at) AT TIME ZONE 'America/Sao_Paulo')::date <= ${today} - 90`,
       };
       const tasks =
-        await pool.query(`SELECT p.id patient_id,p.name patient_name,p.phone,p.journey_status,t.id task_id,t.title,t.due_on,
+        await pool.query(`SELECT p.id patient_id,p.name patient_name,p.phone,p.journey_status,t.id task_id,t.title,t.due_on,t.doctor_id,d.name doctor_name,
       CASE WHEN t.due_on < ${today} THEN 'overdue' WHEN t.due_on = ${today} THEN 'today' ELSE 'upcoming' END timing,
       last_event.occurred_on last_contact_at
       FROM patients p
-      LEFT JOIN LATERAL (SELECT id,title,due_on FROM follow_up_tasks WHERE patient_id=p.id AND completed_at IS NULL AND cancelled_at IS NULL ORDER BY due_on LIMIT 1) t ON true
+      LEFT JOIN LATERAL (SELECT id,title,due_on,doctor_id FROM follow_up_tasks WHERE patient_id=p.id AND completed_at IS NULL AND cancelled_at IS NULL ORDER BY due_on LIMIT 1) t ON true
+      LEFT JOIN users d ON d.id=t.doctor_id
       LEFT JOIN LATERAL (SELECT max(occurred_at) occurred_on FROM patient_events WHERE patient_id=p.id) last_event ON true
       WHERE p.archived_at IS NULL AND ${conditions[filter]} AND (${filter === "adaptation" || filter === "no-contact" ? "true" : "t.id IS NOT NULL"})
       ORDER BY t.due_on NULLS FIRST,p.name LIMIT 200`);
@@ -579,14 +650,16 @@ export function buildApp() {
       title?: string;
       dueOn?: string;
       notes?: string;
+      doctorId?: string;
     };
   }>(
     "/api/follow-ups",
     { preHandler: authenticated },
     async (request, reply) => {
-      const { patientId, title, dueOn, notes } = request.body ?? {};
+      const { patientId, title, dueOn, notes, doctorId } = request.body ?? {};
       if (
         !patientId ||
+        !/^[0-9a-f-]{36}$/i.test(doctorId ?? "") ||
         !title?.trim() ||
         title.trim().length < 2 ||
         !/^\d{4}-\d{2}-\d{2}$/.test(dueOn ?? "")
@@ -594,16 +667,17 @@ export function buildApp() {
         return reply
           .code(400)
           .type("application/problem+json")
-          .send({ title: "Informe paciente, tarefa e data", status: 400 });
+          .send({ title: "Informe paciente, médico, tarefa e data", status: 400 });
       const id = randomUUID();
       const created = await pool.query(
-        `WITH task AS (INSERT INTO follow_up_tasks(id,patient_id,title,due_on,notes,created_by) SELECT $1,p.id,$3,$4::date,$5,$6 FROM patients p WHERE p.id=$2 AND p.archived_at IS NULL RETURNING id), audited AS (INSERT INTO audit_events(user_id,action,entity_type,entity_id,details) SELECT $6,'create','follow_up_task',id,jsonb_build_object('patientId',$2::text,'dueOn',$4::text) FROM task) SELECT id FROM task`,
+        `WITH task AS (INSERT INTO follow_up_tasks(id,patient_id,title,due_on,notes,doctor_id,created_by) SELECT $1,p.id,$3,$4::date,$5,$6,$7 FROM patients p JOIN users d ON d.id=$6 AND d.role='doctor' AND d.active WHERE p.id=$2 AND p.archived_at IS NULL RETURNING id), audited AS (INSERT INTO audit_events(user_id,action,entity_type,entity_id,details) SELECT $7,'create','follow_up_task',id,jsonb_build_object('patientId',$2::text,'doctorId',$6::text,'dueOn',$4::text) FROM task) SELECT id FROM task`,
         [
           id,
           patientId,
           title.trim(),
           dueOn,
           notes?.trim() ?? "",
+          doctorId,
           request.currentUser!.id,
         ],
       );
@@ -611,7 +685,7 @@ export function buildApp() {
         return reply
           .code(404)
           .type("application/problem+json")
-          .send({ title: "Paciente não encontrado", status: 404 });
+          .send({ title: "Paciente ou médico ativo não encontrado", status: 404 });
       return reply.code(201).send({ id });
     },
   );
@@ -646,12 +720,15 @@ export function buildApp() {
     Params: { id: string };
     Body: {
       active?: boolean;
-      role?: "admin" | "operator";
+      role?: "admin" | "operator" | "doctor";
       temporaryPassword?: string;
     };
   }>("/api/admin/users/:id", { preHandler: admin }, async (request, reply) => {
     const { active, role, temporaryPassword } = request.body ?? {};
-    if (role !== undefined && !["admin", "operator"].includes(role))
+    if (
+      role !== undefined &&
+      !["admin", "operator", "doctor"].includes(role)
+    )
       return reply
         .code(400)
         .type("application/problem+json")
@@ -682,7 +759,7 @@ export function buildApp() {
       const removesAdmin =
         target.rows[0].role === "admin" &&
         target.rows[0].active &&
-        (active === false || role === "operator");
+        (active === false || (role !== undefined && role !== "admin"));
       if (removesAdmin) {
         const count = await client.query<{ count: string }>(
           "SELECT count(*) FROM users WHERE role='admin' AND active",
@@ -758,6 +835,8 @@ export function buildApp() {
   type SaleBody = {
     clientRequestId?: string;
     patientId?: string;
+    doctorId?: string;
+    saleKind?: string;
     product?: string;
     quantity?: number;
     totalAmountCents?: number;
@@ -774,9 +853,12 @@ export function buildApp() {
     async (request, reply) => {
       const body = request.body ?? {};
       const installments = body.installments ?? [];
+      const saleKind = body.saleKind ?? "device";
       if (
         !body.clientRequestId ||
         !body.patientId ||
+        !/^[0-9a-f-]{36}$/i.test(body.doctorId ?? "") ||
+        !["device", "service"].includes(saleKind) ||
         !body.companyAccountId ||
         !body.product?.trim() ||
         body.product.trim().length < 2 ||
@@ -791,7 +873,7 @@ export function buildApp() {
           .code(400)
           .type("application/problem+json")
           .send({
-            title: "Confira produto, valor, data, caixa e pagamentos",
+            title: "Confira produto ou serviço, médico, valor, data, caixa e pagamentos",
             status: 400,
           });
       const client = await pool.connect();
@@ -808,8 +890,8 @@ export function buildApp() {
             .send({ id: retry.rows[0].id, idempotent: true });
         }
         const valid = await client.query(
-          "SELECT p.id FROM patients p JOIN company_accounts c ON c.id=$2 AND c.active WHERE p.id=$1 AND p.archived_at IS NULL",
-          [body.patientId, body.companyAccountId],
+          "SELECT p.id FROM patients p JOIN company_accounts c ON c.id=$2 AND c.active JOIN users d ON d.id=$3 AND d.role='doctor' AND d.active WHERE p.id=$1 AND p.archived_at IS NULL",
+          [body.patientId, body.companyAccountId, body.doctorId],
         );
         if (!valid.rowCount) {
           await client.query("ROLLBACK");
@@ -817,17 +899,19 @@ export function buildApp() {
             .code(404)
             .type("application/problem+json")
             .send({
-              title: "Paciente ou caixa ativo não encontrado",
+              title: "Paciente, caixa ou médico ativo não encontrado",
               status: 404,
             });
         }
         const saleId = randomUUID();
         await client.query(
-          `INSERT INTO sales(id,client_request_id,patient_id,product,quantity,total_amount_cents,sold_on,company_account_id,notes,warranty_until,delivery_status,created_by) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12)`,
+          `INSERT INTO sales(id,client_request_id,patient_id,doctor_id,sale_kind,product,quantity,total_amount_cents,sold_on,company_account_id,notes,warranty_until,delivery_status,created_by) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14)`,
           [
             saleId,
             body.clientRequestId,
             body.patientId,
+            body.doctorId,
+            saleKind,
             body.product.trim(),
             body.quantity,
             body.totalAmountCents,
@@ -853,16 +937,18 @@ export function buildApp() {
           );
           if (item.receivedOn)
             await client.query(
-              `INSERT INTO financial_entries(id,entry_type,category,description,amount_cents,competence_on,occurred_on,payment_method,company_account_id,patient_id,sale_id,receivable_installment_id,created_by) VALUES($1,'income','hearing_aid_sale',$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)`,
+              `INSERT INTO financial_entries(id,entry_type,category,description,amount_cents,competence_on,occurred_on,payment_method,company_account_id,patient_id,doctor_id,sale_id,receivable_installment_id,created_by) VALUES($1,'income',$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13)`,
               [
                 randomUUID(),
-                `Venda: ${body.product.trim()}`,
+                saleKind === "service" ? "service" : "hearing_aid_sale",
+                `${saleKind === "service" ? "Serviço" : "Venda"}: ${body.product.trim()}`,
                 item.amountCents,
                 body.soldOn,
                 item.receivedOn,
                 item.paymentMethod,
                 body.companyAccountId,
                 body.patientId,
+                body.doctorId,
                 saleId,
                 installmentId,
                 request.currentUser!.id,
@@ -875,10 +961,11 @@ export function buildApp() {
           [90, "Acompanhamento pós-venda (90 dias)"],
         ] as const)
           await client.query(
-            `INSERT INTO follow_up_tasks(id,patient_id,title,due_on,notes,created_by,sale_id) VALUES($1,$2,$3,$4::date+$5::integer,'Gerado automaticamente pela venda',$6,$7)`,
+            `INSERT INTO follow_up_tasks(id,patient_id,doctor_id,title,due_on,notes,created_by,sale_id) VALUES($1,$2,$3,$4,$5::date+$6::integer,'Gerado automaticamente pela venda',$7,$8)`,
             [
               randomUUID(),
               body.patientId,
+              body.doctorId,
               title,
               body.soldOn,
               days,
@@ -899,6 +986,8 @@ export function buildApp() {
             saleId,
             {
               patientId: body.patientId,
+              doctorId: body.doctorId,
+              saleKind,
               totalAmountCents: body.totalAmountCents,
               installments: installments.length,
             },
@@ -929,7 +1018,7 @@ export function buildApp() {
     { preHandler: authenticated },
     async (request, reply) => {
       const sale = await pool.query(
-        `SELECT s.*,p.name patient_name,c.short_label company_account_label FROM sales s JOIN patients p ON p.id=s.patient_id JOIN company_accounts c ON c.id=s.company_account_id WHERE s.id=$1`,
+        `SELECT s.*,p.name patient_name,c.short_label company_account_label,d.name doctor_name FROM sales s JOIN patients p ON p.id=s.patient_id JOIN company_accounts c ON c.id=s.company_account_id LEFT JOIN users d ON d.id=s.doctor_id WHERE s.id=$1`,
         [request.params.id],
       );
       if (!sale.rowCount)
@@ -1001,7 +1090,7 @@ export function buildApp() {
           [request.params.id, request.currentUser!.id, reason],
         );
         await client.query(
-          `INSERT INTO financial_entries(id,entry_type,category,description,amount_cents,competence_on,occurred_on,payment_method,company_account_id,patient_id,sale_id,reversal_of_id,reversal_reason,created_by) SELECT gen_random_uuid(),CASE entry_type WHEN 'income' THEN 'expense' ELSE 'income' END,category,'Estorno: '||description,amount_cents,competence_on,(now() AT TIME ZONE 'America/Sao_Paulo')::date,payment_method,company_account_id,patient_id,sale_id,id,$2,$3 FROM financial_entries original WHERE sale_id=$1 AND reversal_of_id IS NULL AND NOT EXISTS(SELECT 1 FROM financial_entries reversal WHERE reversal.reversal_of_id=original.id)`,
+          `INSERT INTO financial_entries(id,entry_type,category,description,amount_cents,competence_on,occurred_on,payment_method,company_account_id,patient_id,doctor_id,sale_id,reversal_of_id,reversal_reason,created_by) SELECT gen_random_uuid(),CASE entry_type WHEN 'income' THEN 'expense' ELSE 'income' END,category,'Estorno: '||description,amount_cents,competence_on,(now() AT TIME ZONE 'America/Sao_Paulo')::date,payment_method,company_account_id,patient_id,doctor_id,sale_id,id,$2,$3 FROM financial_entries original WHERE sale_id=$1 AND reversal_of_id IS NULL AND NOT EXISTS(SELECT 1 FROM financial_entries reversal WHERE reversal.reversal_of_id=original.id)`,
           [request.params.id, reason, request.currentUser!.id],
         );
         await client.query(
@@ -1042,22 +1131,24 @@ export function buildApp() {
 
   app.get<{ Querystring: FinanceFilters }>("/api/finance/entries", { preHandler: authenticated }, async (request) => {
     const where = financeWhere(request.query, "f.occurred_on");
-    const result = await pool.query(`SELECT f.id,f.entry_type,f.category,f.description,f.amount_cents,f.competence_on,f.occurred_on,f.payment_method,f.company_account_id,c.short_label company_account_label,f.patient_id,p.name patient_name,f.sale_id,f.reversal_of_id,f.reversal_reason,f.notes,f.created_at,u.name created_by_name,EXISTS(SELECT 1 FROM financial_entries r WHERE r.reversal_of_id=f.id) reversed FROM financial_entries f JOIN company_accounts c ON c.id=f.company_account_id JOIN users u ON u.id=f.created_by LEFT JOIN patients p ON p.id=f.patient_id ${where.sql} ORDER BY f.occurred_on DESC,f.created_at DESC LIMIT 500`, where.values);
+    const result = await pool.query(`SELECT f.id,f.entry_type,f.category,f.description,f.amount_cents,f.competence_on,f.occurred_on,f.payment_method,f.company_account_id,c.short_label company_account_label,f.patient_id,p.name patient_name,f.doctor_id,d.name doctor_name,f.sale_id,f.reversal_of_id,f.reversal_reason,f.notes,f.created_at,u.name created_by_name,EXISTS(SELECT 1 FROM financial_entries r WHERE r.reversal_of_id=f.id) reversed FROM financial_entries f JOIN company_accounts c ON c.id=f.company_account_id JOIN users u ON u.id=f.created_by LEFT JOIN patients p ON p.id=f.patient_id LEFT JOIN users d ON d.id=f.doctor_id ${where.sql} ORDER BY f.occurred_on DESC,f.created_at DESC LIMIT 500`, where.values);
     return { entries: result.rows.map(row => ({ ...row, amount_cents: Number(row.amount_cents) })) };
   });
 
-  app.post<{ Body: { clientRequestId?: string; entryType?: string; category?: string; description?: string; amountCents?: number; competenceOn?: string; occurredOn?: string; paymentMethod?: string; companyAccountId?: string; patientId?: string; notes?: string } }>("/api/finance/entries", { preHandler: authenticated }, async (request, reply) => {
+  app.post<{ Body: { clientRequestId?: string; entryType?: string; category?: string; description?: string; amountCents?: number; competenceOn?: string; occurredOn?: string; paymentMethod?: string; companyAccountId?: string; patientId?: string; doctorId?: string; notes?: string } }>("/api/finance/entries", { preHandler: authenticated }, async (request, reply) => {
     const body = request.body ?? {};
-    if (!validFinancialEntry(body)) return reply.code(400).type("application/problem+json").send({ title: "Confira tipo, categoria, descrição, valor, datas, pagamento e caixa", status: 400 });
+    if (request.currentUser!.role === "operator" && body.entryType === "expense")
+      return reply.code(403).type("application/problem+json").send({ title: "Operador não pode fazer retirada do caixa", status: 403 });
+    if (!validFinancialEntry(body) || (body.category === "service" && !body.doctorId) || (body.patientId !== undefined && !/^[0-9a-f-]{36}$/i.test(body.patientId)) || (body.doctorId !== undefined && !/^[0-9a-f-]{36}$/i.test(body.doctorId))) return reply.code(400).type("application/problem+json").send({ title: "Confira tipo, categoria, descrição, valor, datas, pagamento, caixa, paciente e médico", status: 400 });
     const client = await pool.connect();
     try {
       await client.query("BEGIN");
       const retry = await client.query("SELECT id FROM financial_entries WHERE client_request_id=$1", [body.clientRequestId]);
       if (retry.rowCount) { await client.query("COMMIT"); return { id: retry.rows[0].id, idempotent: true }; }
-      const account = await client.query("SELECT id FROM company_accounts WHERE id=$1 AND active", [body.companyAccountId]);
-      if (!account.rowCount) { await client.query("ROLLBACK"); return reply.code(404).type("application/problem+json").send({ title: "Caixa ativo não encontrado", status: 404 }); }
+      const account = await client.query(`SELECT c.id FROM company_accounts c WHERE c.id=$1 AND c.active AND ($2::uuid IS NULL OR EXISTS(SELECT 1 FROM patients p WHERE p.id=$2 AND p.archived_at IS NULL)) AND ($3::uuid IS NULL OR EXISTS(SELECT 1 FROM users d WHERE d.id=$3 AND d.role='doctor' AND d.active))`, [body.companyAccountId,body.patientId || null,body.doctorId || null]);
+      if (!account.rowCount) { await client.query("ROLLBACK"); return reply.code(404).type("application/problem+json").send({ title: "Caixa, paciente ou médico ativo não encontrado", status: 404 }); }
       const id = randomUUID();
-      await client.query(`INSERT INTO financial_entries(id,client_request_id,entry_type,category,description,amount_cents,competence_on,occurred_on,payment_method,company_account_id,patient_id,notes,created_by) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13)`, [id,body.clientRequestId,body.entryType,body.category,body.description!.trim(),body.amountCents,body.competenceOn,body.occurredOn,body.paymentMethod,body.companyAccountId,body.patientId || null,body.notes?.trim() ?? "",request.currentUser!.id]);
+      await client.query(`INSERT INTO financial_entries(id,client_request_id,entry_type,category,description,amount_cents,competence_on,occurred_on,payment_method,company_account_id,patient_id,doctor_id,notes,created_by) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14)`, [id,body.clientRequestId,body.entryType,body.category,body.description!.trim(),body.amountCents,body.competenceOn,body.occurredOn,body.paymentMethod,body.companyAccountId,body.patientId || null,body.doctorId || null,body.notes?.trim() ?? "",request.currentUser!.id]);
       await client.query("INSERT INTO audit_events(user_id,action,entity_type,entity_id,details) VALUES($1,'create','financial_entry',$2,$3)", [request.currentUser!.id,id,{ entryType: body.entryType, amountCents: body.amountCents }]);
       await client.query("COMMIT");
       return reply.code(201).send({ id });
@@ -1084,12 +1175,12 @@ export function buildApp() {
       await client.query("BEGIN");
       const retry = await client.query("SELECT id FROM financial_entries WHERE client_request_id=$1", [clientRequestId]);
       if (retry.rowCount) { await client.query("COMMIT"); return { id: retry.rows[0].id, idempotent: true }; }
-      const installment = await client.query(`SELECT r.*,s.product,s.sold_on,s.company_account_id,s.patient_id,s.cancelled_at FROM receivable_installments r JOIN sales s ON s.id=r.sale_id WHERE r.id=$1 FOR UPDATE OF r`, [request.params.id]);
+      const installment = await client.query(`SELECT r.*,s.product,s.sale_kind,s.sold_on,s.company_account_id,s.patient_id,s.doctor_id,s.cancelled_at FROM receivable_installments r JOIN sales s ON s.id=r.sale_id WHERE r.id=$1 FOR UPDATE OF r`, [request.params.id]);
       if (!installment.rowCount || installment.rows[0].cancelled_at) { await client.query("ROLLBACK"); return reply.code(409).type("application/problem+json").send({ title: "Parcela não encontrada ou venda cancelada", status: 409 }); }
       const retryAfterLock = await client.query("SELECT id FROM financial_entries WHERE client_request_id=$1", [clientRequestId]);
       if (retryAfterLock.rowCount) { await client.query("COMMIT"); return { id: retryAfterLock.rows[0].id, idempotent: true }; }
       const row = installment.rows[0], id = randomUUID();
-      await client.query(`INSERT INTO financial_entries(id,client_request_id,entry_type,category,description,amount_cents,competence_on,occurred_on,payment_method,company_account_id,patient_id,sale_id,receivable_installment_id,created_by) VALUES($1,$2,'income','hearing_aid_sale',$3,$4,$5,$6,$7,$8,$9,$10,$11,$12)`, [id,clientRequestId,`Venda: ${row.product}`,row.amount_cents,row.sold_on,receivedOn,row.payment_method,row.company_account_id,row.patient_id,row.sale_id,row.id,request.currentUser!.id]);
+      await client.query(`INSERT INTO financial_entries(id,client_request_id,entry_type,category,description,amount_cents,competence_on,occurred_on,payment_method,company_account_id,patient_id,doctor_id,sale_id,receivable_installment_id,created_by) VALUES($1,$2,'income',$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14)`, [id,clientRequestId,row.sale_kind === "service" ? "service" : "hearing_aid_sale",`${row.sale_kind === "service" ? "Serviço" : "Venda"}: ${row.product}`,row.amount_cents,row.sold_on,receivedOn,row.payment_method,row.company_account_id,row.patient_id,row.doctor_id,row.sale_id,row.id,request.currentUser!.id]);
       await client.query("INSERT INTO audit_events(user_id,action,entity_type,entity_id,details) VALUES($1,'settle','receivable_installment',$2,$3)", [request.currentUser!.id,row.id,{ financialEntryId:id, receivedOn }]);
       await client.query("COMMIT");
       return reply.code(201).send({ id });
@@ -1099,7 +1190,7 @@ export function buildApp() {
   app.post<{ Params: { id: string }; Body: { clientRequestId?: string; reason?: string; occurredOn?: string } }>("/api/finance/entries/:id/reverse", { preHandler: admin }, async (request, reply) => {
     const { clientRequestId, reason, occurredOn } = request.body ?? {};
     if (!/^[0-9a-f-]{36}$/i.test(clientRequestId ?? "") || !reason?.trim() || reason.trim().length < 3 || !/^\d{4}-\d{2}-\d{2}$/.test(occurredOn ?? "")) return reply.code(400).type("application/problem+json").send({ title: "Informe data e motivo do estorno", status: 400 });
-    const result = await pool.query(`WITH reversed AS (INSERT INTO financial_entries(id,client_request_id,entry_type,category,description,amount_cents,competence_on,occurred_on,payment_method,company_account_id,patient_id,sale_id,reversal_of_id,reversal_reason,notes,created_by) SELECT $1,$2,CASE entry_type WHEN 'income' THEN 'expense' ELSE 'income' END,category,'Estorno: '||description,amount_cents,competence_on,$3,payment_method,company_account_id,patient_id,sale_id,id,$4,notes,$5 FROM financial_entries original WHERE id=$6 AND reversal_of_id IS NULL AND NOT EXISTS(SELECT 1 FROM financial_entries r WHERE r.reversal_of_id=original.id) RETURNING id),audited AS (INSERT INTO audit_events(user_id,action,entity_type,entity_id,details) SELECT $5,'reverse','financial_entry',id,jsonb_build_object('reversalOfId',$6::text,'reason',$4::text) FROM reversed) SELECT id FROM reversed`, [randomUUID(),clientRequestId,occurredOn,reason.trim(),request.currentUser!.id,request.params.id]);
+    const result = await pool.query(`WITH reversed AS (INSERT INTO financial_entries(id,client_request_id,entry_type,category,description,amount_cents,competence_on,occurred_on,payment_method,company_account_id,patient_id,doctor_id,sale_id,reversal_of_id,reversal_reason,notes,created_by) SELECT $1,$2,CASE entry_type WHEN 'income' THEN 'expense' ELSE 'income' END,category,'Estorno: '||description,amount_cents,competence_on,$3,payment_method,company_account_id,patient_id,doctor_id,sale_id,id,$4,notes,$5 FROM financial_entries original WHERE id=$6 AND reversal_of_id IS NULL AND NOT EXISTS(SELECT 1 FROM financial_entries r WHERE r.reversal_of_id=original.id) RETURNING id),audited AS (INSERT INTO audit_events(user_id,action,entity_type,entity_id,details) SELECT $5,'reverse','financial_entry',id,jsonb_build_object('reversalOfId',$6::text,'reason',$4::text) FROM reversed) SELECT id FROM reversed`, [randomUUID(),clientRequestId,occurredOn,reason.trim(),request.currentUser!.id,request.params.id]);
     if (!result.rowCount) return reply.code(409).type("application/problem+json").send({ title: "Lançamento não encontrado ou já estornado", status: 409 });
     return reply.code(201).send({ id: result.rows[0].id });
   });

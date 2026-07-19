@@ -68,3 +68,13 @@
 - **Who:** equipe técnica valida; Admin e Operador executam as jornadas cobertas.
 - **How:** três viewports, Compose real, seed/migrations repetidos, smoke API, axe e artefatos.
 - **How much:** duas dependências exclusivas de desenvolvimento e maior tempo de CI; sem impacto no contêiner de produção nem custo financeiro inventado.
+
+## PR 8 — Médicos, serviços, UX e LGPD
+
+- **What:** vínculo opcional de paciente no financeiro, médico obrigatório em serviço/retorno/venda, acesso Médico mínimo, bloqueio de saídas pelo Operador, caixas corrigidos, ficha em diálogos e funil opcional.
+- **Why:** representar a operação real sem duplicar módulos e impedir acesso ou retirada incompatível com o papel.
+- **Where:** migration aditiva, seed DEMO, autorização/API, CRM, ficha, Financeiro, testes DevSec e documentação.
+- **When:** evolução independente após a release inicial, nascida da `main` atualizada.
+- **Who:** Admin configura e vê tudo; Operador registra entradas e operação; Médico consulta apenas vínculos próprios.
+- **How:** `doctor_id` direto nas entidades existentes, projeção SQL mínima, constraints/triggers, diálogos HTML nativos, RBAC negativo e testes em PostgreSQL/Docker.
+- **How much:** uma migration e extensões diretas no monólito; impacto operacional moderado pela escolha obrigatória de médico, sem nova dependência ou custo financeiro estimado.

@@ -22,6 +22,7 @@ jobs:
       - run: docker compose exec -T app node dist/db/seed.js
       - run: node tests/dashboard-smoke.mjs
       - run: node tests/finance-smoke.mjs
+      - run: docker compose exec -T db psql -U fonolife -d fonolife < tests/database-devsec.sql
       - run: |
           docker compose exec -T db psql -U fonolife -d fonolife -v ON_ERROR_STOP=0 -c "UPDATE financial_entries SET amount_cents=1" 2>&1 | tee /tmp/update.log
           grep -q "histórico financeiro é imutável" /tmp/update.log
