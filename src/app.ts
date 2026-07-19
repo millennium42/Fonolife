@@ -1103,6 +1103,49 @@ export function buildApp() {
     return { consolidated: byAccount.reduce((total,row) => ({ balance_cents:total.balance_cents+row.balance_cents,income_cents:total.income_cents+row.income_cents,expense_cents:total.expense_cents+row.expense_cents }), { balance_cents:0,income_cents:0,expense_cents:0 }), byAccount };
   });
 
+  app.get("/api/dashboard", { preHandler: authenticated }, async (request) => {
+    const today = "(now() AT TIME ZONE 'America/Sao_Paulo')::date";
+    const [counts, queue] = await Promise.all([
+      pool.query(`SELECT
+        count(*) FILTER (WHERE t.due_on < ${today})::int overdue,
+        count(*) FILTER (WHERE t.due_on = ${today})::int today,
+        count(*)::int open_tasks,
+        (SELECT count(*)::int FROM patients WHERE archived_at IS NULL AND journey_status='adaptation') adaptation,
+        (SELECT count(*)::int FROM sales WHERE cancelled_at IS NULL AND date_trunc('month',sold_on)=date_trunc('month',${today})) month_sales
+        FROM follow_up_tasks t
+        WHERE t.completed_at IS NULL AND t.cancelled_at IS NULL`),
+      pool.query(`SELECT t.id task_id,t.patient_id,p.name patient_name,p.phone,t.title,t.due_on,
+        CASE WHEN t.due_on < ${today} THEN 'overdue' WHEN t.due_on = ${today} THEN 'today' ELSE 'upcoming' END timing
+        FROM follow_up_tasks t JOIN patients p ON p.id=t.patient_id
+        WHERE t.completed_at IS NULL AND t.cancelled_at IS NULL AND p.archived_at IS NULL
+        ORDER BY CASE WHEN t.due_on < ${today} THEN 0 WHEN t.due_on = ${today} THEN 1 ELSE 2 END,t.due_on,p.name LIMIT 12`),
+    ]);
+    const response: Record<string, unknown> = { ...counts.rows[0], queue: queue.rows };
+    if (request.currentUser!.role === "admin") {
+      const financial = await pool.query(`SELECT c.id company_account_id,c.short_label company_account_label,
+        COALESCE(sum(CASE WHEN f.entry_type='income' THEN f.amount_cents ELSE -f.amount_cents END),0) balance_cents,
+        COALESCE(sum(f.amount_cents) FILTER (WHERE f.entry_type='income' AND date_trunc('month',f.occurred_on)=date_trunc('month',${today})),0) month_income_cents,
+        COALESCE(sum(f.amount_cents) FILTER (WHERE f.entry_type='expense' AND date_trunc('month',f.occurred_on)=date_trunc('month',${today})),0) month_expense_cents
+        FROM company_accounts c LEFT JOIN financial_entries f ON f.company_account_id=c.id
+        GROUP BY c.id,c.short_label ORDER BY c.short_label`);
+      const byAccount = financial.rows.map((row) => ({
+        ...row,
+        balance_cents: Number(row.balance_cents),
+        month_income_cents: Number(row.month_income_cents),
+        month_expense_cents: Number(row.month_expense_cents),
+      }));
+      response.financial = {
+        consolidated: byAccount.reduce((total, row) => ({
+          balance_cents: total.balance_cents + row.balance_cents,
+          month_income_cents: total.month_income_cents + row.month_income_cents,
+          month_expense_cents: total.month_expense_cents + row.month_expense_cents,
+        }), { balance_cents: 0, month_income_cents: 0, month_expense_cents: 0 }),
+        byAccount,
+      };
+    }
+    return response;
+  });
+
   const publicDir = resolve("dist/public");
   if (existsSync(publicDir)) {
     app.register(staticFiles, { root: publicDir });
