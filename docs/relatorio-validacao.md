@@ -32,3 +32,11 @@ Limitação consciente: os testes de PostgreSQL real ainda são smoke do Compose
 # Evidência da PR 4
 
 Em 18/07/2026, `npm run typecheck` passou sem erros e `npm test` aprovou 9/9 testes. Os testes de venda cobrem soma exata em centavos e parcelamento mensal determinístico com ajuste do último dia do mês. A integração PostgreSQL/Docker permanece para a validação consolidada da release.
+
+## PR 5
+
+- Typecheck, 10/10 testes e build aprovados.
+- Realizado e previsão são separados; saldo usa somente realizado ativo.
+- Baixa é idempotente e estorno é exclusivo de Admin.
+- Operador recebe 403 em resumo agregado e estorno.
+- Filtros cobrem período, CNPJ, tipo, categoria e pagamento.

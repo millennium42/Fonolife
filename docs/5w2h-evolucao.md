@@ -38,3 +38,13 @@
 - Who: Admin e Operador autenticados.
 - How: transação idempotente, constraints e lançamentos compensatórios.
 - How much: uma migration, um módulo de domínio e extensões diretas na API/UI; impacto operacional reduzido ao fluxo já conhecido.
+
+## PR 5 — Financeiro com dois CNPJs
+
+- **What:** lançamento único, baixas, estornos, realizado, previsões e visões por caixa.
+- **Why:** separar os CNPJs sem duplicar o fluxo de trabalho.
+- **Where:** Financeiro, API, domínio, banco, testes e documentação.
+- **When:** após vendas criarem o ledger inicial.
+- **Who:** Operador lança/baixa; Admin vê saldos, relatórios e estorna.
+- **How:** ledger append-only, compensação e filtros parametrizados.
+- **How much:** impacto alto na integridade e simplificação operacional; sem custo financeiro estimado.

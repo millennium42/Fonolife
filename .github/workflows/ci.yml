@@ -13,5 +13,11 @@ jobs:
       - run: npm run build
       - run: docker compose up --build --wait
       - run: curl --fail http://localhost:3000/api/health
+      - run: node tests/finance-smoke.mjs
+      - run: |
+          docker compose exec -T db psql -U fonolife -d fonolife -v ON_ERROR_STOP=0 -c "UPDATE financial_entries SET amount_cents=1" 2>&1 | tee /tmp/update.log
+          grep -q "histórico financeiro é imutável" /tmp/update.log
+          docker compose exec -T db psql -U fonolife -d fonolife -v ON_ERROR_STOP=0 -c "DELETE FROM financial_entries" 2>&1 | tee /tmp/delete.log
+          grep -q "histórico financeiro é imutável" /tmp/delete.log
       - if: always()
         run: docker compose logs

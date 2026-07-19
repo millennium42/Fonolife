@@ -27,6 +27,7 @@ import {
   validateInstallments,
   type SaleInstallment,
 } from "./domain/sales.js";
+import { validFinancialEntry } from "./domain/finance.js";
 
 type User = {
   id: string;
@@ -1019,6 +1020,88 @@ export function buildApp() {
       }
     },
   );
+
+  type FinanceFilters = { from?: string; to?: string; companyAccountId?: string; entryType?: string; category?: string; paymentMethod?: string };
+  const financeWhere = (query: FinanceFilters, dateColumn: string) => {
+    const values: unknown[] = [], terms: string[] = [];
+    for (const [value, sql] of [
+      [query.from, `${dateColumn} >=`], [query.to, `${dateColumn} <=`],
+      [query.companyAccountId, "f.company_account_id ="], [query.entryType, "f.entry_type ="],
+      [query.category, "f.category ="], [query.paymentMethod, "f.payment_method ="],
+    ] as const) if (value) { values.push(value); terms.push(`${sql} $${values.length}`); }
+    return { values, sql: terms.length ? `WHERE ${terms.join(" AND ")}` : "" };
+  };
+
+  app.get<{ Querystring: FinanceFilters }>("/api/finance/entries", { preHandler: authenticated }, async (request) => {
+    const where = financeWhere(request.query, "f.occurred_on");
+    const result = await pool.query(`SELECT f.id,f.entry_type,f.category,f.description,f.amount_cents,f.competence_on,f.occurred_on,f.payment_method,f.company_account_id,c.short_label company_account_label,f.patient_id,p.name patient_name,f.sale_id,f.reversal_of_id,f.reversal_reason,f.notes,f.created_at,u.name created_by_name,EXISTS(SELECT 1 FROM financial_entries r WHERE r.reversal_of_id=f.id) reversed FROM financial_entries f JOIN company_accounts c ON c.id=f.company_account_id JOIN users u ON u.id=f.created_by LEFT JOIN patients p ON p.id=f.patient_id ${where.sql} ORDER BY f.occurred_on DESC,f.created_at DESC LIMIT 500`, where.values);
+    return { entries: result.rows.map(row => ({ ...row, amount_cents: Number(row.amount_cents) })) };
+  });
+
+  app.post<{ Body: { clientRequestId?: string; entryType?: string; category?: string; description?: string; amountCents?: number; competenceOn?: string; occurredOn?: string; paymentMethod?: string; companyAccountId?: string; patientId?: string; notes?: string } }>("/api/finance/entries", { preHandler: authenticated }, async (request, reply) => {
+    const body = request.body ?? {};
+    if (!validFinancialEntry(body)) return reply.code(400).type("application/problem+json").send({ title: "Confira tipo, categoria, descrição, valor, datas, pagamento e caixa", status: 400 });
+    const client = await pool.connect();
+    try {
+      await client.query("BEGIN");
+      const retry = await client.query("SELECT id FROM financial_entries WHERE client_request_id=$1", [body.clientRequestId]);
+      if (retry.rowCount) { await client.query("COMMIT"); return { id: retry.rows[0].id, idempotent: true }; }
+      const account = await client.query("SELECT id FROM company_accounts WHERE id=$1 AND active", [body.companyAccountId]);
+      if (!account.rowCount) { await client.query("ROLLBACK"); return reply.code(404).type("application/problem+json").send({ title: "Caixa ativo não encontrado", status: 404 }); }
+      const id = randomUUID();
+      await client.query(`INSERT INTO financial_entries(id,client_request_id,entry_type,category,description,amount_cents,competence_on,occurred_on,payment_method,company_account_id,patient_id,notes,created_by) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13)`, [id,body.clientRequestId,body.entryType,body.category,body.description!.trim(),body.amountCents,body.competenceOn,body.occurredOn,body.paymentMethod,body.companyAccountId,body.patientId || null,body.notes?.trim() ?? "",request.currentUser!.id]);
+      await client.query("INSERT INTO audit_events(user_id,action,entity_type,entity_id,details) VALUES($1,'create','financial_entry',$2,$3)", [request.currentUser!.id,id,{ entryType: body.entryType, amountCents: body.amountCents }]);
+      await client.query("COMMIT");
+      return reply.code(201).send({ id });
+    } catch (error: any) {
+      await client.query("ROLLBACK");
+      if (error?.code === "23505") { const retry = await pool.query("SELECT id FROM financial_entries WHERE client_request_id=$1", [body.clientRequestId]); if (retry.rowCount) return { id: retry.rows[0].id, idempotent: true }; }
+      throw error;
+    } finally { client.release(); }
+  });
+
+  app.get<{ Querystring: { from?: string; to?: string; companyAccountId?: string; paymentMethod?: string; status?: string } }>("/api/finance/receivables", { preHandler: authenticated }, async (request) => {
+    const values: unknown[] = [], terms: string[] = [];
+    for (const [value, sql] of [[request.query.from,"r.due_on >="],[request.query.to,"r.due_on <="],[request.query.companyAccountId,"s.company_account_id ="],[request.query.paymentMethod,"r.payment_method ="]] as const) if (value) { values.push(value); terms.push(`${sql} $${values.length}`); }
+    if (request.query.status) { values.push(request.query.status); terms.push(`CASE WHEN s.cancelled_at IS NOT NULL THEN 'cancelled' WHEN receipt.id IS NOT NULL THEN 'received' ELSE 'expected' END = $${values.length}`); }
+    const result = await pool.query(`SELECT r.id,r.amount_cents,r.due_on,r.payment_method,s.id sale_id,s.product,s.patient_id,p.name patient_name,s.company_account_id,c.short_label company_account_label,receipt.id receipt_id,receipt.occurred_on received_on,CASE WHEN s.cancelled_at IS NOT NULL THEN 'cancelled' WHEN receipt.id IS NOT NULL THEN 'received' ELSE 'expected' END status FROM receivable_installments r JOIN sales s ON s.id=r.sale_id JOIN patients p ON p.id=s.patient_id JOIN company_accounts c ON c.id=s.company_account_id LEFT JOIN LATERAL (SELECT f.id,f.occurred_on FROM financial_entries f WHERE f.receivable_installment_id=r.id AND f.reversal_of_id IS NULL AND NOT EXISTS(SELECT 1 FROM financial_entries reversal WHERE reversal.reversal_of_id=f.id) ORDER BY f.created_at DESC LIMIT 1) receipt ON true ${terms.length ? `WHERE ${terms.join(" AND ")}` : ""} ORDER BY r.due_on,r.id LIMIT 500`, values);
+    return { receivables: result.rows.map(row => ({ ...row, amount_cents: Number(row.amount_cents) })) };
+  });
+
+  app.post<{ Params: { id: string }; Body: { clientRequestId?: string; receivedOn?: string } }>("/api/finance/receivables/:id/settle", { preHandler: authenticated }, async (request, reply) => {
+    const { clientRequestId, receivedOn } = request.body ?? {};
+    if (!/^[0-9a-f-]{36}$/i.test(clientRequestId ?? "") || !/^\d{4}-\d{2}-\d{2}$/.test(receivedOn ?? "")) return reply.code(400).type("application/problem+json").send({ title: "Informe a data do recebimento", status: 400 });
+    const client = await pool.connect();
+    try {
+      await client.query("BEGIN");
+      const retry = await client.query("SELECT id FROM financial_entries WHERE client_request_id=$1", [clientRequestId]);
+      if (retry.rowCount) { await client.query("COMMIT"); return { id: retry.rows[0].id, idempotent: true }; }
+      const installment = await client.query(`SELECT r.*,s.product,s.sold_on,s.company_account_id,s.patient_id,s.cancelled_at FROM receivable_installments r JOIN sales s ON s.id=r.sale_id WHERE r.id=$1 FOR UPDATE OF r`, [request.params.id]);
+      if (!installment.rowCount || installment.rows[0].cancelled_at) { await client.query("ROLLBACK"); return reply.code(409).type("application/problem+json").send({ title: "Parcela não encontrada ou venda cancelada", status: 409 }); }
+      const retryAfterLock = await client.query("SELECT id FROM financial_entries WHERE client_request_id=$1", [clientRequestId]);
+      if (retryAfterLock.rowCount) { await client.query("COMMIT"); return { id: retryAfterLock.rows[0].id, idempotent: true }; }
+      const row = installment.rows[0], id = randomUUID();
+      await client.query(`INSERT INTO financial_entries(id,client_request_id,entry_type,category,description,amount_cents,competence_on,occurred_on,payment_method,company_account_id,patient_id,sale_id,receivable_installment_id,created_by) VALUES($1,$2,'income','hearing_aid_sale',$3,$4,$5,$6,$7,$8,$9,$10,$11,$12)`, [id,clientRequestId,`Venda: ${row.product}`,row.amount_cents,row.sold_on,receivedOn,row.payment_method,row.company_account_id,row.patient_id,row.sale_id,row.id,request.currentUser!.id]);
+      await client.query("INSERT INTO audit_events(user_id,action,entity_type,entity_id,details) VALUES($1,'settle','receivable_installment',$2,$3)", [request.currentUser!.id,row.id,{ financialEntryId:id, receivedOn }]);
+      await client.query("COMMIT");
+      return reply.code(201).send({ id });
+    } catch (error: any) { await client.query("ROLLBACK"); const retry = await pool.query("SELECT id FROM financial_entries WHERE client_request_id=$1", [clientRequestId]); if (retry.rowCount) return { id: retry.rows[0].id, idempotent: true }; throw error; } finally { client.release(); }
+  });
+
+  app.post<{ Params: { id: string }; Body: { clientRequestId?: string; reason?: string; occurredOn?: string } }>("/api/finance/entries/:id/reverse", { preHandler: admin }, async (request, reply) => {
+    const { clientRequestId, reason, occurredOn } = request.body ?? {};
+    if (!/^[0-9a-f-]{36}$/i.test(clientRequestId ?? "") || !reason?.trim() || reason.trim().length < 3 || !/^\d{4}-\d{2}-\d{2}$/.test(occurredOn ?? "")) return reply.code(400).type("application/problem+json").send({ title: "Informe data e motivo do estorno", status: 400 });
+    const result = await pool.query(`WITH reversed AS (INSERT INTO financial_entries(id,client_request_id,entry_type,category,description,amount_cents,competence_on,occurred_on,payment_method,company_account_id,patient_id,sale_id,reversal_of_id,reversal_reason,notes,created_by) SELECT $1,$2,CASE entry_type WHEN 'income' THEN 'expense' ELSE 'income' END,category,'Estorno: '||description,amount_cents,competence_on,$3,payment_method,company_account_id,patient_id,sale_id,id,$4,notes,$5 FROM financial_entries original WHERE id=$6 AND reversal_of_id IS NULL AND NOT EXISTS(SELECT 1 FROM financial_entries r WHERE r.reversal_of_id=original.id) RETURNING id),audited AS (INSERT INTO audit_events(user_id,action,entity_type,entity_id,details) SELECT $5,'reverse','financial_entry',id,jsonb_build_object('reversalOfId',$6::text,'reason',$4::text) FROM reversed) SELECT id FROM reversed`, [randomUUID(),clientRequestId,occurredOn,reason.trim(),request.currentUser!.id,request.params.id]);
+    if (!result.rowCount) return reply.code(409).type("application/problem+json").send({ title: "Lançamento não encontrado ou já estornado", status: 409 });
+    return reply.code(201).send({ id: result.rows[0].id });
+  });
+
+  app.get<{ Querystring: FinanceFilters }>("/api/finance/summary", { preHandler: admin }, async (request) => {
+    const where = financeWhere(request.query, "f.occurred_on");
+    const result = await pool.query(`SELECT c.id company_account_id,c.short_label company_account_label,COALESCE(sum(CASE WHEN f.entry_type='income' THEN f.amount_cents ELSE -f.amount_cents END),0) balance_cents,COALESCE(sum(f.amount_cents) FILTER(WHERE f.entry_type='income'),0) income_cents,COALESCE(sum(f.amount_cents) FILTER(WHERE f.entry_type='expense'),0) expense_cents FROM financial_entries f JOIN company_accounts c ON c.id=f.company_account_id ${where.sql} GROUP BY c.id,c.short_label ORDER BY c.short_label`, where.values);
+    const byAccount = result.rows.map(row => ({ ...row, balance_cents:Number(row.balance_cents), income_cents:Number(row.income_cents), expense_cents:Number(row.expense_cents) }));
+    return { consolidated: byAccount.reduce((total,row) => ({ balance_cents:total.balance_cents+row.balance_cents,income_cents:total.income_cents+row.income_cents,expense_cents:total.expense_cents+row.expense_cents }), { balance_cents:0,income_cents:0,expense_cents:0 }), byAccount };
+  });
 
   const publicDir = resolve("dist/public");
   if (existsSync(publicDir)) {

@@ -49,6 +49,43 @@ type CompanyAccount = {
   trade_name: string;
   active: boolean;
 };
+type FinancialEntry = {
+  id: string;
+  entry_type: "income" | "expense";
+  category: string;
+  description: string;
+  amount_cents: number;
+  occurred_on: string;
+  payment_method: string;
+  company_account_label: string;
+  reversal_of_id: string | null;
+  reversed: boolean;
+};
+type Receivable = {
+  id: string;
+  amount_cents: number;
+  due_on: string;
+  payment_method: string;
+  patient_name: string;
+  product: string;
+  company_account_label: string;
+  status: "expected" | "received" | "cancelled";
+  received_on: string | null;
+};
+type FinanceSummary = {
+  consolidated: {
+    balance_cents: number;
+    income_cents: number;
+    expense_cents: number;
+  };
+  byAccount: {
+    company_account_id: string;
+    company_account_label: string;
+    balance_cents: number;
+    income_cents: number;
+    expense_cents: number;
+  }[];
+};
 const statuses: { [key: string]: string } = {
   new_lead: "Novo lead",
   screening: "Triagem",
@@ -986,6 +1023,472 @@ function Patients() {
   );
 }
 
+const money = (value: number) =>
+  new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(
+    value / 100,
+  );
+const paymentLabels: Record<string, string> = {
+  cash: "Dinheiro",
+  pix: "PIX",
+  debit_card: "Débito",
+  credit_card: "Crédito",
+  bank_transfer: "Transferência",
+  boleto: "Boleto",
+  other: "Outro",
+};
+const categoryLabels: Record<string, string> = {
+  hearing_aid_sale: "Venda de aparelho",
+  service: "Serviço",
+  maintenance: "Manutenção",
+  other_income: "Outras entradas",
+  supplier: "Fornecedor",
+  rent: "Aluguel",
+  payroll: "Folha",
+  tax: "Imposto",
+  utilities: "Utilidades",
+  marketing: "Marketing",
+  other_expense: "Outras saídas",
+};
+
+function Finance({ user }: { user: User }) {
+  const entryRequestId = useRef(crypto.randomUUID());
+  const operationIds = useRef(new Map<string, string>());
+  const [tab, setTab] = useState<"entries" | "receivables">("entries"),
+    [entries, setEntries] = useState<FinancialEntry[]>([]),
+    [receivables, setReceivables] = useState<Receivable[]>([]),
+    [accounts, setAccounts] = useState<CompanyAccount[]>([]),
+    [summary, setSummary] = useState<FinanceSummary | null>(null),
+    [showForm, setShowForm] = useState(false),
+    [error, setError] = useState(""),
+    [message, setMessage] = useState(""),
+    [filters, setFilters] = useState({
+      from: "",
+      to: "",
+      companyAccountId: "",
+      entryType: "",
+      category: "",
+      paymentMethod: "",
+    });
+  const query = () =>
+    new URLSearchParams(
+      Object.entries(filters).filter(([, value]) => value),
+    ).toString();
+  async function load() {
+    try {
+      const suffix = query();
+      const [entryData, receivableData, accountData, summaryData] =
+        await Promise.all([
+          api(`/api/finance/entries?${suffix}`),
+          api(
+            `/api/finance/receivables?${new URLSearchParams(Object.entries(filters).filter(([key, value]) => value && !["entryType", "category"].includes(key))).toString()}`,
+          ),
+          api("/api/company-accounts"),
+          user.role === "admin"
+            ? api(`/api/finance/summary?${suffix}`)
+            : Promise.resolve(null),
+        ]);
+      setEntries(entryData.entries);
+      setReceivables(receivableData.receivables);
+      setAccounts(accountData.accounts.filter((a: CompanyAccount) => a.active));
+      setSummary(summaryData);
+      setError("");
+    } catch (reason) {
+      setError((reason as Error).message);
+    }
+  }
+  useEffect(() => {
+    load();
+  }, [JSON.stringify(filters)]);
+  async function createEntry(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const form = event.currentTarget,
+      value = Object.fromEntries(new FormData(form));
+    if (
+      !confirm(
+        `Confirmar ${value.entryType === "income" ? "entrada" : "saída"} de R$ ${value.amount} no caixa escolhido?`,
+      )
+    )
+      return;
+    try {
+      await api("/api/finance/entries", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          clientRequestId: entryRequestId.current,
+          entryType: value.entryType,
+          category: value.category,
+          description: value.description,
+          amountCents: cents(String(value.amount)),
+          competenceOn: value.competenceOn,
+          occurredOn: value.occurredOn,
+          paymentMethod: value.paymentMethod,
+          companyAccountId: value.companyAccountId,
+          notes: value.notes,
+        }),
+      });
+      setShowForm(false);
+      entryRequestId.current = crypto.randomUUID();
+      setMessage("Lançamento registrado.");
+      form.reset();
+      await load();
+    } catch (reason) {
+      setError((reason as Error).message);
+    }
+  }
+  async function settle(item: Receivable) {
+    if (
+      !confirm(
+        `Confirmar recebimento de ${money(item.amount_cents)} de ${item.patient_name}?`,
+      )
+    )
+      return;
+    try {
+      const requestId = operationIds.current.get(item.id) ?? crypto.randomUUID();
+      operationIds.current.set(item.id, requestId);
+      await api(`/api/finance/receivables/${item.id}/settle`, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          clientRequestId: requestId,
+          receivedOn: today(),
+        }),
+      });
+      operationIds.current.delete(item.id);
+      setMessage("Recebimento confirmado.");
+      await load();
+    } catch (reason) {
+      setError((reason as Error).message);
+    }
+  }
+  async function reverse(item: FinancialEntry) {
+    const reason = prompt(`Motivo do estorno de ${money(item.amount_cents)}:`);
+    if (!reason) return;
+    if (
+      !confirm(
+        "Confirmar estorno? Um lançamento compensatório será criado e o original permanecerá no histórico.",
+      )
+    )
+      return;
+    try {
+      const operationKey = `reverse-${item.id}`;
+      const requestId = operationIds.current.get(operationKey) ?? crypto.randomUUID();
+      operationIds.current.set(operationKey, requestId);
+      await api(`/api/finance/entries/${item.id}/reverse`, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          clientRequestId: requestId,
+          reason,
+          occurredOn: today(),
+        }),
+      });
+      operationIds.current.delete(operationKey);
+      setMessage("Estorno registrado.");
+      await load();
+    } catch (reason) {
+      setError((reason as Error).message);
+    }
+  }
+  return (
+    <>
+      {message && (
+        <p className="success" role="status">
+          {message}
+        </p>
+      )}
+      {error && (
+        <p className="error" role="alert">
+          {error}
+        </p>
+      )}
+      <div className="finance-actions">
+        <div className="filter-tabs" role="group" aria-label="Visão financeira">
+          <button
+            className={tab === "entries" ? "active" : ""}
+            onClick={() => setTab("entries")}
+          >
+            Realizado
+          </button>
+          <button
+            className={tab === "receivables" ? "active" : ""}
+            onClick={() => setTab("receivables")}
+          >
+            Previsões
+          </button>
+        </div>
+        <button onClick={() => setShowForm(true)}>+ Novo lançamento</button>
+      </div>
+      <details className="panel finance-filters">
+        <summary>Filtrar resultados</summary>
+        <div className="fields">
+          <label>
+            De
+            <input
+              type="date"
+              value={filters.from}
+              onChange={(e) => setFilters({ ...filters, from: e.target.value })}
+            />
+          </label>
+          <label>
+            Até
+            <input
+              type="date"
+              value={filters.to}
+              onChange={(e) => setFilters({ ...filters, to: e.target.value })}
+            />
+          </label>
+          <label>
+            Caixa/CNPJ
+            <select
+              value={filters.companyAccountId}
+              onChange={(e) =>
+                setFilters({ ...filters, companyAccountId: e.target.value })
+              }
+            >
+              <option value="">Todos</option>
+              {accounts.map((a) => (
+                <option key={a.id} value={a.id}>
+                  {a.short_label}
+                </option>
+              ))}
+            </select>
+          </label>
+          {tab === "entries" && (
+            <>
+              <label>
+                Tipo
+                <select
+                  value={filters.entryType}
+                  onChange={(e) =>
+                    setFilters({ ...filters, entryType: e.target.value })
+                  }
+                >
+                  <option value="">Todos</option>
+                  <option value="income">Entrada</option>
+                  <option value="expense">Saída</option>
+                </select>
+              </label>
+              <label>
+                Categoria
+                <select
+                  value={filters.category}
+                  onChange={(e) =>
+                    setFilters({ ...filters, category: e.target.value })
+                  }
+                >
+                  <option value="">Todas</option>
+                  {Object.entries(categoryLabels).map(([v, l]) => (
+                    <option key={v} value={v}>
+                      {l}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            </>
+          )}
+          <label>
+            Pagamento
+            <select
+              value={filters.paymentMethod}
+              onChange={(e) =>
+                setFilters({ ...filters, paymentMethod: e.target.value })
+              }
+            >
+              <option value="">Todos</option>
+              {Object.entries(paymentLabels).map(([v, l]) => (
+                <option key={v} value={v}>
+                  {l}
+                </option>
+              ))}
+            </select>
+          </label>
+        </div>
+      </details>
+      {user.role === "admin" && tab === "entries" && summary && (
+        <>
+          <div className="finance-summary">
+            <article>
+              <span>Saldo consolidado</span>
+              <strong>{money(summary.consolidated.balance_cents)}</strong>
+            </article>
+            <article>
+              <span>Entradas</span>
+              <strong>{money(summary.consolidated.income_cents)}</strong>
+            </article>
+            <article>
+              <span>Saídas</span>
+              <strong>{money(summary.consolidated.expense_cents)}</strong>
+            </article>
+          </div>
+          <div className="finance-accounts">
+            {summary.byAccount.map((item) => (
+              <article className="panel" key={item.company_account_id}>
+                <strong>{item.company_account_label}</strong>
+                <span>Saldo {money(item.balance_cents)}</span>
+                <small>
+                  Entradas {money(item.income_cents)} · Saídas{" "}
+                  {money(item.expense_cents)}
+                </small>
+              </article>
+            ))}
+          </div>
+        </>
+      )}
+      <section className="panel finance-list">
+        <h2>
+          {tab === "entries" ? "Lançamentos realizados" : "Parcelas previstas"}
+        </h2>
+        {tab === "entries" ? (
+          entries.length ? (
+            entries.map((item) => (
+              <article key={item.id}>
+                <div>
+                  <strong>{item.description}</strong>
+                  <small>
+                    {date(item.occurred_on)} · {item.company_account_label} ·{" "}
+                    {paymentLabels[item.payment_method]}
+                  </small>
+                </div>
+                <strong className={item.entry_type}>
+                  {item.entry_type === "income" ? "+" : "−"}{" "}
+                  {money(item.amount_cents)}
+                </strong>
+                {user.role === "admin" &&
+                  !item.reversal_of_id &&
+                  !item.reversed && (
+                    <button className="secondary" onClick={() => reverse(item)}>
+                      Estornar
+                    </button>
+                  )}
+              </article>
+            ))
+          ) : (
+            <p>Nenhum lançamento no período.</p>
+          )
+        ) : receivables.length ? (
+          receivables.map((item) => (
+            <article key={item.id}>
+              <div>
+                <strong>
+                  {item.patient_name} · {item.product}
+                </strong>
+                <small>
+                  Vence {date(item.due_on)} · {item.company_account_label} ·{" "}
+                  {paymentLabels[item.payment_method]}
+                </small>
+              </div>
+              <strong>{money(item.amount_cents)}</strong>
+              {item.status === "expected" ? (
+                <button onClick={() => settle(item)}>
+                  Confirmar recebimento
+                </button>
+              ) : (
+                <span className={`status ${item.status}`}>
+                  {item.status === "received" ? "Recebido" : "Cancelado"}
+                </span>
+              )}
+            </article>
+          ))
+        ) : (
+          <p>Nenhuma previsão no período.</p>
+        )}
+      </section>
+      {showForm && (
+        <div
+          className="modal"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="finance-form-title"
+        >
+          <form className="panel form" onSubmit={createEntry}>
+            <h2 id="finance-form-title">Novo lançamento</h2>
+            <div className="fields">
+              <label>
+                Tipo
+                <select name="entryType" required>
+                  <option value="income">Entrada</option>
+                  <option value="expense">Saída</option>
+                </select>
+              </label>
+              <label>
+                Categoria
+                <select name="category" required>
+                  {Object.entries(categoryLabels).map(([v, l]) => (
+                    <option key={v} value={v}>
+                      {l}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label>
+                Valor (R$)
+                <input name="amount" inputMode="decimal" required />
+              </label>
+              <label>
+                Competência
+                <input
+                  name="competenceOn"
+                  type="date"
+                  defaultValue={today()}
+                  required
+                />
+              </label>
+              <label>
+                Pago/recebido em
+                <input
+                  name="occurredOn"
+                  type="date"
+                  defaultValue={today()}
+                  required
+                />
+              </label>
+              <label>
+                Forma
+                <select name="paymentMethod" defaultValue="pix">
+                  {Object.entries(paymentLabels).map(([v, l]) => (
+                    <option key={v} value={v}>
+                      {l}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label>
+                Vai para qual caixa/CNPJ?
+                <select name="companyAccountId" required>
+                  <option value="">Escolha</option>
+                  {accounts.map((a) => (
+                    <option key={a.id} value={a.id}>
+                      {a.short_label} — {a.trade_name}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            </div>
+            <label>
+              Descrição
+              <input name="description" minLength={2} required />
+            </label>
+            <label>
+              Observação
+              <textarea name="notes" rows={2} />
+            </label>
+            <div className="actions">
+              <button>Confirmar lançamento</button>
+              <button
+                type="button"
+                className="secondary"
+                onClick={() => setShowForm(false)}
+              >
+                Cancelar
+              </button>
+            </div>
+          </form>
+        </div>
+      )}
+    </>
+  );
+}
+
 function App() {
   const [user, setUser] = useState<User | null>(null),
     [loading, setLoading] = useState(true),
@@ -1103,7 +1606,7 @@ function App() {
                   ? "Veja quem precisa de contato ou cuidado hoje."
                   : page === "Início"
                     ? "O que precisa da sua atenção hoje."
-                    : "Esta área será entregue na próxima etapa."}
+                    : "Registre uma vez e acompanhe realizado e previsões."}
             </p>
           </div>
         </div>
@@ -1111,6 +1614,8 @@ function App() {
           <Patients />
         ) : page === "Acompanhamento" ? (
           <FollowUps />
+        ) : page === "Financeiro" ? (
+          <Finance user={user} />
         ) : (
           <section className="empty">
             <h2>
