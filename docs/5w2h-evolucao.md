@@ -48,3 +48,13 @@
 - **Who:** Operador lança/baixa; Admin vê saldos, relatórios e estorna.
 - **How:** ledger append-only, compensação e filtros parametrizados.
 - **How much:** impacto alto na integridade e simplificação operacional; sem custo financeiro estimado.
+
+## PR 6 — Dashboard operacional
+
+- **What:** indicadores operacionais, fila acionável e resumo financeiro realizado exclusivo do Admin.
+- **Why:** colocar atrasos e retornos do dia na primeira tela, reduzindo contatos esquecidos.
+- **Where:** endpoint `/api/dashboard`, tela Início, testes e documentação.
+- **When:** após CRM, acompanhamento, vendas e financeiro fornecerem dados reais.
+- **Who:** Admin e Operador veem operação; somente Admin vê valores agregados.
+- **How:** consultas SQL diretas, cards compactos e links para ficha ou Acompanhamento.
+- **How much:** uma rota e uma tela sem migration ou dependência; impacto operacional imediato e baixo impacto técnico.

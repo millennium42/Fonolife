@@ -86,6 +86,18 @@ type FinanceSummary = {
     expense_cents: number;
   }[];
 };
+type DashboardData = {
+  overdue: number;
+  today: number;
+  open_tasks: number;
+  adaptation: number;
+  month_sales: number;
+  queue: Pick<FollowUp, "patient_id" | "patient_name" | "phone" | "task_id" | "title" | "due_on" | "timing">[];
+  financial?: {
+    consolidated: { balance_cents: number; month_income_cents: number; month_expense_cents: number };
+    byAccount: { company_account_id: string; company_account_label: string; balance_cents: number; month_income_cents: number; month_expense_cents: number }[];
+  };
+};
 const statuses: { [key: string]: string } = {
   new_lead: "Novo lead",
   screening: "Triagem",
@@ -880,9 +892,9 @@ function FollowUps() {
   );
 }
 
-function Patients() {
+function Patients({ initialPatientId }: { initialPatientId?: string | null }) {
   const [patients, setPatients] = useState<Patient[]>([]),
-    [selected, setSelected] = useState<string | null>(null),
+    [selected, setSelected] = useState<string | null>(initialPatientId ?? null),
     [creating, setCreating] = useState(false),
     [search, setSearch] = useState(""),
     [status, setStatus] = useState(""),
@@ -1489,11 +1501,25 @@ function Finance({ user }: { user: User }) {
   );
 }
 
+function Dashboard({ user, openPatient, openFollowUps }: { user: User; openPatient: (id: string) => void; openFollowUps: () => void }) {
+  const [data, setData] = useState<DashboardData | null>(null), [error, setError] = useState("");
+  useEffect(() => { api("/api/dashboard").then(setData).catch((reason) => setError((reason as Error).message)); }, []);
+  if (error) return <p className="error" role="alert">{error}</p>;
+  if (!data) return <p aria-live="polite">Carregando resumo…</p>;
+  const cards = [["Contatos atrasados", data.overdue, openFollowUps], ["Retornos de hoje", data.today, openFollowUps], ["Tarefas abertas", data.open_tasks, openFollowUps], ["Em adaptação", data.adaptation, openFollowUps], ["Vendas no mês", data.month_sales, undefined]] as const;
+  return <>
+    <section className="dashboard-cards" aria-label="Resumo operacional">{cards.map(([label, value, action]) => <button className="dashboard-card" key={label} onClick={action} disabled={!action}><span>{label}</span><strong>{value}</strong></button>)}</section>
+    {user.role === "admin" && data.financial && <section className="panel"><h2>Financeiro realizado</h2><div className="dashboard-finance"><article><span>Saldo consolidado</span><strong>{money(data.financial.consolidated.balance_cents)}</strong></article><article><span>Entradas no mês</span><strong>{money(data.financial.consolidated.month_income_cents)}</strong></article><article><span>Saídas no mês</span><strong>{money(data.financial.consolidated.month_expense_cents)}</strong></article></div><ul className="account-balances">{data.financial.byAccount.map((account) => <li key={account.company_account_id}><span>{account.company_account_label}</span><strong>{money(account.balance_cents)}</strong></li>)}</ul></section>}
+    <section className="panel dashboard-queue"><div className="section-heading"><h2>Próximas ações</h2><button className="secondary" onClick={openFollowUps}>Ver acompanhamento</button></div>{data.queue.length === 0 ? <div className="empty"><h3>Nenhuma tarefa aberta</h3><p>Novos retornos aparecerão aqui por ordem de urgência.</p></div> : data.queue.map((item) => <button className="patient-row" onClick={() => openPatient(item.patient_id)} key={item.task_id}><span><strong>{item.patient_name}</strong><small>{item.title} · {item.phone}</small></span><span className={item.timing === "overdue" ? "overdue" : ""}>{item.timing === "overdue" ? "Atrasado" : item.timing === "today" ? "Hoje" : date(item.due_on)} →</span></button>)}</section>
+  </>;
+}
+
 function App() {
   const [user, setUser] = useState<User | null>(null),
     [loading, setLoading] = useState(true),
     [error, setError] = useState(""),
-    [page, setPage] = useState("Início");
+    [page, setPage] = useState("Início"),
+    [patientId, setPatientId] = useState<string | null>(null);
   useEffect(() => {
     fetch("/api/auth/me")
       .then((r) => (r.ok ? r.json() : null))
@@ -1611,25 +1637,12 @@ function App() {
           </div>
         </div>
         {page === "Pacientes" ? (
-          <Patients />
+          <Patients initialPatientId={patientId} />
         ) : page === "Acompanhamento" ? (
           <FollowUps />
         ) : page === "Financeiro" ? (
           <Finance user={user} />
-        ) : (
-          <section className="empty">
-            <h2>
-              {page === "Início"
-                ? "Tudo pronto para começar"
-                : "Nenhum registro por aqui"}
-            </h2>
-            <p>
-              {page === "Início"
-                ? "Use Pacientes para iniciar o atendimento."
-                : "Os dados aparecerão aqui nas próximas entregas."}
-            </p>
-          </section>
-        )}
+        ) : <Dashboard user={user} openPatient={(id) => { setPatientId(id); setPage("Pacientes"); }} openFollowUps={() => setPage("Acompanhamento")} />}
       </main>
     </div>
   );

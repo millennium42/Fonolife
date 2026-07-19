@@ -40,3 +40,10 @@ Em 18/07/2026, `npm run typecheck` passou sem erros e `npm test` aprovou 9/9 tes
 - Baixa é idempotente e estorno é exclusivo de Admin.
 - Operador recebe 403 em resumo agregado e estorno.
 - Filtros cobrem período, CNPJ, tipo, categoria e pagamento.
+
+## PR 6
+
+- Dashboard consulta atrasados, hoje, tarefas abertas, adaptação, vendas do mês e fila priorizada.
+- A resposta do Operador não contém `financial`; o Admin recebe realizado consolidado, por CNPJ e entradas/saídas do mês.
+- Cards levam ao Acompanhamento e itens da fila abrem a ficha do paciente; não há gráficos.
+- `npm run typecheck`, `npm test` e `npm run build`: executar após a implementação.
