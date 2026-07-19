@@ -29,3 +29,12 @@
 - **Who:** Admin e Operador agendam e encerram retornos.
 - **How:** estado histórico, datas de São Paulo e próxima ação derivada.
 - **How much:** impacto positivo na fila diária; sem custo financeiro estimado.
+# PR 4 — vendas de aparelhos
+
+- What: venda na ficha, parcelas, recebimentos, entrega, garantia, cancelamento e follow-ups automáticos.
+- Why: concluir a venda sem romper o fluxo único do paciente e preservar consistência financeira.
+- Where: domínio, PostgreSQL, API, ficha do paciente, testes e documentação.
+- When: quarta entrega incremental.
+- Who: Admin e Operador autenticados.
+- How: transação idempotente, constraints e lançamentos compensatórios.
+- How much: uma migration, um módulo de domínio e extensões diretas na API/UI; impacto operacional reduzido ao fluxo já conhecido.

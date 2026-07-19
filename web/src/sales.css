@@ -1,0 +1,4 @@
+button,input,select,textarea{font:inherit}
+fieldset{border:1px solid #c8d5d9;border-radius:8px;margin:1rem 0;padding:1rem}
+legend{font-weight:700}
+.hint{color:#526a73;font-size:.92rem}
