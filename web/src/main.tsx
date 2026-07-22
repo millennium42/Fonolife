@@ -572,21 +572,21 @@ function PatientAttachments({ patientId }: { patientId: string }) {
   };
 
   return (
-    <div style={{ marginTop: "1.5rem", padding: "1rem", border: "1px solid #ddd", borderRadius: "6px" }}>
+    <div style={{ marginTop: "1.5rem", padding: "1rem", border: "1px solid #ddd", borderRadius: "6px", maxWidth: "100%", boxSizing: "border-box" }}>
       <h3>Exames & Laudos Audiométricos</h3>
       {error && <p className="error" role="alert">{error}</p>}
-      <label style={{ display: "block", margin: "0.5rem 0" }}>
+      <label style={{ display: "block", margin: "0.5rem 0", maxWidth: "100%" }}>
         <span>+ Anexar Laudo (PDF / Imagem máx 10MB):</span>{" "}
-        <input type="file" accept=".pdf,.jpg,.jpeg,.png,.webp" onChange={handleUpload} disabled={uploading} />
+        <input type="file" accept=".pdf,.jpg,.jpeg,.png,.webp" onChange={handleUpload} disabled={uploading} style={{ maxWidth: "100%", boxSizing: "border-box" }} />
       </label>
       {uploading && <p>Enviando exame...</p>}
       {attachments.length === 0 ? (
         <p style={{ fontSize: "0.85rem", color: "#666" }}>Nenhum laudo anexado a este paciente.</p>
       ) : (
-        <ul style={{ listStyle: "none", padding: 0 }}>
+        <ul style={{ listStyle: "none", padding: 0, margin: 0 }}>
           {attachments.map((a) => (
-            <li key={a.id} style={{ padding: "0.5rem 0", borderBottom: "1px solid #eee", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-              <span>📄 <strong>{a.original_name}</strong> <small>({(a.size_bytes / 1024).toFixed(1)} KB)</small></span>
+            <li key={a.id} style={{ padding: "0.5rem 0", borderBottom: "1px solid #eee", display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "0.5rem" }}>
+              <span style={{ wordBreak: "break-word", minWidth: 0, flex: "1 1 auto" }}>📄 <strong>{a.original_name}</strong> <small>({(a.size_bytes / 1024).toFixed(1)} KB)</small></span>
               <a href={`/api/attachments/${a.id}/download`} target="_blank" rel="noopener noreferrer" style={{ textDecoration: "none", fontWeight: "bold" }}>
                 📥 Baixar Laudo
               </a>
@@ -596,6 +596,7 @@ function PatientAttachments({ patientId }: { patientId: string }) {
       )}
     </div>
   );
+
 }
 
 function PatientRecord({ id, onBack }: { id: string; onBack: () => void }) {

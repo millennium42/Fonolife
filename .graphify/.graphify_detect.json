@@ -87,14 +87,14 @@
     "video": []
   },
   "total_files": 78,
-  "total_words": 38321,
+  "total_words": 38540,
   "needs_graph": false,
-  "warning": "Corpus is ~38.321 words - fits in a single context window. You may not need a graph.",
+  "warning": "Corpus is ~38.540 words - fits in a single context window. You may not need a graph.",
   "skipped_sensitive": [],
   "graphifyignore_patterns": 6,
   "git": {
     "source_owner": "git",
-    "source_hash": "0687af4d38261ad728243f2b3b31b07357cc661d",
+    "source_hash": "639a91490c9b9be8376e3dcd14e78693199cf77c",
     "branches": [
       "codex/pr8-importacao-csv-seguranca",
       "main"
@@ -108,11 +108,11 @@
     "source": "default-auto",
     "root": ".",
     "git_root": ".",
-    "head": "0687af4d38261ad728243f2b3b31b07357cc661d",
-    "candidate_count": 149,
+    "head": "639a91490c9b9be8376e3dcd14e78693199cf77c",
+    "candidate_count": 154,
     "included_count": 78,
     "excluded_untracked_count": 0,
-    "excluded_ignored_count": 6224,
+    "excluded_ignored_count": 6226,
     "excluded_sensitive_count": 0,
     "missing_committed_count": 0,
     "warnings": [],

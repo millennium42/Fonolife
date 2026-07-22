@@ -1,24 +1,24 @@
 # Graph Report - .  (2026-07-22)
 
 ## Corpus Check
-- Corpus is ~38.321 words - fits in a single context window. You may not need a graph.
+- Corpus is ~38.540 words - fits in a single context window. You may not need a graph.
 
 ## Summary
-- 238 nodes · 483 edges · 14 communities detected
+- 239 nodes · 497 edges · 17 communities detected
 - Extraction: 100% EXTRACTED · 0% INFERRED · 0% AMBIGUOUS
 - Token cost: 0 input · 0 output
-- Edge kinds: contains: 171 · imports: 91 · MODIFIES: 67 · imports_from: 40 · ON_BRANCH: 28 · references: 23 · reads_from: 20 · PARENT_OF: 18 · calls: 14 · triggers: 11
+- Edge kinds: contains: 171 · imports: 91 · MODIFIES: 68 · imports_from: 40 · ON_BRANCH: 40 · references: 23 · reads_from: 20 · PARENT_OF: 19 · calls: 14 · triggers: 11
 
 
 ## Input Scope
 - Requested: auto
 - Resolved: committed (source: default-auto)
-- Included files: 78 · Candidates: 149
-- Excluded: 0 untracked · 6224 ignored · 0 sensitive · 0 missing committed
+- Included files: 78 · Candidates: 154
+- Excluded: 0 untracked · 6226 ignored · 0 sensitive · 0 missing committed
 - Recommendation: Use --scope all or graphify.yaml inputs.corpus for a knowledge-base folder.
 
 ## Graph Freshness
-- Built from Git commit: `0687af4`
+- Built from Git commit: `639a914`
 - Compare this hash to `git rev-parse HEAD` before trusting freshness-sensitive graph output.
 ## God Nodes (most connected - your core abstractions)
 1. `financial_entries` - 11 edges
@@ -33,30 +33,30 @@
 10. `follow_up_tasks` - 5 edges
 
 ## Surprising Connections (you probably didn't know these)
+- `0d2db0f feat: centralizar cadastro e histórico de pacientes (#2)` --ON_BRANCH--> `codex/pr8-importacao-csv-seguranca`  [EXTRACTED]
+  git → git  _Bridges community 0 → community 2_
+- `0d2db0f feat: centralizar cadastro e histórico de pacientes (#2)` --PARENT_OF--> `ff35345 feat: tornar o pós-atendimento uma fila acionável (#3)`  [EXTRACTED]
+  git → git  _Bridges community 0 → community 12_
 - `3f9e6cc feat: estabelecer núcleo seguro e executável da clínica Fonolife (#1)` --ON_BRANCH--> `codex/pr8-importacao-csv-seguranca`  [EXTRACTED]
-  git → git  _Bridges community 4 → community 1_
-- `4de92ce Graphify` --PARENT_OF--> `98e15b2 feat: implementar importação CSV idempotente com auditoria e controle de concorrência (#8)`  [EXTRACTED]
-  git → git  _Bridges community 1 → community 0_
-- `5ccde91 feat: implementar atalhos rápidos de comunicação via WhatsApp com auditoria de cliques (#10)` --ON_BRANCH--> `codex/pr8-importacao-csv-seguranca`  [EXTRACTED]
-  git → git  _Bridges community 9 → community 1_
-- `5ccde91 feat: implementar atalhos rápidos de comunicação via WhatsApp com auditoria de cliques (#10)` --PARENT_OF--> `a7b6a8a feat(attachments): adicionar validação de exames, tipos MIME permitidos e hash SHA-256 (#11)`  [EXTRACTED]
-  git → git  _Bridges community 9 → community 7_
-- `98e15b2 feat: implementar importação CSV idempotente com auditoria e controle de concorrência (#8)` --PARENT_OF--> `bb925aa feat: implementar catálogo e controle de estoque de aparelhos com auditoria e movimentações imutáveis (#9)`  [EXTRACTED]
-  git → git  _Bridges community 0 → community 5_
+  git → git  _Bridges community 4 → community 2_
+- `3f9e6cc feat: estabelecer núcleo seguro e executável da clínica Fonolife (#1)` --PARENT_OF--> `0d2db0f feat: centralizar cadastro e histórico de pacientes (#2)`  [EXTRACTED]
+  git → git  _Bridges community 4 → community 0_
+- `ff35345 feat: tornar o pós-atendimento uma fila acionável (#3)` --ON_BRANCH--> `codex/pr8-importacao-csv-seguranca`  [EXTRACTED]
+  git → git  _Bridges community 12 → community 2_
 
 ## Communities
 
 ### Community 0 - "Community 0"
 Cohesion: 0.11
-Nodes (31): 98e15b2 feat: implementar importação CSV idempotente com auditoria e controle de concorrência (#8), calculateCsvHash(), CsvFinancialRow, CsvPatientRow, parseCsv(), ParsedCsv, sanitizeCsvCell(), validateFinancialCsvRow() (+23 more)
+Nodes (32): 0d2db0f feat: centralizar cadastro e histórico de pacientes (#2), a740db5 feat: registrar vendas com parcelas e pós-venda automático (#4), calculateCsvHash(), CsvFinancialRow, CsvPatientRow, parseCsv(), ParsedCsv, sanitizeCsvCell() (+24 more)
 
 ### Community 1 - "Community 1"
-Cohesion: 0.09
-Nodes (21): codex/pr8-importacao-csv-seguranca, main, 0687af4 feat(privacy): implementar endpoints de exportação JSON e anonimização LGPD com auditoria (#12), 077b08e feat(privacy): adicionar migration 010 para pseudonimização LGPD e campos de auditoria de privacidade (#12), 0d2db0f feat: centralizar cadastro e histórico de pacientes (#2), 0e1c4ad test: consolidar QA, acessibilidade e release do Fonolife (#7), 2dd873d feat: consolidar financeiro único para dois CNPJs (#5), 4de92ce Graphify (+13 more)
-
-### Community 2 - "Community 2"
 Cohesion: 0.07
 Nodes (21): categoryLabels, CompanyAccount, Dashboard(), DashboardData, date(), eventTypes, Finance(), FinanceSummary (+13 more)
+
+### Community 2 - "Community 2"
+Cohesion: 0.13
+Nodes (18): codex/pr8-importacao-csv-seguranca, main, 0687af4 feat(privacy): implementar endpoints de exportação JSON e anonimização LGPD com auditoria (#12), 077b08e feat(privacy): adicionar migration 010 para pseudonimização LGPD e campos de auditoria de privacidade (#12), 0e1c4ad test: consolidar QA, acessibilidade e release do Fonolife (#7), 2dd873d feat: consolidar financeiro único para dois CNPJs (#5), 4de92ce Graphify, 5ccde91 feat: implementar atalhos rápidos de comunicação via WhatsApp com auditoria de cliques (#10) (+10 more)
 
 ### Community 3 - "Community 3"
 Cohesion: 0.15
@@ -67,38 +67,50 @@ Cohesion: 0.21
 Nodes (12): 3f9e6cc feat: estabelecer núcleo seguro e executável da clínica Fonolife (#1), email, migrate(), pool, seedDemo(), hashPassword(), hashToken(), scrypt (+4 more)
 
 ### Community 5 - "Community 5"
-Cohesion: 0.19
-Nodes (14): bb925aa feat: implementar catálogo e controle de estoque de aparelhos com auditoria e movimentações imutáveis (#9), InventoryMovement, MOVEMENT_TYPES, MovementType, Product, validInventoryMovement(), validProduct(), validProductBrand() (+6 more)
-
-### Community 6 - "Community 6"
 Cohesion: 0.25
 Nodes (12): follow_up_tasks, follow_up_tasks_no_delete, follow_up_tasks_restrict_update, OLD.created_at, OLD.created_by, OLD.due_on, OLD.notes, OLD.patient_id (+4 more)
 
+### Community 6 - "Community 6"
+Cohesion: 0.33
+Nodes (9): InventoryMovement, MOVEMENT_TYPES, MovementType, Product, validInventoryMovement(), validProduct(), validProductBrand(), validProductModel() (+1 more)
+
 ### Community 7 - "Community 7"
-Cohesion: 0.36
-Nodes (7): a7b6a8a feat(attachments): adicionar validação de exames, tipos MIME permitidos e hash SHA-256 (#11), ALLOWED_MIME_TYPES, AllowedMimeType, calculateFileHash(), sanitizeFilename(), validFileSize(), validMimeType()
+Cohesion: 0.39
+Nodes (6): ALLOWED_MIME_TYPES, AllowedMimeType, calculateFileHash(), sanitizeFilename(), validFileSize(), validMimeType()
 
 ### Community 8 - "Community 8"
 Cohesion: 0.43
 Nodes (5): patient_events, patient_events_immutable, patients, patients_no_delete, users
 
 ### Community 9 - "Community 9"
-Cohesion: 0.52
-Nodes (4): 5ccde91 feat: implementar atalhos rápidos de comunicação via WhatsApp com auditoria de cliques (#10), buildWhatsAppLink(), formatE164Phone(), WHATSAPP_TEMPLATES
-
-### Community 10 - "Community 10"
 Cohesion: 0.43
 Nodes (5): audit_events, audit_events_immutable, company_accounts, user_sessions, users
 
-### Community 11 - "Community 11"
+### Community 10 - "Community 10"
 Cohesion: 0.29
 Nodes (4): accounts, clientRequestId, payload, summary
 
+### Community 11 - "Community 11"
+Cohesion: 0.53
+Nodes (4): inventory_movements, products, trg_prevent_inventory_movement_modification, users
+
 ### Community 12 - "Community 12"
+Cohesion: 0.70
+Nodes (3): ff35345 feat: tornar o pós-atendimento uma fila acionável (#3), FOLLOW_UP_FILTERS, saoPauloDate()
+
+### Community 13 - "Community 13"
+Cohesion: 0.70
+Nodes (3): anonymizePatientName(), formatLgpdExportPackage(), isAnonymized()
+
+### Community 14 - "Community 14"
+Cohesion: 0.80
+Nodes (3): buildWhatsAppLink(), formatE164Phone(), WHATSAPP_TEMPLATES
+
+### Community 15 - "Community 15"
 Cohesion: 0.83
 Nodes (3): csv_import_errors, csv_import_jobs, users
 
-### Community 13 - "Community 13"
+### Community 16 - "Community 16"
 Cohesion: 0.83
 Nodes (3): patient_attachments, patients, users
 
@@ -109,17 +121,17 @@ Nodes (3): patient_attachments, patients, users
 ## Suggested Questions
 _Questions this graph is uniquely positioned to answer:_
 
-- **Why does `validProduct()` connect `Community 5` to `Community 0`?**
+- **Why does `validProduct()` connect `Community 6` to `Community 0`?**
   _High betweenness centrality (0.008) - this node is a cross-community bridge._
 - **Why does `hashPassword()` connect `Community 4` to `Community 0`?**
   _High betweenness centrality (0.005) - this node is a cross-community bridge._
-- **Why does `normalizePhone()` connect `Community 0` to `Community 9`?**
+- **Why does `normalizePhone()` connect `Community 0` to `Community 14`?**
   _High betweenness centrality (0.004) - this node is a cross-community bridge._
 - **What connects `company_accounts`, `User`, `FastifyRequest` to the rest of the system?**
   _35 weakly-connected nodes found - possible documentation gaps or missing edges._
 - **Should `Community 0` be split into smaller, more focused modules?**
-  _Cohesion score 0.11153846153846154 - nodes in this community are weakly interconnected._
+  _Cohesion score 0.10975609756097561 - nodes in this community are weakly interconnected._
 - **Should `Community 1` be split into smaller, more focused modules?**
-  _Cohesion score 0.0915915915915916 - nodes in this community are weakly interconnected._
-- **Should `Community 2` be split into smaller, more focused modules?**
   _Cohesion score 0.07007575757575757 - nodes in this community are weakly interconnected._
+- **Should `Community 2` be split into smaller, more focused modules?**
+  _Cohesion score 0.12688172043010754 - nodes in this community are weakly interconnected._

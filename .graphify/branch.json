@@ -1,16 +1,16 @@
 {
   "schemaVersion": 1,
-  "branchName": "codex/pr8-importacao-csv-seguranca",
+  "branchName": "main",
   "worktreePath": "C:\\Users\\milla\\Documents\\Projetos\\Git\\Fonolife",
-  "upstream": null,
-  "mergeBase": null,
-  "firstSeenHead": "4de92ceb139c8f6c4cd8917b5d4080934fbfa844",
-  "lastSeenHead": "0687af4d38261ad728243f2b3b31b07357cc661d",
-  "lastAnalyzedHead": "0687af4d38261ad728243f2b3b31b07357cc661d",
+  "upstream": "origin/main",
+  "mergeBase": "639a91490c9b9be8376e3dcd14e78693199cf77c",
+  "firstSeenHead": "639a91490c9b9be8376e3dcd14e78693199cf77c",
+  "lastSeenHead": "639a91490c9b9be8376e3dcd14e78693199cf77c",
+  "lastAnalyzedHead": "639a91490c9b9be8376e3dcd14e78693199cf77c",
   "stale": false,
   "staleReason": null,
   "staleSince": null,
   "lifecycleEvent": null,
-  "createdAt": "2026-07-22T19:34:26.677Z",
-  "updatedAt": "2026-07-22T20:10:19.864Z"
+  "createdAt": "2026-07-22T20:19:50.276Z",
+  "updatedAt": "2026-07-22T20:19:50.276Z"
 }
