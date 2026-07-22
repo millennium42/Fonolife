@@ -17,6 +17,7 @@ No marketing language.
 Respond ONLY with a JSON object mapping each node id (as a string) to its
 one-sentence description — no prose, no markdown fences.
 
+- "migrations_006_csv_imports_csv_import_errors": "csv_import_errors" | kind=code-symbol | source=migrations/006_csv_imports.sql:L14 | neighbors=[006_csv_imports.sql, csv_import_jobs]
 - "migrations_006_csv_imports_users": "users" | kind=code-symbol | source=migrations/006_csv_imports.sql:L9 | neighbors=[006_csv_imports.sql, csv_import_jobs]
 - "migrations_007_inventory_products": "products" | kind=code-symbol | source=migrations/007_inventory.sql:L1 | neighbors=[007_inventory.sql, inventory_movements]
 - "migrations_007_inventory_trg_prevent_inventory_movement_modification": "trg_prevent_inventory_movement_modification" | kind=code-symbol | source=migrations/007_inventory.sql:L32 | neighbors=[007_inventory.sql, inventory_movements]
@@ -56,7 +57,6 @@ one-sentence description — no prose, no markdown fences.
 - "migrations_008_whatsapp_shortcuts": "008_whatsapp_shortcuts.sql" | kind=code-symbol | source=migrations/008_whatsapp_shortcuts.sql:L1 | neighbors=[5ccde91 feat: implementar atalhos rápid…]
 - "migrations_010_lgpd_privacy": "010_lgpd_privacy.sql" | kind=code-symbol | source=migrations/010_lgpd_privacy.sql:L1 | neighbors=[077b08e feat(privacy): adicionar migrat…]
 - "playwright_config": "playwright.config.ts" | kind=code-symbol | source=playwright.config.ts:L1 | neighbors=[0e1c4ad test: consolidar QA, acessibili…]
-- "src_app_attempts": "attempts" | kind=code-symbol | source=src/app.ts:L68 | neighbors=[app.ts]
 
 ## Instructions
 

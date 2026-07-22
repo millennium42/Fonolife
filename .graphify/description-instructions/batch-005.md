@@ -17,6 +17,7 @@ No marketing language.
 Respond ONLY with a JSON object mapping each node id (as a string) to its
 one-sentence description — no prose, no markdown fences.
 
+- "src_app_attempts": "attempts" | kind=code-symbol | source=src/app.ts:L68 | neighbors=[app.ts]
 - "src_app_fastifyrequest": "FastifyRequest" | kind=code-symbol | source=src/app.ts:L64 | neighbors=[app.ts]
 - "src_app_user": "User" | kind=code-symbol | source=src/app.ts:L56 | neighbors=[app.ts]
 - "src_main_api": "api()" | kind=code-symbol | source=web/src/main.tsx:L138 | neighbors=[main.tsx]
