@@ -98,3 +98,13 @@
 - **Who:** Admin e Operador autenticados.
 - **How:** normalização E.164, codificação estrita `encodeURIComponent`, disparo de auditoria em `audit_events` e evento em `patient_events`.
 - **How much:** 1 migration aditiva, 22 testes unitários verdes, zero dependências de terceiros.
+
+## PR 11 — Anexos de Exames & Audiometrias com Armazenamento Seguro
+
+- **What:** upload, armazenamento seguro e visualização de laudos audiométricos e exames em PDF/Imagens (máx 10MB) com hashes SHA-256 e auditoria.
+- **Why:** garantir a integridade dos laudos audiométricos dos pacientes sem expor arquivos a acessos públicos não autenticados.
+- **Where:** domínio `src/domain/attachments.ts`, migration `009_attachments.sql`, endpoints `/api/patients/:id/attachments` e `/api/attachments/:id/download`, UI React e testes.
+- **When:** décima primeira entrega incremental da evolução do sistema.
+- **Who:** Admin e Operador autenticados.
+- **How:** sanitização `sanitizeFilename` contra Path Traversal, validação estrita de MIME, gravação isolada em `storage/attachments/`, cabeçalhos `Content-Security-Policy` e arquivamento lógico `archived_at`.
+- **How much:** 1 migration aditiva, 26 testes unitários verdes, zero dependências extras.

@@ -527,7 +527,78 @@ function PatientForm({
   );
 }
 
+function PatientAttachments({ patientId }: { patientId: string }) {
+  const [attachments, setAttachments] = useState<any[]>([]);
+  const [uploading, setUploading] = useState(false);
+  const [error, setError] = useState("");
+
+  const load = () => {
+    api(`/api/patients/${patientId}/attachments`)
+      .then((d) => setAttachments(d?.attachments || []))
+      .catch(() => {});
+  };
+
+  useEffect(() => {
+    load();
+  }, [patientId]);
+
+  const handleUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setUploading(true);
+    setError("");
+    const reader = new FileReader();
+    reader.onload = async (ev) => {
+      try {
+        const base64 = (ev.target?.result as string).split(",")[1];
+        await api(`/api/patients/${patientId}/attachments`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            fileName: file.name,
+            mimeType: file.type || "application/pdf",
+            contentBase64: base64,
+          }),
+        });
+        load();
+      } catch (err: any) {
+        setError(err.message);
+      } finally {
+        setUploading(false);
+      }
+    };
+    reader.readAsDataURL(file);
+  };
+
+  return (
+    <div style={{ marginTop: "1.5rem", padding: "1rem", border: "1px solid #ddd", borderRadius: "6px" }}>
+      <h3>Exames & Laudos Audiométricos</h3>
+      {error && <p className="error" role="alert">{error}</p>}
+      <label style={{ display: "block", margin: "0.5rem 0" }}>
+        <span>+ Anexar Laudo (PDF / Imagem máx 10MB):</span>{" "}
+        <input type="file" accept=".pdf,.jpg,.jpeg,.png,.webp" onChange={handleUpload} disabled={uploading} />
+      </label>
+      {uploading && <p>Enviando exame...</p>}
+      {attachments.length === 0 ? (
+        <p style={{ fontSize: "0.85rem", color: "#666" }}>Nenhum laudo anexado a este paciente.</p>
+      ) : (
+        <ul style={{ listStyle: "none", padding: 0 }}>
+          {attachments.map((a) => (
+            <li key={a.id} style={{ padding: "0.5rem 0", borderBottom: "1px solid #eee", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+              <span>📄 <strong>{a.original_name}</strong> <small>({(a.size_bytes / 1024).toFixed(1)} KB)</small></span>
+              <a href={`/api/attachments/${a.id}/download`} target="_blank" rel="noopener noreferrer" style={{ textDecoration: "none", fontWeight: "bold" }}>
+                📥 Baixar Laudo
+              </a>
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+  );
+}
+
 function PatientRecord({ id, onBack }: { id: string; onBack: () => void }) {
+
   const [patient, setPatient] = useState<Patient | null>(null),
     [timeline, setTimeline] = useState<TimelineItem[]>([]),
     [editing, setEditing] = useState(false),
@@ -677,7 +748,9 @@ function PatientRecord({ id, onBack }: { id: string; onBack: () => void }) {
             <strong>Observações:</strong> {patient.notes}
           </p>
         )}
+        <PatientAttachments patientId={id} />
       </section>
+
       <div className="record-grid">
         <div>
           <form className="panel form" onSubmit={addEvent}>

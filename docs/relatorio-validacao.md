@@ -95,4 +95,16 @@ Em 18/07/2026, `npm run typecheck` passou sem erros e `npm test` aprovou 9/9 tes
 - Auditoria de Comunicação: clique do atalho gera evento atômico em `patient_events` (tipo `whatsapp`) e em `audit_events`.
 - Defeitos: P0 = 0, P1 = 0, P2 = 0.
 
-Backlog P2: anexos, prontuário clínico completo, configuração dos prazos e evolução de privacidade/LGPD. Nenhum item bloqueia os critérios desta release.
+## PR 11 — Anexos de Exames & Audiometrias com Armazenamento Seguro
+
+- `npm run typecheck`: aprovado (0 erros).
+- `npm test`: 26/26 testes aprovados.
+- `npm run build`: aprovado (bundle Fastify + Vite compilados com sucesso).
+- `npm audit`: 0 vulnerabilidades.
+- Proteção Path Traversal: sanitização rigorosa via `sanitizeFilename` e isolamento dos arquivos em `storage/attachments/` com UUIDs imutáveis.
+- Restrição de MIME & Tamanho: autorização exclusiva para PDF, JPEG, PNG e WEBP até o limite de 10MB.
+- Integridade & Auditoria: geração de hash SHA-256 e gravação em `patient_events` e `audit_events`.
+- Cabeçalhos de Segurança HTTP: respostas de download contendo `Content-Security-Policy: default-src 'none'` e `X-Content-Type-Options: nosniff`.
+- Defeitos: P0 = 0, P1 = 0, P2 = 0.
+
+Backlog P2: prontuário clínico completo, configuração dos prazos e evolução de privacidade/LGPD. Nenhum item bloqueia os critérios desta release.

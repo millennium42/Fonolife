@@ -1,24 +1,24 @@
 # Graph Report - .  (2026-07-22)
 
 ## Corpus Check
-- Corpus is ~34.105 words - fits in a single context window. You may not need a graph.
+- Corpus is ~36.632 words - fits in a single context window. You may not need a graph.
 
 ## Summary
-- 205 nodes · 410 edges · 12 communities detected
+- 228 nodes · 460 edges · 14 communities detected
 - Extraction: 100% EXTRACTED · 0% INFERRED · 0% AMBIGUOUS
 - Token cost: 0 input · 0 output
-- Edge kinds: contains: 155 · imports: 73 · MODIFIES: 53 · imports_from: 34 · references: 21 · ON_BRANCH: 20 · reads_from: 20 · calls: 13 · triggers: 11 · PARENT_OF: 10
+- Edge kinds: contains: 168 · imports: 86 · MODIFIES: 62 · imports_from: 38 · ON_BRANCH: 24 · references: 23 · reads_from: 20 · calls: 14 · PARENT_OF: 14 · triggers: 11
 
 
 ## Input Scope
 - Requested: auto
 - Resolved: committed (source: default-auto)
-- Included files: 68 · Candidates: 126
-- Excluded: 3 untracked · 6222 ignored · 0 sensitive · 0 missing committed
+- Included files: 75 · Candidates: 138
+- Excluded: 0 untracked · 6223 ignored · 0 sensitive · 0 missing committed
 - Recommendation: Use --scope all or graphify.yaml inputs.corpus for a knowledge-base folder.
 
 ## Graph Freshness
-- Built from Git commit: `bb925aa`
+- Built from Git commit: `9c8e9de`
 - Compare this hash to `git rev-parse HEAD` before trusting freshness-sensitive graph output.
 ## God Nodes (most connected - your core abstractions)
 1. `financial_entries` - 11 edges
@@ -27,20 +27,22 @@
 4. `restrict_follow_up_update()` - 7 edges
 5. `receivable_installments` - 6 edges
 6. `validProduct()` - 6 edges
-7. `hashPassword()` - 6 edges
-8. `follow_up_tasks` - 5 edges
-9. `check_sale_installment_total()` - 5 edges
-10. `config` - 5 edges
+7. `normalizePhone()` - 6 edges
+8. `validPatientPhone()` - 6 edges
+9. `hashPassword()` - 6 edges
+10. `follow_up_tasks` - 5 edges
 
 ## Surprising Connections (you probably didn't know these)
 - `3f9e6cc feat: estabelecer núcleo seguro e executável da clínica Fonolife (#1)` --ON_BRANCH--> `codex/pr8-importacao-csv-seguranca`  [EXTRACTED]
   git → git  _Bridges community 4 → community 3_
 - `4de92ce Graphify` --PARENT_OF--> `98e15b2 feat: implementar importação CSV idempotente com auditoria e controle de concorrência (#8)`  [EXTRACTED]
   git → git  _Bridges community 3 → community 0_
+- `5ccde91 feat: implementar atalhos rápidos de comunicação via WhatsApp com auditoria de cliques (#10)` --ON_BRANCH--> `codex/pr8-importacao-csv-seguranca`  [EXTRACTED]
+  git → git  _Bridges community 9 → community 3_
+- `5ccde91 feat: implementar atalhos rápidos de comunicação via WhatsApp com auditoria de cliques (#10)` --PARENT_OF--> `a7b6a8a feat(attachments): adicionar validação de exames, tipos MIME permitidos e hash SHA-256 (#11)`  [EXTRACTED]
+  git → git  _Bridges community 9 → community 7_
 - `98e15b2 feat: implementar importação CSV idempotente com auditoria e controle de concorrência (#8)` --PARENT_OF--> `bb925aa feat: implementar catálogo e controle de estoque de aparelhos com auditoria e movimentações imutáveis (#9)`  [EXTRACTED]
-  git → git  _Bridges community 0 → community 6_
-- `bb925aa feat: implementar catálogo e controle de estoque de aparelhos com auditoria e movimentações imutáveis (#9)` --ON_BRANCH--> `codex/pr8-importacao-csv-seguranca`  [EXTRACTED]
-  git → git  _Bridges community 6 → community 3_
+  git → git  _Bridges community 0 → community 5_
 
 ## Communities
 
@@ -57,59 +59,67 @@ Cohesion: 0.15
 Nodes (25): actual, check_sale_installment_total(), company_accounts, expected, financial_entries, financial_entries_immutable, financial_entries_one_active_receipt, OLD.client_request_id (+17 more)
 
 ### Community 3 - "Community 3"
-Cohesion: 0.13
-Nodes (12): codex/pr8-importacao-csv-seguranca, main, 0d2db0f feat: centralizar cadastro e histórico de pacientes (#2), 0e1c4ad test: consolidar QA, acessibilidade e release do Fonolife (#7), 2dd873d feat: consolidar financeiro único para dois CNPJs (#5), 4de92ce Graphify, 68c033b chore: inicializar main para entregas independentes, a56a353 feat: priorizar filas acionáveis no dashboard (#6) (+4 more)
+Cohesion: 0.12
+Nodes (14): codex/pr8-importacao-csv-seguranca, main, 0d2db0f feat: centralizar cadastro e histórico de pacientes (#2), 0e1c4ad test: consolidar QA, acessibilidade e release do Fonolife (#7), 2dd873d feat: consolidar financeiro único para dois CNPJs (#5), 4de92ce Graphify, 68c033b chore: inicializar main para entregas independentes, 9c8e9de feat(attachments): implementar endpoints de upload, download e listagem de exames com auditoria (#11) (+6 more)
 
 ### Community 4 - "Community 4"
 Cohesion: 0.21
 Nodes (12): 3f9e6cc feat: estabelecer núcleo seguro e executável da clínica Fonolife (#1), email, migrate(), pool, seedDemo(), hashPassword(), hashToken(), scrypt (+4 more)
 
 ### Community 5 - "Community 5"
+Cohesion: 0.19
+Nodes (14): bb925aa feat: implementar catálogo e controle de estoque de aparelhos com auditoria e movimentações imutáveis (#9), InventoryMovement, MOVEMENT_TYPES, MovementType, Product, validInventoryMovement(), validProduct(), validProductBrand() (+6 more)
+
+### Community 6 - "Community 6"
 Cohesion: 0.25
 Nodes (12): follow_up_tasks, follow_up_tasks_no_delete, follow_up_tasks_restrict_update, OLD.created_at, OLD.created_by, OLD.due_on, OLD.notes, OLD.patient_id (+4 more)
 
-### Community 6 - "Community 6"
-Cohesion: 0.30
-Nodes (10): bb925aa feat: implementar catálogo e controle de estoque de aparelhos com auditoria e movimentações imutáveis (#9), InventoryMovement, MOVEMENT_TYPES, MovementType, Product, validInventoryMovement(), validProduct(), validProductBrand() (+2 more)
-
 ### Community 7 - "Community 7"
-Cohesion: 0.43
-Nodes (5): patient_events, patient_events_immutable, patients, patients_no_delete, users
+Cohesion: 0.36
+Nodes (7): a7b6a8a feat(attachments): adicionar validação de exames, tipos MIME permitidos e hash SHA-256 (#11), ALLOWED_MIME_TYPES, AllowedMimeType, calculateFileHash(), sanitizeFilename(), validFileSize(), validMimeType()
 
 ### Community 8 - "Community 8"
 Cohesion: 0.43
-Nodes (5): audit_events, audit_events_immutable, company_accounts, user_sessions, users
+Nodes (5): patient_events, patient_events_immutable, patients, patients_no_delete, users
 
 ### Community 9 - "Community 9"
+Cohesion: 0.52
+Nodes (4): 5ccde91 feat: implementar atalhos rápidos de comunicação via WhatsApp com auditoria de cliques (#10), buildWhatsAppLink(), formatE164Phone(), WHATSAPP_TEMPLATES
+
+### Community 10 - "Community 10"
+Cohesion: 0.43
+Nodes (5): audit_events, audit_events_immutable, company_accounts, user_sessions, users
+
+### Community 11 - "Community 11"
 Cohesion: 0.29
 Nodes (4): accounts, clientRequestId, payload, summary
 
-### Community 10 - "Community 10"
-Cohesion: 0.53
-Nodes (4): inventory_movements, products, trg_prevent_inventory_movement_modification, users
-
-### Community 11 - "Community 11"
+### Community 12 - "Community 12"
 Cohesion: 0.83
 Nodes (3): csv_import_errors, csv_import_jobs, users
 
+### Community 13 - "Community 13"
+Cohesion: 0.83
+Nodes (3): patient_attachments, patients, users
+
 ## Knowledge Gaps
-- **33 isolated node(s):** `company_accounts`, `User`, `FastifyRequest`, `attempts`, `email` (+28 more)
+- **35 isolated node(s):** `company_accounts`, `User`, `FastifyRequest`, `attempts`, `email` (+30 more)
   These have ≤1 connection - possible missing edges or undocumented components.
 
 ## Suggested Questions
 _Questions this graph is uniquely positioned to answer:_
 
-- **Why does `validProduct()` connect `Community 6` to `Community 0`?**
-  _High betweenness centrality (0.010) - this node is a cross-community bridge._
+- **Why does `validProduct()` connect `Community 5` to `Community 0`?**
+  _High betweenness centrality (0.009) - this node is a cross-community bridge._
 - **Why does `hashPassword()` connect `Community 4` to `Community 0`?**
   _High betweenness centrality (0.006) - this node is a cross-community bridge._
-- **Why does `pool` connect `Community 4` to `Community 0`?**
+- **Why does `normalizePhone()` connect `Community 0` to `Community 9`?**
   _High betweenness centrality (0.004) - this node is a cross-community bridge._
 - **What connects `company_accounts`, `User`, `FastifyRequest` to the rest of the system?**
-  _33 weakly-connected nodes found - possible documentation gaps or missing edges._
+  _35 weakly-connected nodes found - possible documentation gaps or missing edges._
 - **Should `Community 0` be split into smaller, more focused modules?**
   _Cohesion score 0.11153846153846154 - nodes in this community are weakly interconnected._
 - **Should `Community 1` be split into smaller, more focused modules?**
-  _Cohesion score 0.07258064516129033 - nodes in this community are weakly interconnected._
+  _Cohesion score 0.07007575757575757 - nodes in this community are weakly interconnected._
 - **Should `Community 2` be split into smaller, more focused modules?**
   _Cohesion score 0.14814814814814814 - nodes in this community are weakly interconnected._
