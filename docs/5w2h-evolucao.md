@@ -108,3 +108,13 @@
 - **Who:** Admin e Operador autenticados.
 - **How:** sanitização `sanitizeFilename` contra Path Traversal, validação estrita de MIME, gravação isolada em `storage/attachments/`, cabeçalhos `Content-Security-Policy` e arquivamento lógico `archived_at`.
 - **How much:** 1 migration aditiva, 26 testes unitários verdes, zero dependências extras.
+
+## PR 12 — Governança de Dados, Portabilidade e Anonimização LGPD
+
+- **What:** exportação de dados em JSON estruturado (Portabilidade, Art. 18 LGPD) e pseudonimização reversível de PII mantendo integridade financeira contábil/fiscal.
+- **Why:** atender às exigências legais da Lei Geral de Proteção de Dados (Lei 13.709/2018) sem comprometer a imutabilidade do histórico financeiro append-only da clínica.
+- **Where:** domínio `src/domain/privacy.ts`, migration `010_lgpd_privacy.sql`, endpoints `/api/patients/:id/export-data` e `/api/admin/patients/:id/anonymize`, UI React e testes.
+- **When:** décima segunda entrega da evolução do sistema (Fechamento da Roadmap).
+- **Who:** Admin para anonimização; Admin e Operador autenticados para exportação de dados.
+- **How:** transação SQL atômica mascarando PII em `patients` e `patient_events`, preservação de `sales`/`financial_entries` e gravação de log crítico em `audit_events`.
+- **How much:** 1 migration aditiva, 29 testes unitários verdes, zero dependências extras.

@@ -107,4 +107,23 @@ Em 18/07/2026, `npm run typecheck` passou sem erros e `npm test` aprovou 9/9 tes
 - Cabeçalhos de Segurança HTTP: respostas de download contendo `Content-Security-Policy: default-src 'none'` e `X-Content-Type-Options: nosniff`.
 - Defeitos: P0 = 0, P1 = 0, P2 = 0.
 
-Backlog P2: prontuário clínico completo, configuração dos prazos e evolução de privacidade/LGPD. Nenhum item bloqueia os critérios desta release.
+## PR 12 — Governança de Dados, Portabilidade e Anonimização LGPD
+
+- `npm run typecheck`: aprovado (0 erros).
+- `npm test`: 29/29 testes aprovados.
+- `npm run build`: aprovado (bundle Fastify + Vite compilados com sucesso).
+- `npm audit`: 0 vulnerabilidades.
+- Portabilidade (Art. 18 LGPD): geração de pacote JSON estruturado contendo prontuário completo do paciente com log de auditoria.
+- Anonimização Segura: substituição de PII por pseudônimos e mascaramentos em transação SQL mantendo a integridade contábil e fiscal das vendas e lançamentos financeiros append-only.
+- RBAC: endpoint de anonimização restrito ao perfil Admin com trava de versão optimistic lock.
+- Defeitos: P0 = 0, P1 = 0, P2 = 0.
+
+---
+
+### Resumo Consolidado da Release de Evolução (PR 1 a PR 12)
+
+- **Total de PRs Entregues**: 12/12 (100% da Roadmap Concluído).
+- **Métricas de Qualidade Final**: **P0 = 0, P1 = 0, P2 = 0**.
+- **Segurança & Auditoria**: Rastreabilidade atômica em `audit_events`, RBAC restrito, HSTS, CSP, nosniff, sanitização contra CSV Injection e Path Traversal.
+- **Suíte de Testes**: **29/29 testes unitários verdes**.
+- **Integração Grafo AST**: Graphify sincronizado e atualizado.

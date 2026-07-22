@@ -23,6 +23,7 @@ type Patient = {
   guardian_name?: string | null;
   notes?: string;
   archived_at?: string | null;
+  anonymized_at?: string | null;
 };
 type TimelineItem = {
   id: string;
@@ -688,6 +689,26 @@ function PatientRecord({ id, onBack }: { id: string; onBack: () => void }) {
         }}
       />
     );
+  async function handleExportLgpd() {
+    window.open(`/api/patients/${id}/export-data`, "_blank");
+  }
+
+  async function handleAnonymizeLgpd() {
+    if (!confirm("ATENÇÃO: Deseja anonimizar permanentemente este paciente conforme a LGPD? Todos os dados de PII serão mascarados."))
+      return;
+    try {
+      await api(`/api/admin/patients/${id}/anonymize`, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ version: patient!.version }),
+      });
+      setMessage("Paciente anonimizado com sucesso (LGPD).");
+      await load();
+    } catch (reason) {
+      setError((reason as Error).message);
+    }
+  }
+
   return (
     <>
       <button className="back" onClick={onBack}>
@@ -712,6 +733,14 @@ function PatientRecord({ id, onBack }: { id: string; onBack: () => void }) {
             </p>
           </div>
           <div className="actions">
+            <button className="secondary" onClick={handleExportLgpd} title="Exportar dados do titular (LGPD)">
+              Exportar LGPD
+            </button>
+            {!patient.anonymized_at && (
+              <button className="danger" onClick={handleAnonymizeLgpd} title="Anonimizar dados de identificação (LGPD)">
+                Anonimizar LGPD
+              </button>
+            )}
             <button className="secondary" onClick={() => setEditing(true)}>
               Editar ficha
             </button>
@@ -720,6 +749,7 @@ function PatientRecord({ id, onBack }: { id: string; onBack: () => void }) {
             </button>
           </div>
         </div>
+
         {patient.care_alert && (
           <p className="care-alert">
             <strong>Atenção:</strong> {patient.care_alert}

@@ -1,24 +1,24 @@
 # Graph Report - .  (2026-07-22)
 
 ## Corpus Check
-- Corpus is ~36.632 words - fits in a single context window. You may not need a graph.
+- Corpus is ~38.321 words - fits in a single context window. You may not need a graph.
 
 ## Summary
-- 228 nodes · 460 edges · 14 communities detected
+- 238 nodes · 483 edges · 14 communities detected
 - Extraction: 100% EXTRACTED · 0% INFERRED · 0% AMBIGUOUS
 - Token cost: 0 input · 0 output
-- Edge kinds: contains: 168 · imports: 86 · MODIFIES: 62 · imports_from: 38 · ON_BRANCH: 24 · references: 23 · reads_from: 20 · calls: 14 · PARENT_OF: 14 · triggers: 11
+- Edge kinds: contains: 171 · imports: 91 · MODIFIES: 67 · imports_from: 40 · ON_BRANCH: 28 · references: 23 · reads_from: 20 · PARENT_OF: 18 · calls: 14 · triggers: 11
 
 
 ## Input Scope
 - Requested: auto
 - Resolved: committed (source: default-auto)
-- Included files: 75 · Candidates: 138
-- Excluded: 0 untracked · 6223 ignored · 0 sensitive · 0 missing committed
+- Included files: 78 · Candidates: 149
+- Excluded: 0 untracked · 6224 ignored · 0 sensitive · 0 missing committed
 - Recommendation: Use --scope all or graphify.yaml inputs.corpus for a knowledge-base folder.
 
 ## Graph Freshness
-- Built from Git commit: `9c8e9de`
+- Built from Git commit: `0687af4`
 - Compare this hash to `git rev-parse HEAD` before trusting freshness-sensitive graph output.
 ## God Nodes (most connected - your core abstractions)
 1. `financial_entries` - 11 edges
@@ -34,11 +34,11 @@
 
 ## Surprising Connections (you probably didn't know these)
 - `3f9e6cc feat: estabelecer núcleo seguro e executável da clínica Fonolife (#1)` --ON_BRANCH--> `codex/pr8-importacao-csv-seguranca`  [EXTRACTED]
-  git → git  _Bridges community 4 → community 3_
+  git → git  _Bridges community 4 → community 1_
 - `4de92ce Graphify` --PARENT_OF--> `98e15b2 feat: implementar importação CSV idempotente com auditoria e controle de concorrência (#8)`  [EXTRACTED]
-  git → git  _Bridges community 3 → community 0_
+  git → git  _Bridges community 1 → community 0_
 - `5ccde91 feat: implementar atalhos rápidos de comunicação via WhatsApp com auditoria de cliques (#10)` --ON_BRANCH--> `codex/pr8-importacao-csv-seguranca`  [EXTRACTED]
-  git → git  _Bridges community 9 → community 3_
+  git → git  _Bridges community 9 → community 1_
 - `5ccde91 feat: implementar atalhos rápidos de comunicação via WhatsApp com auditoria de cliques (#10)` --PARENT_OF--> `a7b6a8a feat(attachments): adicionar validação de exames, tipos MIME permitidos e hash SHA-256 (#11)`  [EXTRACTED]
   git → git  _Bridges community 9 → community 7_
 - `98e15b2 feat: implementar importação CSV idempotente com auditoria e controle de concorrência (#8)` --PARENT_OF--> `bb925aa feat: implementar catálogo e controle de estoque de aparelhos com auditoria e movimentações imutáveis (#9)`  [EXTRACTED]
@@ -51,16 +51,16 @@ Cohesion: 0.11
 Nodes (31): 98e15b2 feat: implementar importação CSV idempotente com auditoria e controle de concorrência (#8), calculateCsvHash(), CsvFinancialRow, CsvPatientRow, parseCsv(), ParsedCsv, sanitizeCsvCell(), validateFinancialCsvRow() (+23 more)
 
 ### Community 1 - "Community 1"
+Cohesion: 0.09
+Nodes (21): codex/pr8-importacao-csv-seguranca, main, 0687af4 feat(privacy): implementar endpoints de exportação JSON e anonimização LGPD com auditoria (#12), 077b08e feat(privacy): adicionar migration 010 para pseudonimização LGPD e campos de auditoria de privacidade (#12), 0d2db0f feat: centralizar cadastro e histórico de pacientes (#2), 0e1c4ad test: consolidar QA, acessibilidade e release do Fonolife (#7), 2dd873d feat: consolidar financeiro único para dois CNPJs (#5), 4de92ce Graphify (+13 more)
+
+### Community 2 - "Community 2"
 Cohesion: 0.07
 Nodes (21): categoryLabels, CompanyAccount, Dashboard(), DashboardData, date(), eventTypes, Finance(), FinanceSummary (+13 more)
 
-### Community 2 - "Community 2"
+### Community 3 - "Community 3"
 Cohesion: 0.15
 Nodes (25): actual, check_sale_installment_total(), company_accounts, expected, financial_entries, financial_entries_immutable, financial_entries_one_active_receipt, OLD.client_request_id (+17 more)
-
-### Community 3 - "Community 3"
-Cohesion: 0.12
-Nodes (14): codex/pr8-importacao-csv-seguranca, main, 0d2db0f feat: centralizar cadastro e histórico de pacientes (#2), 0e1c4ad test: consolidar QA, acessibilidade e release do Fonolife (#7), 2dd873d feat: consolidar financeiro único para dois CNPJs (#5), 4de92ce Graphify, 68c033b chore: inicializar main para entregas independentes, 9c8e9de feat(attachments): implementar endpoints de upload, download e listagem de exames com auditoria (#11) (+6 more)
 
 ### Community 4 - "Community 4"
 Cohesion: 0.21
@@ -110,9 +110,9 @@ Nodes (3): patient_attachments, patients, users
 _Questions this graph is uniquely positioned to answer:_
 
 - **Why does `validProduct()` connect `Community 5` to `Community 0`?**
-  _High betweenness centrality (0.009) - this node is a cross-community bridge._
+  _High betweenness centrality (0.008) - this node is a cross-community bridge._
 - **Why does `hashPassword()` connect `Community 4` to `Community 0`?**
-  _High betweenness centrality (0.006) - this node is a cross-community bridge._
+  _High betweenness centrality (0.005) - this node is a cross-community bridge._
 - **Why does `normalizePhone()` connect `Community 0` to `Community 9`?**
   _High betweenness centrality (0.004) - this node is a cross-community bridge._
 - **What connects `company_accounts`, `User`, `FastifyRequest` to the rest of the system?**
@@ -120,6 +120,6 @@ _Questions this graph is uniquely positioned to answer:_
 - **Should `Community 0` be split into smaller, more focused modules?**
   _Cohesion score 0.11153846153846154 - nodes in this community are weakly interconnected._
 - **Should `Community 1` be split into smaller, more focused modules?**
-  _Cohesion score 0.07007575757575757 - nodes in this community are weakly interconnected._
+  _Cohesion score 0.0915915915915916 - nodes in this community are weakly interconnected._
 - **Should `Community 2` be split into smaller, more focused modules?**
-  _Cohesion score 0.14814814814814814 - nodes in this community are weakly interconnected._
+  _Cohesion score 0.07007575757575757 - nodes in this community are weakly interconnected._
