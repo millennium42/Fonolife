@@ -61,4 +61,15 @@ Em 18/07/2026, `npm run typecheck` passou sem erros e `npm test` aprovou 9/9 tes
 - Dependências: `npm audit --audit-level=high` sem vulnerabilidades; CI limita `packages: write` ao job de publicação.
 - Graphify estrutural atualizado; documentação semântica permanece sem backend externo e não faz parte do produto.
 
-Backlog P2: importação CSV idempotente, estoque/catálogo, WhatsApp, anexos, prontuário clínico completo, configuração dos prazos e evolução de privacidade/LGPD. Nenhum item bloqueia os critérios desta release.
+## PR 8 — Importação CSV Idempotente de Pacientes e Finanças
+
+- `npm run typecheck`: aprovado (0 erros).
+- `npm test`: 16/16 testes aprovados.
+- `npm run build`: aprovado (bundle Fastify + Vite compilados com sucesso).
+- `npm audit`: 0 vulnerabilidades (vulnerabilidade `fast-uri` corrigida).
+- Idempotência: verificada via hash SHA-256 com reenvio de arquivo retornando payload de lote anterior sem duplicação no PostgreSQL.
+- Segurança e Sanitização: sanitização de fórmulas CSV (CSV Injection) prefixando `'` em células iniciadas com `=`, `+`, `-`, `@`.
+- RBAC: perfil Operador bloqueado com HTTP 403; exclusivo para perfil Admin.
+- Defeitos: P0 = 0, P1 = 0, P2 = 0.
+
+Backlog P2: estoque/catálogo, WhatsApp, anexos, prontuário clínico completo, configuração dos prazos e evolução de privacidade/LGPD. Nenhum item bloqueia os critérios desta release.

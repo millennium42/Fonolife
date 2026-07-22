@@ -1514,6 +1514,127 @@ function Dashboard({ user, openPatient, openFollowUps }: { user: User; openPatie
   </>;
 }
 
+function CsvImport() {
+  const [entityType, setEntityType] = useState<"patient" | "financial">("patient");
+  const [csvContent, setCsvContent] = useState("");
+  const [fileName, setFileName] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [message, setMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
+  const [jobs, setJobs] = useState<any[]>([]);
+
+  const loadHistory = () => {
+    api("/api/admin/import/csv").then((data) => setJobs(data?.jobs || [])).catch(() => {});
+  };
+
+  useEffect(() => {
+    loadHistory();
+  }, []);
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setFileName(file.name);
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      setCsvContent((event.target?.result as string) || "");
+    };
+    reader.readAsText(file);
+  };
+
+  const handleUpload = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!csvContent.trim()) {
+      setMessage({ type: "error", text: "Selecione um arquivo CSV com conteúdo." });
+      return;
+    }
+    setLoading(true);
+    setMessage(null);
+    try {
+      const res = await api("/api/admin/import/csv", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ entityType, csvContent }),
+      });
+      setMessage({
+        type: "success",
+        text: res.idempotent
+          ? "Arquivo já importado anteriormente (Idempotente)."
+          : `Importação concluída: ${res.processedRows} processados, ${res.errorCount} erros de ${res.totalRows} linhas.`,
+      });
+      loadHistory();
+    } catch (err: any) {
+      setMessage({ type: "error", text: err.message || "Erro na importação" });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <section className="card">
+      <h2>Importação Massiva via CSV (Administração)</h2>
+      <p>Envie planilhas CSV de pacientes ou lançamentos financeiros com garantia de idempotência.</p>
+      
+      <form onSubmit={handleUpload} style={{ display: "flex", flexDirection: "column", gap: "1rem", maxWidth: "600px", margin: "1.5rem 0" }}>
+        <label>
+          Tipo de Entidade
+          <select value={entityType} onChange={(e) => setEntityType(e.target.value as any)}>
+            <option value="patient">Pacientes (Nome, Telefone, Origem, Status)</option>
+            <option value="financial">Finanças (ContaID, Tipo, ValorCentavos, DataVencimento, Descrição)</option>
+          </select>
+        </label>
+        
+        <label>
+          Arquivo CSV
+          <input type="file" accept=".csv,text/csv" onChange={handleFileChange} required />
+        </label>
+        {fileName && <p style={{ fontSize: "0.85rem", color: "#666" }}>Arquivo selecionado: {fileName}</p>}
+
+        <button type="submit" disabled={loading || !csvContent}>
+          {loading ? "Processando..." : "Importar CSV"}
+        </button>
+      </form>
+
+      {message && (
+        <div style={{ padding: "0.75rem 1rem", borderRadius: "4px", backgroundColor: message.type === "success" ? "#e6f4ea" : "#fce8e6", color: message.type === "success" ? "#137333" : "#c5221f", marginBottom: "1.5rem" }}>
+          {message.text}
+        </div>
+      )}
+
+      {jobs.length > 0 && (
+        <div>
+          <h3>Histórico de Importações CSV</h3>
+          <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.85rem", marginTop: "0.5rem" }}>
+            <thead>
+              <tr style={{ borderBottom: "2px solid #ccc", textAlign: "left" }}>
+                <th style={{ padding: "0.5rem" }}>Data</th>
+                <th style={{ padding: "0.5rem" }}>Tipo</th>
+                <th style={{ padding: "0.5rem" }}>Total Linhas</th>
+                <th style={{ padding: "0.5rem" }}>Processados</th>
+                <th style={{ padding: "0.5rem" }}>Erros</th>
+                <th style={{ padding: "0.5rem" }}>Status</th>
+                <th style={{ padding: "0.5rem" }}>Responsável</th>
+              </tr>
+            </thead>
+            <tbody>
+              {jobs.map((job) => (
+                <tr key={job.id} style={{ borderBottom: "1px solid #eee" }}>
+                  <td style={{ padding: "0.5rem" }}>{date(job.created_at)}</td>
+                  <td style={{ padding: "0.5rem" }}>{job.entity_type === "patient" ? "Pacientes" : "Finanças"}</td>
+                  <td style={{ padding: "0.5rem" }}>{job.total_rows}</td>
+                  <td style={{ padding: "0.5rem" }}>{job.processed_rows}</td>
+                  <td style={{ padding: "0.5rem", color: job.error_count > 0 ? "red" : "inherit" }}>{job.error_count}</td>
+                  <td style={{ padding: "0.5rem" }}>{job.status}</td>
+                  <td style={{ padding: "0.5rem" }}>{job.created_by_name}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </section>
+  );
+}
+
 function App() {
   const [user, setUser] = useState<User | null>(null),
     [loading, setLoading] = useState(true),
@@ -1529,13 +1650,13 @@ function App() {
   async function login(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setError("");
+    const form = event.currentTarget,
+      v = Object.fromEntries(new FormData(form));
     try {
       const body = await api("/api/auth/login", {
         method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify(
-          Object.fromEntries(new FormData(event.currentTarget)),
-        ),
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(v),
       });
       setUser(body.user);
     } catch (reason) {
@@ -1598,7 +1719,11 @@ function App() {
         </section>
       </main>
     );
-  const pages = ["Início", "Pacientes", "Acompanhamento", "Financeiro"];
+
+  const pages = user.role === "admin"
+    ? ["Início", "Pacientes", "Acompanhamento", "Financeiro", "Importação CSV"]
+    : ["Início", "Pacientes", "Acompanhamento", "Financeiro"];
+
   return (
     <div className="shell">
       <header>
@@ -1632,7 +1757,9 @@ function App() {
                   ? "Veja quem precisa de contato ou cuidado hoje."
                   : page === "Início"
                     ? "O que precisa da sua atenção hoje."
-                    : "Registre uma vez e acompanhe realizado e previsões."}
+                    : page === "Importação CSV"
+                      ? "Importação em lote de registros via planilha CSV."
+                      : "Registre uma vez e acompanhe realizado e previsões."}
             </p>
           </div>
         </div>
@@ -1642,10 +1769,13 @@ function App() {
           <FollowUps />
         ) : page === "Financeiro" ? (
           <Finance user={user} />
+        ) : page === "Importação CSV" ? (
+          <CsvImport />
         ) : <Dashboard user={user} openPatient={(id) => { setPatientId(id); setPage("Pacientes"); }} openFollowUps={() => setPage("Acompanhamento")} />}
       </main>
     </div>
   );
+
 }
 createRoot(document.getElementById("root")!).render(
   <React.StrictMode>

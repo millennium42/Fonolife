@@ -28,6 +28,12 @@ import {
   type SaleInstallment,
 } from "./domain/sales.js";
 import { validFinancialEntry } from "./domain/finance.js";
+import {
+  calculateCsvHash,
+  parseCsv,
+  validateFinancialCsvRow,
+  validatePatientCsvRow,
+} from "./domain/csv-import.js";
 
 type User = {
   id: string;
@@ -282,6 +288,179 @@ export function buildApp() {
     await audit(request.currentUser!.id, "create", "user", id, { role });
     return reply.code(201).send({ id });
   });
+
+  app.post<{ Body: { entityType?: string; csvContent?: string } }>(
+    "/api/admin/import/csv",
+    { preHandler: admin },
+    async (request, reply) => {
+      const { entityType, csvContent } = request.body ?? {};
+      if (
+        !entityType ||
+        !["patient", "financial"].includes(entityType) ||
+        !csvContent ||
+        typeof csvContent !== "string" ||
+        csvContent.trim().length === 0
+      )
+        return reply
+          .code(400)
+          .type("application/problem+json")
+          .send({
+            title: "Informe o tipo (patient/financial) e o conteúdo CSV válido",
+            status: 400,
+          });
+
+      // Proteção de tamanho de payload (Máximo de 5MB por arquivo)
+      if (csvContent.length > 5 * 1024 * 1024)
+        return reply
+          .code(413)
+          .type("application/problem+json")
+          .send({
+            title: "O arquivo CSV não pode exceder 5MB",
+            status: 413,
+          });
+
+      const batchHash = calculateCsvHash(csvContent);
+
+      // Verificação de Idempotência: Se o mesmo arquivo já foi importado com sucesso
+      const existingJob = await pool.query(
+        "SELECT id,entity_type,status,total_rows,processed_rows,error_count,created_at,completed_at FROM csv_import_jobs WHERE batch_hash=$1",
+        [batchHash]
+      );
+      if (existingJob.rowCount && existingJob.rows[0].status === "completed") {
+        const job = existingJob.rows[0];
+        return reply.code(200).send({
+          id: job.id,
+          batchHash,
+          entityType: job.entity_type,
+          status: job.status,
+          totalRows: job.total_rows,
+          processedRows: job.processed_rows,
+          errorCount: job.error_count,
+          idempotent: true,
+          message: "Este arquivo CSV já foi importado anteriormente.",
+        });
+      }
+
+      const jobId = randomUUID();
+      await pool.query(
+        "INSERT INTO csv_import_jobs(id,batch_hash,entity_type,status,created_by) VALUES($1,$2,$3,'processing',$4)",
+        [jobId, batchHash, entityType, request.currentUser!.id]
+      );
+
+      const parsed = parseCsv(csvContent);
+      let processedRows = 0;
+      let errorCount = 0;
+
+      for (let i = 0; i < parsed.rows.length; i++) {
+        const rowNumber = i + 2; // Linha 1 é o cabeçalho
+        const row = parsed.rows[i];
+
+        if (entityType === "patient") {
+          const validation = validatePatientCsvRow(row, rowNumber);
+          if (!validation.valid) {
+            errorCount++;
+            await pool.query(
+              "INSERT INTO csv_import_errors(id,job_id,row_number,error_message) VALUES($1,$2,$3,$4)",
+              [randomUUID(), jobId, rowNumber, validation.error]
+            );
+            continue;
+          }
+
+          const data = validation.data!;
+          const patientId = randomUUID();
+          await pool.query(
+            `INSERT INTO patients(id,name,phone,birth_date,guardian_name,contact_source,journey_status,notes,care_alert,assigned_user_id,created_by)
+             VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)`,
+            [
+              patientId,
+              data.name,
+              data.phone,
+              data.birthDate || null,
+              data.guardianName || null,
+              data.contactSource,
+              data.status,
+              data.notes || "",
+              data.careAlert || "",
+              request.currentUser!.id,
+              request.currentUser!.id,
+            ]
+          );
+          processedRows++;
+        } else if (entityType === "financial") {
+          const validation = validateFinancialCsvRow(row, rowNumber);
+          if (!validation.valid) {
+            errorCount++;
+            await pool.query(
+              "INSERT INTO csv_import_errors(id,job_id,row_number,error_message) VALUES($1,$2,$3,$4)",
+              [randomUUID(), jobId, rowNumber, validation.error]
+            );
+            continue;
+          }
+
+          const data = validation.data!;
+          const entryId = randomUUID();
+          await pool.query(
+            `INSERT INTO financial_entries(id,company_account_id,entry_type,amount_cents,occurred_on,description,category,payment_method,created_by)
+             VALUES($1,$2,$3,$4,$5::date,$6,$7,$8,$9)`,
+            [
+              entryId,
+              data.companyAccountId,
+              data.entryType,
+              data.amountCents,
+              data.dueDate,
+              data.description,
+              data.category,
+              data.paymentMethod,
+              request.currentUser!.id,
+            ]
+          );
+          processedRows++;
+        }
+      }
+
+      await pool.query(
+        "UPDATE csv_import_jobs SET status='completed',total_rows=$1,processed_rows=$2,error_count=$3,completed_at=now() WHERE id=$4",
+        [parsed.rows.length, processedRows, errorCount, jobId]
+      );
+
+      await audit(request.currentUser!.id, "csv_import", "csv_import_job", jobId, {
+        entityType,
+        totalRows: parsed.rows.length,
+        processedRows,
+        errorCount,
+      });
+
+      return reply.code(201).send({
+        jobId,
+        entityType,
+        totalRows: parsed.rows.length,
+        processedRows,
+        errorCount,
+        idempotent: false,
+      });
+    }
+  );
+
+  app.get("/api/admin/import/csv", { preHandler: admin }, async () => ({
+    jobs: (
+      await pool.query(
+        `SELECT j.id,j.batch_hash,j.entity_type,j.status,j.total_rows,j.processed_rows,j.error_count,j.created_at,j.completed_at,u.name created_by_name
+         FROM csv_import_jobs j JOIN users u ON u.id=j.created_by ORDER BY j.created_at DESC LIMIT 50`
+      )
+    ).rows,
+  }));
+
+  app.get<{ Params: { id: string } }>(
+    "/api/admin/import/csv/:id/errors",
+    { preHandler: admin },
+    async (request, reply) => {
+      const errors = await pool.query(
+        "SELECT row_number,error_message,created_at FROM csv_import_errors WHERE job_id=$1 ORDER BY row_number",
+        [request.params.id]
+      );
+      return { errors: errors.rows };
+    }
+  );
 
   app.get<{
     Querystring: {

@@ -68,3 +68,13 @@
 - **Who:** equipe técnica valida; Admin e Operador executam as jornadas cobertas.
 - **How:** três viewports, Compose real, seed/migrations repetidos, smoke API, axe e artefatos.
 - **How much:** duas dependências exclusivas de desenvolvimento e maior tempo de CI; sem impacto no contêiner de produção nem custo financeiro inventado.
+
+## PR 8 — Importação CSV Idempotente de Pacientes e Finanças
+
+- **What:** módulo de carga massiva de pacientes e lançamentos financeiros via CSV com suporte a idempotência e sanitização contra CSV Injection.
+- **Why:** permitir a migração inicial de dados de planilhas/sistemas legado sem duplicar registros ou corromper a auditoria.
+- **Where:** domínio `src/domain/csv-import.ts`, migration `006_csv_imports.sql`, endpoints `/api/admin/import/csv`, UI administrativa e testes.
+- **When:** oitava entrega incremental após validação da release base.
+- **Who:** exclusivo para perfil **Admin**.
+- **How:** hash SHA-256 no banco para idempotência, parsing tolerante a delimitadores, sanitização de fórmulas e inserção em lote auditada.
+- **How much:** uma migration aditiva, 16 testes unitários verdes, zero novas dependências externas de infraestrutura.
