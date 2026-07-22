@@ -78,3 +78,13 @@
 - **Who:** exclusivo para perfil **Admin**.
 - **How:** hash SHA-256 no banco para idempotência, parsing tolerante a delimitadores, sanitização de fórmulas e inserção em lote auditada.
 - **How much:** uma migration aditiva, 16 testes unitários verdes, zero novas dependências externas de infraestrutura.
+
+## PR 9 — Catálogo e Controle de Estoque de Aparelhos
+
+- **What:** módulo de catálogo de produtos (aparelhos auditivos) e histórico append-only de movimentações de estoque com baixa automática em vendas.
+- **Why:** controlar a disponibilidade física de aparelhos e impedir vendas de itens sem saldo suficiente em estoque.
+- **Where:** domínio `src/domain/inventory.ts`, migration `007_inventory.sql`, endpoints `/api/products` e `/api/inventory/movements`, tela "Estoque" no frontend e testes.
+- **When:** nona entrega incremental da evolução do sistema.
+- **Who:** Admin gerencia produtos e lançamentos manuais; Operador visualiza saldos e realiza vendas com baixa automática.
+- **How:** trigger PostgreSQL prevenindo alteração física de lançamentos (`append-only`), validação de saldo não-negativo e integração transacional com a rota `/api/sales`.
+- **How much:** 1 migration aditiva, 19 testes unitários verdes, zero dependências extras.

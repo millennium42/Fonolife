@@ -17,6 +17,22 @@ No marketing language.
 Respond ONLY with a JSON object mapping each node id (as a string) to its
 one-sentence description — no prose, no markdown fences.
 
+- "src_main_financialentry": "FinancialEntry" | kind=code-symbol | source=web/src/main.tsx:L52 | neighbors=[main.tsx]
+- "src_main_followup": "FollowUp" | kind=code-symbol | source=web/src/main.tsx:L35 | neighbors=[main.tsx]
+- "src_main_followups": "FollowUps()" | kind=code-symbol | source=web/src/main.tsx:L756 | neighbors=[main.tsx]
+- "src_main_inventory": "Inventory()" | kind=code-symbol | source=web/src/main.tsx:L1517 | neighbors=[main.tsx]
+- "src_main_monthly": "monthly()" | kind=code-symbol | source=web/src/main.tsx:L153 | neighbors=[main.tsx]
+- "src_main_patient": "Patient" | kind=code-symbol | source=web/src/main.tsx:L12 | neighbors=[main.tsx]
+- "src_main_patientform": "PatientForm()" | kind=code-symbol | source=web/src/main.tsx:L382 | neighbors=[main.tsx]
+- "src_main_patients": "Patients()" | kind=code-symbol | source=web/src/main.tsx:L897 | neighbors=[main.tsx]
+- "src_main_paymentlabels": "paymentLabels" | kind=code-symbol | source=web/src/main.tsx:L1042 | neighbors=[main.tsx]
+- "src_main_receivable": "Receivable" | kind=code-symbol | source=web/src/main.tsx:L64 | neighbors=[main.tsx]
+- "src_main_sources": "sources" | kind=code-symbol | source=web/src/main.tsx:L111 | neighbors=[main.tsx]
+- "src_main_statuses": "statuses" | kind=code-symbol | source=web/src/main.tsx:L101 | neighbors=[main.tsx]
+- "src_main_timelineitem": "TimelineItem" | kind=code-symbol | source=web/src/main.tsx:L27 | neighbors=[main.tsx]
+- "src_main_user": "User" | kind=code-symbol | source=web/src/main.tsx:L6 | neighbors=[main.tsx]
+- "tests_dashboard_smoke_dashboard": "dashboard()" | kind=code-symbol | source=tests/dashboard-smoke.mjs:L9 | neighbors=[dashboard-smoke.mjs]
+- "tests_dashboard_smoke_login": "login()" | kind=code-symbol | source=tests/dashboard-smoke.mjs:L4 | neighbors=[dashboard-smoke.mjs]
 - "tests_dashboard_test": "dashboard.test.ts" | kind=code-symbol | source=tests/dashboard.test.ts:L1 | neighbors=[a56a353 feat: priorizar filas acionávei…]
 - "tests_devsec_smoke_login": "login()" | kind=code-symbol | source=tests/devsec-smoke.mjs:L14 | neighbors=[devsec-smoke.mjs]
 - "tests_finance_smoke_accounts": "accounts" | kind=code-symbol | source=tests/finance-smoke.mjs:L10 | neighbors=[finance-smoke.mjs]

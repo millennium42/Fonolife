@@ -72,4 +72,16 @@ Em 18/07/2026, `npm run typecheck` passou sem erros e `npm test` aprovou 9/9 tes
 - RBAC: perfil Operador bloqueado com HTTP 403; exclusivo para perfil Admin.
 - Defeitos: P0 = 0, P1 = 0, P2 = 0.
 
-Backlog P2: estoque/catálogo, WhatsApp, anexos, prontuário clínico completo, configuração dos prazos e evolução de privacidade/LGPD. Nenhum item bloqueia os critérios desta release.
+## PR 9 — Catálogo e Controle de Estoque de Aparelhos
+
+- `npm run typecheck`: aprovado (0 erros).
+- `npm test`: 19/19 testes aprovados.
+- `npm run build`: aprovado (bundle Fastify + Vite compilados com sucesso).
+- `npm audit`: 0 vulnerabilidades.
+- Imutabilidade & Append-only: trigger PostgreSQL `trg_prevent_inventory_movement_modification` bloqueando qualquer UPDATE/DELETE na tabela `inventory_movements`.
+- Saldo Não-Negativo: validação transacional impedindo vendas ou ajustes que resultem em saldo negativo no estoque.
+- Baixa Automática em Vendas: integração transacional na API de Vendas gerando baixa automática `sale_deduction`.
+- RBAC: perfil Operador bloqueado em rotas administrativas de catálogo/movimentação (HTTP 403).
+- Defeitos: P0 = 0, P1 = 0, P2 = 0.
+
+Backlog P2: WhatsApp, anexos, prontuário clínico completo, configuração dos prazos e evolução de privacidade/LGPD. Nenhum item bloqueia os critérios desta release.

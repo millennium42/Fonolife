@@ -1514,7 +1514,194 @@ function Dashboard({ user, openPatient, openFollowUps }: { user: User; openPatie
   </>;
 }
 
+function Inventory({ user }: { user: User }) {
+  const [products, setProducts] = useState<any[]>([]);
+  const [movements, setMovements] = useState<any[]>([]);
+  const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [showAddProduct, setShowAddProduct] = useState(false);
+  const [showAddMovement, setShowAddMovement] = useState(false);
+
+  const loadData = () => {
+    api("/api/products").then((d) => setProducts(d?.products || [])).catch((e) => setError(e.message));
+    api("/api/inventory/movements").then((d) => setMovements(d?.movements || [])).catch(() => {});
+  };
+
+  useEffect(() => {
+    loadData();
+  }, []);
+
+  async function handleAddProduct(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    setLoading(true);
+    setError("");
+    const form = e.currentTarget,
+      v = Object.fromEntries(new FormData(form));
+    try {
+      await api("/api/admin/products", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: String(v.name),
+          brand: String(v.brand),
+          model: String(v.model),
+          priceCents: cents(String(v.price)),
+        }),
+      });
+      setShowAddProduct(false);
+      loadData();
+    } catch (err: any) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function handleAddMovement(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    setLoading(true);
+    setError("");
+    const form = e.currentTarget,
+      v = Object.fromEntries(new FormData(form));
+    try {
+      await api("/api/admin/inventory/movements", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          productId: String(v.productId),
+          movementType: String(v.movementType),
+          quantity: Number(v.quantity),
+          notes: String(v.notes),
+        }),
+      });
+      setShowAddMovement(false);
+      loadData();
+    } catch (err: any) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  return (
+    <section className="card">
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+        <h2>Catálogo & Estoque de Aparelhos</h2>
+        {user.role === "admin" && (
+          <div style={{ display: "flex", gap: "0.5rem" }}>
+            <button className="secondary" onClick={() => setShowAddProduct(!showAddProduct)}>
+              {showAddProduct ? "Cancelar" : "+ Novo Produto"}
+            </button>
+            <button onClick={() => setShowAddMovement(!showAddMovement)}>
+              {showAddMovement ? "Cancelar" : "+ Entrada / Ajuste de Estoque"}
+            </button>
+          </div>
+        )}
+      </div>
+
+      {error && <p className="error" role="alert" style={{ margin: "1rem 0" }}>{error}</p>}
+
+      {showAddProduct && (
+        <form onSubmit={handleAddProduct} style={{ display: "flex", flexDirection: "column", gap: "0.75rem", maxWidth: "500px", margin: "1rem 0", padding: "1rem", border: "1px solid #ddd", borderRadius: "4px" }}>
+          <h3>Cadastrar Produto no Catálogo</h3>
+          <label>Nome <input name="name" required placeholder="Ex: Aparelho Audibel Pro" /></label>
+          <label>Marca <input name="brand" required placeholder="Ex: Audibel" /></label>
+          <label>Modelo <input name="model" required placeholder="Ex: AX7" /></label>
+          <label>Preço Sugerido (R$) <input name="price" required placeholder="Ex: 4500,00" /></label>
+          <button type="submit" disabled={loading}>{loading ? "Salvando..." : "Salvar Produto"}</button>
+        </form>
+      )}
+
+      {showAddMovement && (
+        <form onSubmit={handleAddMovement} style={{ display: "flex", flexDirection: "column", gap: "0.75rem", maxWidth: "500px", margin: "1rem 0", padding: "1rem", border: "1px solid #ddd", borderRadius: "4px" }}>
+          <h3>Lançar Entrada ou Ajuste de Estoque</h3>
+          <label>
+            Produto
+            <select name="productId" required>
+              <option value="">Selecione o produto</option>
+              {products.map((p) => (
+                <option key={p.id} value={p.id}>{p.name} ({p.brand} {p.model})</option>
+              ))}
+            </select>
+          </label>
+          <label>
+            Tipo de Movimentação
+            <select name="movementType" required>
+              <option value="entry">Entrada (Adicionar ao estoque)</option>
+              <option value="adjustment">Ajuste Manual Auditado</option>
+            </select>
+          </label>
+          <label>Quantidade (Positiva para entrada, negativa para baixa) <input name="quantity" type="number" required placeholder="Ex: 5 ou -1" /></label>
+          <label>Observações <input name="notes" placeholder="Motivo do ajuste ou nota fiscal de entrada" /></label>
+          <button type="submit" disabled={loading}>{loading ? "Registrando..." : "Registrar Movimentação"}</button>
+        </form>
+      )}
+
+      <h3>Produtos em Catálogo</h3>
+      <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.85rem", marginTop: "0.5rem" }}>
+        <thead>
+          <tr style={{ borderBottom: "2px solid #ccc", textAlign: "left" }}>
+            <th style={{ padding: "0.5rem" }}>Nome</th>
+            <th style={{ padding: "0.5rem" }}>Marca</th>
+            <th style={{ padding: "0.5rem" }}>Modelo</th>
+            <th style={{ padding: "0.5rem" }}>Preço</th>
+            <th style={{ padding: "0.5rem" }}>Saldo em Estoque</th>
+          </tr>
+        </thead>
+        <tbody>
+          {products.map((p) => (
+            <tr key={p.id} style={{ borderBottom: "1px solid #eee" }}>
+              <td style={{ padding: "0.5rem" }}><strong>{p.name}</strong></td>
+              <td style={{ padding: "0.5rem" }}>{p.brand}</td>
+              <td style={{ padding: "0.5rem" }}>{p.model}</td>
+              <td style={{ padding: "0.5rem" }}>{money(p.price_cents)}</td>
+              <td style={{ padding: "0.5rem", fontWeight: "bold", color: p.stock_balance > 0 ? "green" : "red" }}>
+                {p.stock_balance} un.
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+
+      {movements.length > 0 && (
+        <div style={{ marginTop: "2rem" }}>
+          <h3>Histórico de Movimentações (Append-Only)</h3>
+          <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.85rem", marginTop: "0.5rem" }}>
+            <thead>
+              <tr style={{ borderBottom: "2px solid #ccc", textAlign: "left" }}>
+                <th style={{ padding: "0.5rem" }}>Data</th>
+                <th style={{ padding: "0.5rem" }}>Produto</th>
+                <th style={{ padding: "0.5rem" }}>Tipo</th>
+                <th style={{ padding: "0.5rem" }}>Qtd.</th>
+                <th style={{ padding: "0.5rem" }}>Observação</th>
+                <th style={{ padding: "0.5rem" }}>Responsável</th>
+              </tr>
+            </thead>
+            <tbody>
+              {movements.map((m) => (
+                <tr key={m.id} style={{ borderBottom: "1px solid #eee" }}>
+                  <td style={{ padding: "0.5rem" }}>{date(m.created_at)}</td>
+                  <td style={{ padding: "0.5rem" }}>{m.product_name}</td>
+                  <td style={{ padding: "0.5rem" }}>
+                    {m.movement_type === "entry" ? "Entrada" : m.movement_type === "sale_deduction" ? "Baixa por Venda" : "Ajuste"}
+                  </td>
+                  <td style={{ padding: "0.5rem", color: m.quantity > 0 ? "green" : "red", fontWeight: "bold" }}>
+                    {m.quantity > 0 ? `+${m.quantity}` : m.quantity}
+                  </td>
+                  <td style={{ padding: "0.5rem" }}>{m.notes}</td>
+                  <td style={{ padding: "0.5rem" }}>{m.created_by_name}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </section>
+  );
+}
+
 function CsvImport() {
+
   const [entityType, setEntityType] = useState<"patient" | "financial">("patient");
   const [csvContent, setCsvContent] = useState("");
   const [fileName, setFileName] = useState("");
@@ -1721,8 +1908,8 @@ function App() {
     );
 
   const pages = user.role === "admin"
-    ? ["Início", "Pacientes", "Acompanhamento", "Financeiro", "Importação CSV"]
-    : ["Início", "Pacientes", "Acompanhamento", "Financeiro"];
+    ? ["Início", "Pacientes", "Acompanhamento", "Financeiro", "Estoque", "Importação CSV"]
+    : ["Início", "Pacientes", "Acompanhamento", "Financeiro", "Estoque"];
 
   return (
     <div className="shell">
@@ -1757,9 +1944,11 @@ function App() {
                   ? "Veja quem precisa de contato ou cuidado hoje."
                   : page === "Início"
                     ? "O que precisa da sua atenção hoje."
-                    : page === "Importação CSV"
-                      ? "Importação em lote de registros via planilha CSV."
-                      : "Registre uma vez e acompanhe realizado e previsões."}
+                    : page === "Estoque"
+                      ? "Catálogo de aparelhos e controle de estoque."
+                      : page === "Importação CSV"
+                        ? "Importação em lote de registros via planilha CSV."
+                        : "Registre uma vez e acompanhe realizado e previsões."}
             </p>
           </div>
         </div>
@@ -1769,12 +1958,15 @@ function App() {
           <FollowUps />
         ) : page === "Financeiro" ? (
           <Finance user={user} />
+        ) : page === "Estoque" ? (
+          <Inventory user={user} />
         ) : page === "Importação CSV" ? (
           <CsvImport />
         ) : <Dashboard user={user} openPatient={(id) => { setPatientId(id); setPage("Pacientes"); }} openFollowUps={() => setPage("Acompanhamento")} />}
       </main>
     </div>
   );
+
 
 }
 createRoot(document.getElementById("root")!).render(

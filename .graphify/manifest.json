@@ -24,8 +24,8 @@
     "hash": "27552e5dd89137a5382deb92859254b0"
   },
   "C:/Users/milla/Documents/Projetos/Git/Fonolife/src/app.ts": {
-    "mtime": 1784748658797.3467,
-    "hash": "84a7eda880769845eed14dd605fcc275"
+    "mtime": 1784749086555.4219,
+    "hash": "8450a2325233f6e63828447811c2e7b2"
   },
   "C:/Users/milla/Documents/Projetos/Git/Fonolife/src/config.ts": {
     "mtime": 1784747865828.1047,
@@ -120,8 +120,8 @@
     "hash": "97596fb76e2d03fe921c8719f977440e"
   },
   "C:/Users/milla/Documents/Projetos/Git/Fonolife/web/src/main.tsx": {
-    "mtime": 1784748799389.5115,
-    "hash": "f8415a28b3b6dd8a7ccf0a60f273b21d"
+    "mtime": 1784749122210.8843,
+    "hash": "1c19c1081a16e4e0b5a67b2f96ed054f"
   },
   "C:/Users/milla/Documents/Projetos/Git/Fonolife/.codex/skills/graphify/SKILL.md": {
     "mtime": 1784747865779.5283,
@@ -180,8 +180,8 @@
     "hash": "f17558428b4fbdc6291b6777ec854e2c"
   },
   "C:/Users/milla/Documents/Projetos/Git/Fonolife/docs/5w2h-evolucao.md": {
-    "mtime": 1784747865795.2217,
-    "hash": "fea635aefbb9e24611cc42310ba08330"
+    "mtime": 1784748876975.4238,
+    "hash": "fa19f38c6d8ea73751c57fedbaf3c843"
   },
   "C:/Users/milla/Documents/Projetos/Git/Fonolife/docs/arquitetura-do-sistema.md": {
     "mtime": 1784747865795.2217,
@@ -212,11 +212,51 @@
     "hash": "cabc16a7e9d74cf5186a7e7a941905e0"
   },
   "C:/Users/milla/Documents/Projetos/Git/Fonolife/docs/relatorio-validacao.md": {
-    "mtime": 1784747865811.9268,
-    "hash": "28302be27b8e7aed3a99db2c1b8768f9"
+    "mtime": 1784748890560.7886,
+    "hash": "c0ee23cda6cdd1774312c940ef2503a1"
   },
   "C:/Users/milla/Documents/Projetos/Git/Fonolife/web/index.html": {
     "mtime": 1784747865844.9507,
     "hash": "755ae34760e7c8dc258b1ac4b9c640c4"
+  },
+  "C:/Users/milla/Documents/Projetos/Git/Fonolife/migrations/006_csv_imports.sql": {
+    "mtime": 1784748622443.1711,
+    "hash": "239d2a199969dddae26f8695a1ecce6a"
+  },
+  "C:/Users/milla/Documents/Projetos/Git/Fonolife/src/domain/csv-import.ts": {
+    "mtime": 1784748734854.8872,
+    "hash": "a6d257b6c38ec42fd3fe47a171e763ca"
+  },
+  "C:/Users/milla/Documents/Projetos/Git/Fonolife/tests/csv-import.test.ts": {
+    "mtime": 1784748832762.3323,
+    "hash": "c34c8e99fd7609e1419c026fdeb6461e"
+  },
+  "C:/Users/milla/Documents/Projetos/Git/Fonolife/.graphify/GRAPH_REPORT.md": {
+    "mtime": 1784748866421.1692,
+    "hash": "83626c8126153c001dc5125068a685f0"
+  },
+  "C:/Users/milla/Documents/Projetos/Git/Fonolife/.graphify/description-instructions/batch-000.md": {
+    "mtime": 1784748866333.7202,
+    "hash": "143c77ba7732ea091e91a8245dc6744e"
+  },
+  "C:/Users/milla/Documents/Projetos/Git/Fonolife/.graphify/description-instructions/batch-001.md": {
+    "mtime": 1784748866341.6846,
+    "hash": "6c3ab563878c9c09c83c332449699e95"
+  },
+  "C:/Users/milla/Documents/Projetos/Git/Fonolife/.graphify/description-instructions/batch-002.md": {
+    "mtime": 1784748866342.686,
+    "hash": "4f6b73974368bfd624c53699da2cd117"
+  },
+  "C:/Users/milla/Documents/Projetos/Git/Fonolife/.graphify/description-instructions/batch-003.md": {
+    "mtime": 1784748866343.6887,
+    "hash": "f600f9ba2eb7ec891eb1a3395f4d3f97"
+  },
+  "C:/Users/milla/Documents/Projetos/Git/Fonolife/.graphify/description-instructions/batch-004.md": {
+    "mtime": 1784748866344.6875,
+    "hash": "622b26fcdd424a388ee5beac94c4d773"
+  },
+  "C:/Users/milla/Documents/Projetos/Git/Fonolife/.graphify/label-instructions/communities.md": {
+    "mtime": 1784748866165.6592,
+    "hash": "d5fbb3801dd83348d512428007de9882"
   }
 }

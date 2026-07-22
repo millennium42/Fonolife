@@ -34,6 +34,10 @@ import {
   validateFinancialCsvRow,
   validatePatientCsvRow,
 } from "./domain/csv-import.js";
+import {
+  validInventoryMovement,
+  validProduct,
+} from "./domain/inventory.js";
 
 type User = {
   id: string;
@@ -461,6 +465,141 @@ export function buildApp() {
       return { errors: errors.rows };
     }
   );
+
+  app.get("/api/products", { preHandler: authenticated }, async () => ({
+    products: (
+      await pool.query(
+        `SELECT p.id,p.name,p.brand,p.model,p.price_cents,p.active,p.created_at,
+                COALESCE(SUM(m.quantity), 0)::integer stock_balance
+         FROM products p
+         LEFT JOIN inventory_movements m ON m.product_id = p.id
+         GROUP BY p.id ORDER BY p.name`
+      )
+    ).rows,
+  }));
+
+  app.post<{
+    Body: { name?: string; brand?: string; model?: string; priceCents?: number };
+  }>("/api/admin/products", { preHandler: admin }, async (request, reply) => {
+    const { name, brand, model, priceCents } = request.body ?? {};
+    if (!validProduct({ name, brand, model, priceCents }))
+      return reply
+        .code(400)
+        .type("application/problem+json")
+        .send({
+          title: "Confira o nome, marca, modelo e preço em centavos",
+          status: 400,
+        });
+
+    const id = randomUUID();
+    await pool.query(
+      "INSERT INTO products(id,name,brand,model,price_cents) VALUES($1,$2,$3,$4,$5)",
+      [id, name!.trim(), brand!.trim(), model!.trim(), priceCents]
+    );
+    await audit(request.currentUser!.id, "create", "product", id);
+    return reply.code(201).send({ id });
+  });
+
+  app.patch<{
+    Params: { id: string };
+    Body: { name?: string; brand?: string; model?: string; priceCents?: number; active?: boolean };
+  }>("/api/admin/products/:id", { preHandler: admin }, async (request, reply) => {
+    const { name, brand, model, priceCents, active } = request.body ?? {};
+    const result = await pool.query(
+      `UPDATE products SET
+         name=COALESCE($1,name),
+         brand=COALESCE($2,brand),
+         model=COALESCE($3,model),
+         price_cents=COALESCE($4,price_cents),
+         active=COALESCE($5,active),
+         updated_at=now()
+       WHERE id=$6 RETURNING id`,
+      [name?.trim() || null, brand?.trim() || null, model?.trim() || null, priceCents ?? null, active ?? null, request.params.id]
+    );
+    if (!result.rowCount)
+      return reply
+        .code(404)
+        .type("application/problem+json")
+        .send({ title: "Produto não encontrado", status: 404 });
+
+    await audit(request.currentUser!.id, "update", "product", request.params.id);
+    return reply.code(204).send();
+  });
+
+  app.get("/api/inventory/movements", { preHandler: authenticated }, async () => ({
+    movements: (
+      await pool.query(
+        `SELECT m.id,m.product_id,p.name product_name,m.movement_type,m.quantity,m.notes,m.created_at,u.name created_by_name
+         FROM inventory_movements m
+         JOIN products p ON p.id=m.product_id
+         JOIN users u ON u.id=m.created_by
+         ORDER BY m.created_at DESC LIMIT 200`
+      )
+    ).rows,
+  }));
+
+  app.post<{
+    Body: { productId?: string; movementType?: string; quantity?: number; notes?: string };
+  }>("/api/admin/inventory/movements", { preHandler: admin }, async (request, reply) => {
+    const { productId, movementType, quantity, notes } = request.body ?? {};
+    if (!validInventoryMovement({ productId, movementType, quantity }))
+      return reply
+        .code(400)
+        .type("application/problem+json")
+        .send({
+          title: "Confira o produto, tipo de movimentação e quantidade",
+          status: 400,
+        });
+
+    const client = await pool.connect();
+    try {
+      await client.query("BEGIN");
+      const prod = await client.query("SELECT 1 FROM products WHERE id=$1", [productId]);
+      if (!prod.rowCount) {
+        await client.query("ROLLBACK");
+        return reply
+          .code(404)
+          .type("application/problem+json")
+          .send({ title: "Produto não encontrado", status: 404 });
+      }
+
+      // Se for uma baixa ou ajuste negativo, valida saldo suficiente para não negativar
+      if (quantity! < 0) {
+        const balance = await client.query<{ stock: string }>(
+          "SELECT COALESCE(SUM(quantity),0) stock FROM inventory_movements WHERE product_id=$1",
+          [productId]
+        );
+        const currentStock = Number(balance.rows[0].stock);
+        if (currentStock + quantity! < 0) {
+          await client.query("ROLLBACK");
+          return reply
+            .code(409)
+            .type("application/problem+json")
+            .send({
+              title: `Saldo em estoque insuficiente (Atual: ${currentStock}, Tentativa de baixa: ${Math.abs(quantity!)})`,
+              status: 409,
+            });
+        }
+      }
+
+      const id = randomUUID();
+      await client.query(
+        "INSERT INTO inventory_movements(id,product_id,movement_type,quantity,notes,created_by) VALUES($1,$2,$3,$4,$5,$6)",
+        [id, productId, movementType, quantity, notes?.trim() || "", request.currentUser!.id]
+      );
+      await client.query(
+        "INSERT INTO audit_events(user_id,action,entity_type,entity_id,details) VALUES($1,$2,$3,$4,$5)",
+        [request.currentUser!.id, "create", "inventory_movement", id, { productId, movementType, quantity }]
+      );
+      await client.query("COMMIT");
+      return reply.code(201).send({ id });
+    } catch (err) {
+      await client.query("ROLLBACK");
+      throw err;
+    } finally {
+      client.release();
+    }
+  });
 
   app.get<{
     Querystring: {
@@ -937,6 +1076,7 @@ export function buildApp() {
   type SaleBody = {
     clientRequestId?: string;
     patientId?: string;
+    productId?: string;
     product?: string;
     quantity?: number;
     totalAmountCents?: number;
@@ -1000,6 +1140,26 @@ export function buildApp() {
               status: 404,
             });
         }
+
+        // Se a venda for vinculada a um produto do catálogo, valida saldo em estoque
+        if (body.productId) {
+          const balance = await client.query<{ stock: string }>(
+            "SELECT COALESCE(SUM(quantity),0) stock FROM inventory_movements WHERE product_id=$1",
+            [body.productId]
+          );
+          const currentStock = Number(balance.rows[0]?.stock ?? 0);
+          if (currentStock < Number(body.quantity)) {
+            await client.query("ROLLBACK");
+            return reply
+              .code(409)
+              .type("application/problem+json")
+              .send({
+                title: `Estoque insuficiente para esta venda (Disponível: ${currentStock}, Solicitado: ${body.quantity})`,
+                status: 409,
+              });
+          }
+        }
+
         const saleId = randomUUID();
         await client.query(
           `INSERT INTO sales(id,client_request_id,patient_id,product,quantity,total_amount_cents,sold_on,company_account_id,notes,warranty_until,delivery_status,created_by) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12)`,
@@ -1018,6 +1178,21 @@ export function buildApp() {
             request.currentUser!.id,
           ],
         );
+
+        // Se houver produto do catálogo, registra a baixa de estoque automática
+        if (body.productId) {
+          await client.query(
+            "INSERT INTO inventory_movements(id,product_id,movement_type,quantity,notes,created_by) VALUES($1,$2,'sale_deduction',$3,$4,$5)",
+            [
+              randomUUID(),
+              body.productId,
+              -Math.abs(Number(body.quantity)),
+              `Baixa automática pela Venda ${saleId}`,
+              request.currentUser!.id,
+            ]
+          );
+        }
+
         for (const item of installments) {
           const installmentId = randomUUID();
           await client.query(
