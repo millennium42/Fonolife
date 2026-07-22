@@ -1,24 +1,24 @@
 # Graph Report - .  (2026-07-22)
 
 ## Corpus Check
-- Corpus is ~32.872 words - fits in a single context window. You may not need a graph.
+- Corpus is ~34.105 words - fits in a single context window. You may not need a graph.
 
 ## Summary
-- 186 nodes · 369 edges · 10 communities detected
+- 205 nodes · 410 edges · 12 communities detected
 - Extraction: 100% EXTRACTED · 0% INFERRED · 0% AMBIGUOUS
 - Token cost: 0 input · 0 output
-- Edge kinds: contains: 140 · imports: 64 · MODIFIES: 48 · imports_from: 30 · reads_from: 20 · ON_BRANCH: 19 · references: 19 · calls: 10 · triggers: 10 · PARENT_OF: 9
+- Edge kinds: contains: 155 · imports: 73 · MODIFIES: 53 · imports_from: 34 · references: 21 · ON_BRANCH: 20 · reads_from: 20 · calls: 13 · triggers: 11 · PARENT_OF: 10
 
 
 ## Input Scope
 - Requested: auto
 - Resolved: committed (source: default-auto)
-- Included files: 65 · Candidates: 118
-- Excluded: 3 untracked · 6221 ignored · 0 sensitive · 0 missing committed
+- Included files: 68 · Candidates: 126
+- Excluded: 3 untracked · 6222 ignored · 0 sensitive · 0 missing committed
 - Recommendation: Use --scope all or graphify.yaml inputs.corpus for a knowledge-base folder.
 
 ## Graph Freshness
-- Built from Git commit: `98e15b2`
+- Built from Git commit: `bb925aa`
 - Compare this hash to `git rev-parse HEAD` before trusting freshness-sensitive graph output.
 ## God Nodes (most connected - your core abstractions)
 1. `financial_entries` - 11 edges
@@ -26,17 +26,21 @@
 3. `sales` - 8 edges
 4. `restrict_follow_up_update()` - 7 edges
 5. `receivable_installments` - 6 edges
-6. `hashPassword()` - 6 edges
-7. `follow_up_tasks` - 5 edges
-8. `check_sale_installment_total()` - 5 edges
-9. `config` - 5 edges
-10. `pool` - 5 edges
+6. `validProduct()` - 6 edges
+7. `hashPassword()` - 6 edges
+8. `follow_up_tasks` - 5 edges
+9. `check_sale_installment_total()` - 5 edges
+10. `config` - 5 edges
 
 ## Surprising Connections (you probably didn't know these)
 - `3f9e6cc feat: estabelecer núcleo seguro e executável da clínica Fonolife (#1)` --ON_BRANCH--> `codex/pr8-importacao-csv-seguranca`  [EXTRACTED]
   git → git  _Bridges community 4 → community 3_
 - `4de92ce Graphify` --PARENT_OF--> `98e15b2 feat: implementar importação CSV idempotente com auditoria e controle de concorrência (#8)`  [EXTRACTED]
   git → git  _Bridges community 3 → community 0_
+- `98e15b2 feat: implementar importação CSV idempotente com auditoria e controle de concorrência (#8)` --PARENT_OF--> `bb925aa feat: implementar catálogo e controle de estoque de aparelhos com auditoria e movimentações imutáveis (#9)`  [EXTRACTED]
+  git → git  _Bridges community 0 → community 6_
+- `bb925aa feat: implementar catálogo e controle de estoque de aparelhos com auditoria e movimentações imutáveis (#9)` --ON_BRANCH--> `codex/pr8-importacao-csv-seguranca`  [EXTRACTED]
+  git → git  _Bridges community 6 → community 3_
 
 ## Communities
 
@@ -45,7 +49,7 @@ Cohesion: 0.11
 Nodes (31): 98e15b2 feat: implementar importação CSV idempotente com auditoria e controle de concorrência (#8), calculateCsvHash(), CsvFinancialRow, CsvPatientRow, parseCsv(), ParsedCsv, sanitizeCsvCell(), validateFinancialCsvRow() (+23 more)
 
 ### Community 1 - "Community 1"
-Cohesion: 0.08
+Cohesion: 0.07
 Nodes (21): categoryLabels, CompanyAccount, Dashboard(), DashboardData, date(), eventTypes, Finance(), FinanceSummary (+13 more)
 
 ### Community 2 - "Community 2"
@@ -65,39 +69,47 @@ Cohesion: 0.25
 Nodes (12): follow_up_tasks, follow_up_tasks_no_delete, follow_up_tasks_restrict_update, OLD.created_at, OLD.created_by, OLD.due_on, OLD.notes, OLD.patient_id (+4 more)
 
 ### Community 6 - "Community 6"
-Cohesion: 0.43
-Nodes (5): patient_events, patient_events_immutable, patients, patients_no_delete, users
+Cohesion: 0.30
+Nodes (10): bb925aa feat: implementar catálogo e controle de estoque de aparelhos com auditoria e movimentações imutáveis (#9), InventoryMovement, MOVEMENT_TYPES, MovementType, Product, validInventoryMovement(), validProduct(), validProductBrand() (+2 more)
 
 ### Community 7 - "Community 7"
 Cohesion: 0.43
-Nodes (5): audit_events, audit_events_immutable, company_accounts, user_sessions, users
+Nodes (5): patient_events, patient_events_immutable, patients, patients_no_delete, users
 
 ### Community 8 - "Community 8"
+Cohesion: 0.43
+Nodes (5): audit_events, audit_events_immutable, company_accounts, user_sessions, users
+
+### Community 9 - "Community 9"
 Cohesion: 0.29
 Nodes (4): accounts, clientRequestId, payload, summary
 
-### Community 9 - "Community 9"
+### Community 10 - "Community 10"
+Cohesion: 0.53
+Nodes (4): inventory_movements, products, trg_prevent_inventory_movement_modification, users
+
+### Community 11 - "Community 11"
 Cohesion: 0.83
 Nodes (3): csv_import_errors, csv_import_jobs, users
 
 ## Knowledge Gaps
-- **29 isolated node(s):** `company_accounts`, `User`, `FastifyRequest`, `attempts`, `email` (+24 more)
+- **33 isolated node(s):** `company_accounts`, `User`, `FastifyRequest`, `attempts`, `email` (+28 more)
   These have ≤1 connection - possible missing edges or undocumented components.
 
 ## Suggested Questions
 _Questions this graph is uniquely positioned to answer:_
 
+- **Why does `validProduct()` connect `Community 6` to `Community 0`?**
+  _High betweenness centrality (0.010) - this node is a cross-community bridge._
 - **Why does `hashPassword()` connect `Community 4` to `Community 0`?**
   _High betweenness centrality (0.006) - this node is a cross-community bridge._
 - **Why does `pool` connect `Community 4` to `Community 0`?**
   _High betweenness centrality (0.004) - this node is a cross-community bridge._
-- **Why does `verifyPassword()` connect `Community 4` to `Community 0`?**
-  _High betweenness centrality (0.003) - this node is a cross-community bridge._
 - **What connects `company_accounts`, `User`, `FastifyRequest` to the rest of the system?**
-  _29 weakly-connected nodes found - possible documentation gaps or missing edges._
+  _33 weakly-connected nodes found - possible documentation gaps or missing edges._
 - **Should `Community 0` be split into smaller, more focused modules?**
   _Cohesion score 0.11153846153846154 - nodes in this community are weakly interconnected._
 - **Should `Community 1` be split into smaller, more focused modules?**
-  _Cohesion score 0.07526881720430108 - nodes in this community are weakly interconnected._
+  _Cohesion score 0.07258064516129033 - nodes in this community are weakly interconnected._
 - **Should `Community 2` be split into smaller, more focused modules?**
   _Cohesion score 0.14814814814814814 - nodes in this community are weakly interconnected._

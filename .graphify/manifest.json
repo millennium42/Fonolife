@@ -24,8 +24,8 @@
     "hash": "27552e5dd89137a5382deb92859254b0"
   },
   "C:/Users/milla/Documents/Projetos/Git/Fonolife/src/app.ts": {
-    "mtime": 1784749086555.4219,
-    "hash": "8450a2325233f6e63828447811c2e7b2"
+    "mtime": 1784749467149.8796,
+    "hash": "5ba651502caa5363b8476bbac28b5999"
   },
   "C:/Users/milla/Documents/Projetos/Git/Fonolife/src/config.ts": {
     "mtime": 1784747865828.1047,
@@ -120,8 +120,8 @@
     "hash": "97596fb76e2d03fe921c8719f977440e"
   },
   "C:/Users/milla/Documents/Projetos/Git/Fonolife/web/src/main.tsx": {
-    "mtime": 1784749122210.8843,
-    "hash": "1c19c1081a16e4e0b5a67b2f96ed054f"
+    "mtime": 1784749488805.0244,
+    "hash": "1795f97f74d20a7ca9d710f342796373"
   },
   "C:/Users/milla/Documents/Projetos/Git/Fonolife/.codex/skills/graphify/SKILL.md": {
     "mtime": 1784747865779.5283,
@@ -180,8 +180,8 @@
     "hash": "f17558428b4fbdc6291b6777ec854e2c"
   },
   "C:/Users/milla/Documents/Projetos/Git/Fonolife/docs/5w2h-evolucao.md": {
-    "mtime": 1784748876975.4238,
-    "hash": "fa19f38c6d8ea73751c57fedbaf3c843"
+    "mtime": 1784749209111.1038,
+    "hash": "9a7c16d1f9c7895b32fa206f1ca06aa3"
   },
   "C:/Users/milla/Documents/Projetos/Git/Fonolife/docs/arquitetura-do-sistema.md": {
     "mtime": 1784747865795.2217,
@@ -212,8 +212,8 @@
     "hash": "cabc16a7e9d74cf5186a7e7a941905e0"
   },
   "C:/Users/milla/Documents/Projetos/Git/Fonolife/docs/relatorio-validacao.md": {
-    "mtime": 1784748890560.7886,
-    "hash": "c0ee23cda6cdd1774312c940ef2503a1"
+    "mtime": 1784749222481.375,
+    "hash": "eeb087fd5cae89ec2eadc9fa572907aa"
   },
   "C:/Users/milla/Documents/Projetos/Git/Fonolife/web/index.html": {
     "mtime": 1784747865844.9507,
@@ -232,31 +232,43 @@
     "hash": "c34c8e99fd7609e1419c026fdeb6461e"
   },
   "C:/Users/milla/Documents/Projetos/Git/Fonolife/.graphify/GRAPH_REPORT.md": {
-    "mtime": 1784748866421.1692,
-    "hash": "83626c8126153c001dc5125068a685f0"
+    "mtime": 1784749198810.1555,
+    "hash": "1e650efe91c449280abf0c2f54a89005"
   },
   "C:/Users/milla/Documents/Projetos/Git/Fonolife/.graphify/description-instructions/batch-000.md": {
-    "mtime": 1784748866333.7202,
-    "hash": "143c77ba7732ea091e91a8245dc6744e"
+    "mtime": 1784749198700.3208,
+    "hash": "14e2d57a4f406642b9a0ce78321a2825"
   },
   "C:/Users/milla/Documents/Projetos/Git/Fonolife/.graphify/description-instructions/batch-001.md": {
-    "mtime": 1784748866341.6846,
-    "hash": "6c3ab563878c9c09c83c332449699e95"
+    "mtime": 1784749198700.3208,
+    "hash": "97e0f6ca2381fcb15360bb6a6e0ef37d"
   },
   "C:/Users/milla/Documents/Projetos/Git/Fonolife/.graphify/description-instructions/batch-002.md": {
-    "mtime": 1784748866342.686,
-    "hash": "4f6b73974368bfd624c53699da2cd117"
+    "mtime": 1784749198700.3208,
+    "hash": "3f8b031683196ba084de8838419b49c1"
   },
   "C:/Users/milla/Documents/Projetos/Git/Fonolife/.graphify/description-instructions/batch-003.md": {
-    "mtime": 1784748866343.6887,
-    "hash": "f600f9ba2eb7ec891eb1a3395f4d3f97"
+    "mtime": 1784749198700.3208,
+    "hash": "1ba3cac7f0d9958f0af578abdb4c493d"
   },
   "C:/Users/milla/Documents/Projetos/Git/Fonolife/.graphify/description-instructions/batch-004.md": {
-    "mtime": 1784748866344.6875,
-    "hash": "622b26fcdd424a388ee5beac94c4d773"
+    "mtime": 1784749198700.3208,
+    "hash": "55c523f3cb8a74920ab209f3964019b1"
   },
   "C:/Users/milla/Documents/Projetos/Git/Fonolife/.graphify/label-instructions/communities.md": {
-    "mtime": 1784748866165.6592,
-    "hash": "d5fbb3801dd83348d512428007de9882"
+    "mtime": 1784749198485.0718,
+    "hash": "4c6af2636e66b7a54be635db19c03b00"
+  },
+  "C:/Users/milla/Documents/Projetos/Git/Fonolife/migrations/007_inventory.sql": {
+    "mtime": 1784749023046.274,
+    "hash": "384d97e768e3974151b01905fb34d2e6"
+  },
+  "C:/Users/milla/Documents/Projetos/Git/Fonolife/src/domain/inventory.ts": {
+    "mtime": 1784749147133.8347,
+    "hash": "785d1c012b57607f798b00babbdc24ff"
+  },
+  "C:/Users/milla/Documents/Projetos/Git/Fonolife/tests/inventory.test.ts": {
+    "mtime": 1784749029706.8213,
+    "hash": "7ad16b9dba16ceb5ea42a5bac400de6b"
   }
 }

@@ -848,6 +848,39 @@ export function buildApp() {
       return reply.code(201).send({ id: event.rows[0].id });
     },
   );
+
+  app.post<{
+    Params: { id: string };
+    Body: { messageText?: string };
+  }>(
+    "/api/patients/:id/whatsapp-click",
+    { preHandler: authenticated },
+    async (request, reply) => {
+      const { messageText } = request.body ?? {};
+      const description = messageText?.trim()
+        ? `Contato iniciado via WhatsApp: "${messageText.trim().slice(0, 100)}..."`
+        : "Contato iniciado via WhatsApp";
+
+      const event = await pool.query(
+        `WITH created AS (
+           INSERT INTO patient_events(id,patient_id,event_type,description,occurred_at,created_by)
+           SELECT $1,p.id,'whatsapp',$3,now(),$4 FROM patients p WHERE p.id=$2 AND p.archived_at IS NULL RETURNING id
+         ), audited AS (
+           INSERT INTO audit_events(user_id,action,entity_type,entity_id,details)
+           SELECT $4,'create','patient_event',id,jsonb_build_object('patientId',$2::text,'eventType','whatsapp') FROM created
+         ) SELECT id FROM created`,
+        [randomUUID(), request.params.id, description, request.currentUser!.id]
+      );
+
+      if (!event.rowCount)
+        return reply
+          .code(404)
+          .type("application/problem+json")
+          .send({ title: "Paciente não encontrado", status: 404 });
+      return reply.code(201).send({ id: event.rows[0].id });
+    }
+  );
+
   app.get<{ Params: { id: string } }>(
     "/api/patients/:id/timeline",
     { preHandler: authenticated },

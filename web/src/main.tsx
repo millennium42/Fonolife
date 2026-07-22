@@ -1514,7 +1514,50 @@ function Dashboard({ user, openPatient, openFollowUps }: { user: User; openPatie
   </>;
 }
 
+function WhatsAppButton({
+  patientId,
+  phone,
+  patientName,
+  defaultMessage,
+}: {
+  patientId: string;
+  phone: string;
+  patientName: string;
+  defaultMessage?: string;
+}) {
+  const handleOpen = async () => {
+    const text = defaultMessage || `Olá, ${patientName}! Passando da clínica Fonolife para acompanhar seu atendimento.`;
+    try {
+      await api(`/api/patients/${patientId}/whatsapp-click`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ messageText: text }),
+      });
+    } catch (_) {}
+    const e164 = phone.replace(/\D/g, "");
+    const fullPhone = e164.length === 11 ? `55${e164}` : e164;
+    const url = `https://wa.me/${fullPhone}?text=${encodeURIComponent(text)}`;
+    window.open(url, "_blank", "noopener,noreferrer");
+  };
+
+  return (
+    <button
+      type="button"
+      className="secondary"
+      onClick={(e) => {
+        e.stopPropagation();
+        handleOpen();
+      }}
+      title="Abrir conversa no WhatsApp"
+      style={{ display: "inline-flex", alignItems: "center", gap: "0.25rem", padding: "0.2rem 0.5rem", fontSize: "0.85rem" }}
+    >
+      💬 WhatsApp
+    </button>
+  );
+}
+
 function Inventory({ user }: { user: User }) {
+
   const [products, setProducts] = useState<any[]>([]);
   const [movements, setMovements] = useState<any[]>([]);
   const [error, setError] = useState("");

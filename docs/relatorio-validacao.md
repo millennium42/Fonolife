@@ -84,4 +84,15 @@ Em 18/07/2026, `npm run typecheck` passou sem erros e `npm test` aprovou 9/9 tes
 - RBAC: perfil Operador bloqueado em rotas administrativas de catálogo/movimentação (HTTP 403).
 - Defeitos: P0 = 0, P1 = 0, P2 = 0.
 
-Backlog P2: WhatsApp, anexos, prontuário clínico completo, configuração dos prazos e evolução de privacidade/LGPD. Nenhum item bloqueia os critérios desta release.
+## PR 10 — Atalhos Rápidos WhatsApp de Comunicação Direta
+
+- `npm run typecheck`: aprovado (0 erros).
+- `npm test`: 22/22 testes aprovados.
+- `npm run build`: aprovado (bundle Fastify + Vite compilados com sucesso).
+- `npm audit`: 0 vulnerabilidades.
+- Segurança de URL: codificação estrita com `encodeURIComponent` contra injeção de parâmetros maliciosos ou scripts em links `wa.me`.
+- Formatação E.164: normalização garantida com código internacional `55` e validação de 11 dígitos com DDD.
+- Auditoria de Comunicação: clique do atalho gera evento atômico em `patient_events` (tipo `whatsapp`) e em `audit_events`.
+- Defeitos: P0 = 0, P1 = 0, P2 = 0.
+
+Backlog P2: anexos, prontuário clínico completo, configuração dos prazos e evolução de privacidade/LGPD. Nenhum item bloqueia os critérios desta release.

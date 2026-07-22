@@ -88,3 +88,13 @@
 - **Who:** Admin gerencia produtos e lançamentos manuais; Operador visualiza saldos e realiza vendas com baixa automática.
 - **How:** trigger PostgreSQL prevenindo alteração física de lançamentos (`append-only`), validação de saldo não-negativo e integração transacional com a rota `/api/sales`.
 - **How much:** 1 migration aditiva, 19 testes unitários verdes, zero dependências extras.
+
+## PR 10 — Atalhos Rápidos WhatsApp de Comunicação Direta
+
+- **What:** geração segura de URLs wa.me para mensagens padronizadas de retorno e pós-venda (D+7, D+30, D+90) com auditoria no banco.
+- **Why:** acelerar o contato operacional diário com pacientes mantendo a linha do tempo atualizada sem custos de APIs pagas da Meta.
+- **Where:** domínio `src/domain/whatsapp.ts`, migration `008_whatsapp_shortcuts.sql`, endpoint `/api/patients/:id/whatsapp-click`, UI React e testes.
+- **When:** décima entrega incremental da evolução do sistema.
+- **Who:** Admin e Operador autenticados.
+- **How:** normalização E.164, codificação estrita `encodeURIComponent`, disparo de auditoria em `audit_events` e evento em `patient_events`.
+- **How much:** 1 migration aditiva, 22 testes unitários verdes, zero dependências de terceiros.
