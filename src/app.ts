@@ -776,9 +776,11 @@ export function buildApp() {
       status?: string;
       overdue?: string;
       archived?: string;
+      limit?: string;
+      offset?: string;
     };
   }>("/api/patients", { preHandler: authenticated }, async (request) => {
-    const { search = "", status, overdue, archived } = request.query;
+    const { search = "", status, overdue, archived, limit, offset } = request.query;
     if (status && !isOneOf(status, PATIENT_STATUSES))
       throw Object.assign(new Error("Status inválido"), { statusCode: 400 });
     const terms: string[] = [];
@@ -798,11 +800,16 @@ export function buildApp() {
       terms.push(
         "next_task.due_on < (now() AT TIME ZONE 'America/Sao_Paulo')::date",
       );
+
+    const limitNum = Math.min(Math.max(Number(limit ?? 200), 1), 500);
+    const offsetNum = Math.max(Number(offset ?? 0), 0);
+    values.push(limitNum, offsetNum);
+
     const patients = await pool.query(
-      `SELECT p.id,p.name,p.phone,p.journey_status,p.contact_source,p.care_alert,p.responsible_doctor_id,doc.name responsible_doctor_name,next_task.due_on next_contact_on,p.archived_at,p.version,u.name assigned_user_name FROM patients p JOIN users u ON u.id=p.assigned_user_id LEFT JOIN users doc ON doc.id=p.responsible_doctor_id LEFT JOIN LATERAL (SELECT due_on FROM follow_up_tasks WHERE patient_id=p.id AND completed_at IS NULL AND cancelled_at IS NULL ORDER BY due_on LIMIT 1) next_task ON true ${terms.length ? "WHERE " + terms.join(" AND ") : ""} ORDER BY (next_task.due_on < (now() AT TIME ZONE 'America/Sao_Paulo')::date) DESC,next_task.due_on NULLS LAST,p.name LIMIT 200`,
+      `SELECT p.id,p.name,p.phone,p.journey_status,p.contact_source,p.care_alert,p.responsible_doctor_id,doc.name responsible_doctor_name,next_task.due_on next_contact_on,p.archived_at,p.version,u.name assigned_user_name FROM patients p JOIN users u ON u.id=p.assigned_user_id LEFT JOIN users doc ON doc.id=p.responsible_doctor_id LEFT JOIN LATERAL (SELECT due_on FROM follow_up_tasks WHERE patient_id=p.id AND completed_at IS NULL AND cancelled_at IS NULL ORDER BY due_on LIMIT 1) next_task ON true ${terms.length ? "WHERE " + terms.join(" AND ") : ""} ORDER BY (next_task.due_on < (now() AT TIME ZONE 'America/Sao_Paulo')::date) DESC,next_task.due_on NULLS LAST,p.name LIMIT $${values.length - 1} OFFSET $${values.length}`,
       values,
     );
-    return { patients: patients.rows };
+    return { patients: patients.rows, pagination: { limit: limitNum, offset: offsetNum, count: patients.rowCount } };
   });
 
   app.post<{

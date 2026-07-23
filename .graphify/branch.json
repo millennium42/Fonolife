@@ -1,16 +1,16 @@
 {
   "schemaVersion": 1,
-  "branchName": "codex/p1-refatoracao-tecnica",
+  "branchName": "codex/p2-melhorias-operacionais",
   "worktreePath": "C:\\Users\\milla\\Documents\\Projetos\\Git\\Fonolife",
   "upstream": null,
   "mergeBase": null,
-  "firstSeenHead": "46934875f17d823f3ccf6ce5ce2813f01697fa4b",
-  "lastSeenHead": "46934875f17d823f3ccf6ce5ce2813f01697fa4b",
-  "lastAnalyzedHead": "46934875f17d823f3ccf6ce5ce2813f01697fa4b",
+  "firstSeenHead": "e517fa0fbf903d361cecc9acc57d2d1b20695f69",
+  "lastSeenHead": "e517fa0fbf903d361cecc9acc57d2d1b20695f69",
+  "lastAnalyzedHead": "e517fa0fbf903d361cecc9acc57d2d1b20695f69",
   "stale": false,
   "staleReason": null,
   "staleSince": null,
   "lifecycleEvent": null,
-  "createdAt": "2026-07-23T22:02:45.299Z",
-  "updatedAt": "2026-07-23T22:02:45.299Z"
+  "createdAt": "2026-07-23T22:05:29.524Z",
+  "updatedAt": "2026-07-23T22:05:29.524Z"
 }
