@@ -752,6 +752,14 @@ export function buildApp() {
     }
   });
 
+  app.get("/api/doctors", { preHandler: authenticated }, async () => ({
+    doctors: (
+      await pool.query(
+        "SELECT id, name, email, role, license_number, specialty FROM users WHERE role IN ('doctor', 'admin') AND active ORDER BY name"
+      )
+    ).rows,
+  }));
+
   app.get<{
     Querystring: {
       search?: string;
@@ -781,11 +789,12 @@ export function buildApp() {
         "next_task.due_on < (now() AT TIME ZONE 'America/Sao_Paulo')::date",
       );
     const patients = await pool.query(
-      `SELECT p.id,p.name,p.phone,p.journey_status,p.contact_source,p.care_alert,next_task.due_on next_contact_on,p.archived_at,p.version,u.name assigned_user_name FROM patients p JOIN users u ON u.id=p.assigned_user_id LEFT JOIN LATERAL (SELECT due_on FROM follow_up_tasks WHERE patient_id=p.id AND completed_at IS NULL AND cancelled_at IS NULL ORDER BY due_on LIMIT 1) next_task ON true ${terms.length ? "WHERE " + terms.join(" AND ") : ""} ORDER BY (next_task.due_on < (now() AT TIME ZONE 'America/Sao_Paulo')::date) DESC,next_task.due_on NULLS LAST,p.name LIMIT 200`,
+      `SELECT p.id,p.name,p.phone,p.journey_status,p.contact_source,p.care_alert,p.responsible_doctor_id,doc.name responsible_doctor_name,next_task.due_on next_contact_on,p.archived_at,p.version,u.name assigned_user_name FROM patients p JOIN users u ON u.id=p.assigned_user_id LEFT JOIN users doc ON doc.id=p.responsible_doctor_id LEFT JOIN LATERAL (SELECT due_on FROM follow_up_tasks WHERE patient_id=p.id AND completed_at IS NULL AND cancelled_at IS NULL ORDER BY due_on LIMIT 1) next_task ON true ${terms.length ? "WHERE " + terms.join(" AND ") : ""} ORDER BY (next_task.due_on < (now() AT TIME ZONE 'America/Sao_Paulo')::date) DESC,next_task.due_on NULLS LAST,p.name LIMIT 200`,
       values,
     );
     return { patients: patients.rows };
   });
+
   app.post<{
     Body: {
       name?: string;
@@ -798,6 +807,7 @@ export function buildApp() {
       careAlert?: string;
       nextContactOn?: string;
       assignedUserId?: string;
+      responsibleDoctorId?: string | null;
     };
   }>("/api/patients", { preHandler: authenticated }, async (request, reply) => {
     const body = request.body ?? {};
@@ -824,7 +834,7 @@ export function buildApp() {
     );
     const id = randomUUID();
     await pool.query(
-      `WITH created AS (INSERT INTO patients(id,name,phone,birth_date,guardian_name,contact_source,journey_status,notes,care_alert,assigned_user_id,created_by) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11) RETURNING id) INSERT INTO audit_events(user_id,action,entity_type,entity_id,details) SELECT $11,'create','patient',id,jsonb_build_object('status',$6::text) FROM created`,
+      `WITH created AS (INSERT INTO patients(id,name,phone,birth_date,guardian_name,contact_source,journey_status,notes,care_alert,assigned_user_id,responsible_doctor_id,created_by) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12) RETURNING id) INSERT INTO audit_events(user_id,action,entity_type,entity_id,details) SELECT $12,'create','patient',id,jsonb_build_object('status',$6::text) FROM created`,
       [
         id,
         body.name!.trim(),
@@ -836,6 +846,7 @@ export function buildApp() {
         body.notes?.trim() || "",
         body.careAlert?.trim() || "",
         assigned,
+        body.responsibleDoctorId || null,
         request.currentUser!.id,
       ],
     );
@@ -848,12 +859,13 @@ export function buildApp() {
           : null,
       });
   });
+
   app.get<{ Params: { id: string } }>(
     "/api/patients/:id",
     { preHandler: authenticated },
     async (request, reply) => {
       const patient = await pool.query(
-        `SELECT p.*,next_task.due_on next_contact_on,u.name assigned_user_name FROM patients p JOIN users u ON u.id=p.assigned_user_id LEFT JOIN LATERAL (SELECT due_on FROM follow_up_tasks WHERE patient_id=p.id AND completed_at IS NULL AND cancelled_at IS NULL ORDER BY due_on LIMIT 1) next_task ON true WHERE p.id=$1`,
+        `SELECT p.*,doc.name responsible_doctor_name,next_task.due_on next_contact_on,u.name assigned_user_name FROM patients p JOIN users u ON u.id=p.assigned_user_id LEFT JOIN users doc ON doc.id=p.responsible_doctor_id LEFT JOIN LATERAL (SELECT due_on FROM follow_up_tasks WHERE patient_id=p.id AND completed_at IS NULL AND cancelled_at IS NULL ORDER BY due_on LIMIT 1) next_task ON true WHERE p.id=$1`,
         [request.params.id],
       );
       if (!patient.rowCount)
@@ -864,6 +876,7 @@ export function buildApp() {
       return { patient: patient.rows[0] };
     },
   );
+
   app.patch<{
     Params: { id: string };
     Body: {
@@ -878,6 +891,7 @@ export function buildApp() {
       careAlert?: string;
       nextContactOn?: string | null;
       assignedUserId?: string;
+      responsibleDoctorId?: string | null;
     };
   }>(
     "/api/patients/:id",
@@ -897,7 +911,7 @@ export function buildApp() {
           .type("application/problem+json")
           .send({ title: "Confira os dados do paciente", status: 400 });
       const result = await pool.query(
-        `WITH updated AS (UPDATE patients SET name=$1,phone=$2,birth_date=$3,guardian_name=$4,contact_source=$5,journey_status=$6,notes=$7,care_alert=$8,assigned_user_id=COALESCE($9,assigned_user_id),version=version+1,updated_at=now() WHERE id=$10 AND version=$11 AND archived_at IS NULL RETURNING id,version), audited AS (INSERT INTO audit_events(user_id,action,entity_type,entity_id,details) SELECT $12,'update','patient',id,jsonb_build_object('version',version) FROM updated) SELECT version FROM updated`,
+        `WITH updated AS (UPDATE patients SET name=$1,phone=$2,birth_date=$3,guardian_name=$4,contact_source=$5,journey_status=$6,notes=$7,care_alert=$8,assigned_user_id=COALESCE($9,assigned_user_id),responsible_doctor_id=$10,version=version+1,updated_at=now() WHERE id=$11 AND version=$12 AND archived_at IS NULL RETURNING id,version), audited AS (INSERT INTO audit_events(user_id,action,entity_type,entity_id,details) SELECT $13,'update','patient',id,jsonb_build_object('version',version) FROM updated) SELECT version FROM updated`,
         [
           body.name!.trim(),
           phone,
@@ -908,6 +922,7 @@ export function buildApp() {
           body.notes?.trim() || "",
           body.careAlert?.trim() || "",
           body.assignedUserId || null,
+          body.responsibleDoctorId || null,
           request.params.id,
           body.version,
           request.currentUser!.id,
@@ -1536,6 +1551,7 @@ export function buildApp() {
     clientRequestId?: string;
     patientId?: string;
     productId?: string;
+    serviceId?: string;
     product?: string;
     quantity?: number;
     totalAmountCents?: number;
@@ -1650,6 +1666,27 @@ export function buildApp() {
               request.currentUser!.id,
             ]
           );
+        }
+
+        // Se houver serviço do catálogo com produtos relacionados, efetua baixas automáticas de estoque dos insumos do serviço
+        if (body.serviceId) {
+          const serviceProducts = await client.query<{ product_id: string; quantity: number }>(
+            "SELECT product_id, quantity FROM service_products WHERE service_id=$1",
+            [body.serviceId]
+          );
+          for (const sp of serviceProducts.rows) {
+            const deductionQty = -Math.abs(sp.quantity * Number(body.quantity));
+            await client.query(
+              "INSERT INTO inventory_movements(id,product_id,movement_type,quantity,notes,created_by) VALUES($1,$2,'sale_deduction',$3,$4,$5)",
+              [
+                randomUUID(),
+                sp.product_id,
+                deductionQty,
+                `Consumo de insumo pelo Serviço na Venda ${saleId}`,
+                request.currentUser!.id,
+              ]
+            );
+          }
         }
 
         for (const item of installments) {

@@ -17,6 +17,22 @@ No marketing language.
 Respond ONLY with a JSON object mapping each node id (as a string) to its
 one-sentence description — no prose, no markdown fences.
 
+- "src_main_csvimport": "CsvImport()" | kind=code-symbol | source=web/src/main.tsx:L1852 | neighbors=[main.tsx]
+- "src_main_dashboarddata": "DashboardData" | kind=code-symbol | source=web/src/main.tsx:L92 | neighbors=[main.tsx]
+- "src_main_doctorconsultationform": "DoctorConsultationForm()" | kind=code-symbol | source=web/src/main.tsx:L2316 | neighbors=[main.tsx]
+- "src_main_doctorpatients": "DoctorPatients()" | kind=code-symbol | source=web/src/main.tsx:L2277 | neighbors=[main.tsx]
+- "src_main_eventtypes": "eventTypes" | kind=code-symbol | source=web/src/main.tsx:L122 | neighbors=[main.tsx]
+- "src_main_financesummary": "FinanceSummary" | kind=code-symbol | source=web/src/main.tsx:L78 | neighbors=[main.tsx]
+- "src_main_financialentry": "FinancialEntry" | kind=code-symbol | source=web/src/main.tsx:L55 | neighbors=[main.tsx]
+- "src_main_followup": "FollowUp" | kind=code-symbol | source=web/src/main.tsx:L38 | neighbors=[main.tsx]
+- "src_main_followups": "FollowUps()" | kind=code-symbol | source=web/src/main.tsx:L862 | neighbors=[main.tsx]
+- "src_main_inventory": "Inventory()" | kind=code-symbol | source=web/src/main.tsx:L1665 | neighbors=[main.tsx]
+- "src_main_monthly": "monthly()" | kind=code-symbol | source=web/src/main.tsx:L156 | neighbors=[main.tsx]
+- "src_main_patient": "Patient" | kind=code-symbol | source=web/src/main.tsx:L14 | neighbors=[main.tsx]
+- "src_main_patientattachments": "PatientAttachments()" | kind=code-symbol | source=web/src/main.tsx:L533 | neighbors=[main.tsx]
+- "src_main_patientform": "PatientForm()" | kind=code-symbol | source=web/src/main.tsx:L385 | neighbors=[main.tsx]
+- "src_main_patients": "Patients()" | kind=code-symbol | source=web/src/main.tsx:L1003 | neighbors=[main.tsx]
+- "src_main_paymentlabels": "paymentLabels" | kind=code-symbol | source=web/src/main.tsx:L1148 | neighbors=[main.tsx]
 - "src_main_receivable": "Receivable" | kind=code-symbol | source=web/src/main.tsx:L67 | neighbors=[main.tsx]
 - "src_main_sources": "sources" | kind=code-symbol | source=web/src/main.tsx:L114 | neighbors=[main.tsx]
 - "src_main_statuses": "statuses" | kind=code-symbol | source=web/src/main.tsx:L104 | neighbors=[main.tsx]
