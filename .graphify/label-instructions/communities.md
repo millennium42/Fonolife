@@ -13,7 +13,7 @@ language. Do not normalize every name to one common language.
 ## Communities
 
 Community 0: normalizePhone(, validPatientPhone(, attachments.ts, ALLOWED_MIME_TYPES, AllowedMimeType, calculateFileHash(, sanitizeFilename(, validFileSize(, validMimeType(, csv-import.ts, calculateCsvHash(, CsvFinancialRow [lang=en]
-Community 1: codex/01-servicos-catalogo-estoque, codex/02-medico-responsavel-prontuario-global, codex/03-caixa-pdv-relatorio-financeiro, codex/04-design-system-seed-demo, codex/fix-seed-fk-constraint, codex/pr8-importacao-csv-seguranca, main, 0687af4 feat(privacy): implementar endpoints de exportação J, 077b08e feat(privacy): adicionar migration 010 para pseudoni, 0d2db0f feat: centralizar cadastro e histórico de pacientes , 0e1c4ad test: consolidar QA, acessibilidade e release do Fon, 2dd873d feat: consolidar financeiro único para dois CNPJs (# [lang=pt]
+Community 1: codex/01-servicos-catalogo-estoque, codex/02-medico-responsavel-prontuario-global, codex/03-caixa-pdv-relatorio-financeiro, codex/04-design-system-seed-demo, codex/fix-seed-fk-constraint, codex/pr8-importacao-csv-seguranca, codex/quick-demo-login-buttons, main, 0687af4 feat(privacy): implementar endpoints de exportação J, 077b08e feat(privacy): adicionar migration 010 para pseudoni, 0d2db0f feat: centralizar cadastro e histórico de pacientes , 0e1c4ad test: consolidar QA, acessibilidade e release do Fon [lang=pt]
 Community 2: main.tsx, api(, App(, async(, categoryLabels, cents(, CompanyAccount, CsvImport(, Dashboard(, DashboardData, date(, DoctorCalendar( [lang=en]
 Community 3: validProduct(, 264533a feat(services): adicionar migracao, modelo de domini, 5fe1e04 feat(doctor): adicionar perfil médico, agenda calend, d7896dd Merge branch 'codex/01-servicos-catalogo-estoque' in, doctors.ts, buildCalendarDays(, CalendarDay, validLicenseNumber(, inventory.ts, InventoryMovement, MOVEMENT_TYPES, MovementType [lang=nl]
 Community 4: financial_entries, receivable_installments, restrict_sale_update(, sales, 004_sales.sql, actual, check_sale_installment_total(, company_accounts, expected, financial_entries_immutable, financial_entries_one_active_receipt, OLD.client_request_id [lang=en]
@@ -24,12 +24,11 @@ Community 8: 001_base.sql, audit_events, audit_events_immutable, company_account
 Community 9: finance-smoke.mjs, accounts, call(, clientRequestId, login(, payload, summary [lang=en]
 Community 10: 007_inventory.sql, inventory_movements, prevent_inventory_movement_modification(, products, trg_prevent_inventory_movement_modification, users [lang=en]
 Community 11: whatsapp.ts, buildWhatsAppLink(, formatE164Phone(, WHATSAPP_TEMPLATES, whatsapp.test.ts [lang=en]
-Community 12: follow-ups.ts, FOLLOW_UP_FILTERS, saoPauloDate(, follow-ups.test.ts [lang=en]
-Community 13: 006_csv_imports.sql, csv_import_errors, csv_import_jobs, users [lang=en]
-Community 14: 009_attachments.sql, patient_attachments, patients, users [lang=en]
-Community 15: critical-flow.spec.ts, accessible(, login( [lang=en]
-Community 16: dashboard-smoke.mjs, dashboard(, login( [lang=en]
-Community 17: devsec-smoke.mjs, login( [lang=en]
+Community 12: 006_csv_imports.sql, csv_import_errors, csv_import_jobs, users [lang=en]
+Community 13: 009_attachments.sql, patient_attachments, patients, users [lang=en]
+Community 14: critical-flow.spec.ts, accessible(, login( [lang=en]
+Community 15: dashboard-smoke.mjs, dashboard(, login( [lang=en]
+Community 16: devsec-smoke.mjs, login( [lang=en]
 
 ## Instructions
 

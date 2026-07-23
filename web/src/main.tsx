@@ -1905,6 +1905,104 @@ function CsvImport() {
   );
 }
 
+function LoginForm({ onLogin }: { onLogin: (user: User) => void }) {
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
+
+  const handleLogin = async (loginEmail: string, loginPass: string) => {
+    setLoading(true);
+    setError("");
+    try {
+      const res = await api("/api/auth/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: loginEmail, password: loginPass }),
+      });
+      onLogin(res.user);
+    } catch (err: any) {
+      setError(err.message || "Erro ao efetuar login");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div className="login">
+      <section style={{ width: "min(100%, 450px)" }}>
+        <div className="brand" style={{ marginBottom: "0.5rem", textAlign: "center" }}>🦻 Fonolife CRM</div>
+        <p style={{ textAlign: "center", color: "#64748b", fontSize: "0.9rem", marginBottom: "1.5rem" }}>
+          Sistema de Gestão Clínica, Caixa & Prontuários
+        </p>
+
+        {error && <p className="error" role="alert">{error}</p>}
+
+        <form
+          onSubmit={(e) => {
+            e.preventDefault();
+            handleLogin(email, password);
+          }}
+        >
+          <label>E-mail Profissional <input name="email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} required autoFocus placeholder="ex: admin@fonolife.com.br" /></label>
+          <label>Senha <input name="password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} required placeholder="••••••••" /></label>
+          <button style={{ width: "100%", marginTop: "1rem" }} disabled={loading}>{loading ? "Autenticando..." : "Entrar no Sistema"}</button>
+        </form>
+
+        <div style={{ marginTop: "2rem", paddingTop: "1.25rem", borderTop: "1px solid var(--border)" }}>
+          <p style={{ fontSize: "0.85rem", fontWeight: "bold", color: "#475569", marginBottom: "0.75rem", textAlign: "center" }}>
+            ⚡ Acesso Rápido — Perfis de Demonstração (Demo):
+          </p>
+          <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
+            <button
+              type="button"
+              className="secondary"
+              style={{ width: "100%", justifyContent: "space-between" }}
+              disabled={loading}
+              onClick={() => {
+                setEmail("admin@fonolife.com.br");
+                setPassword("admin123");
+                handleLogin("admin@fonolife.com.br", "admin123");
+              }}
+            >
+              <span>👑 Entrar como <strong>Administrador</strong></span>
+              <small style={{ opacity: 0.7 }}>Acesso Total</small>
+            </button>
+            <button
+              type="button"
+              className="secondary"
+              style={{ width: "100%", justifyContent: "space-between" }}
+              disabled={loading}
+              onClick={() => {
+                setEmail("operador@fonolife.com.br");
+                setPassword("operador123");
+                handleLogin("operador@fonolife.com.br", "operador123");
+              }}
+            >
+              <span>🛒 Entrar como <strong>Operador (Caixa / PDV)</strong></span>
+              <small style={{ opacity: 0.7 }}>Atendimento & Vendas</small>
+            </button>
+            <button
+              type="button"
+              className="secondary"
+              style={{ width: "100%", justifyContent: "space-between" }}
+              disabled={loading}
+              onClick={() => {
+                setEmail("carlos.fonolife@gmail.com");
+                setPassword("medico123");
+                handleLogin("carlos.fonolife@gmail.com", "medico123");
+              }}
+            >
+              <span>🩺 Entrar como <strong>Médico Fonoaudiólogo</strong></span>
+              <small style={{ opacity: 0.7 }}>Agenda & Prontuários</small>
+            </button>
+          </div>
+        </div>
+      </section>
+    </div>
+  );
+}
+
 function App() {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
@@ -1922,29 +2020,7 @@ function App() {
   if (loading) return <div className="center"><p>Carregando Fonolife…</p></div>;
 
   if (!user) {
-    return (
-      <div className="login">
-        <section>
-          <div className="brand" style={{ marginBottom: "1rem", textAlign: "center" }}>🦻 Fonolife CRM</div>
-          <form
-            onSubmit={async (e) => {
-              e.preventDefault();
-              const v = Object.fromEntries(new FormData(e.currentTarget));
-              const res = await api("/api/auth/login", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify(v),
-              });
-              setUser(res.user);
-            }}
-          >
-            <label>E-mail Profissional <input name="email" type="email" required autoFocus /></label>
-            <label>Senha <input name="password" type="password" required /></label>
-            <button style={{ width: "100%", marginTop: "1rem" }}>Entrar no Sistema</button>
-          </form>
-        </section>
-      </div>
-    );
+    return <LoginForm onLogin={setUser} />;
   }
 
   const pages =
