@@ -100,10 +100,14 @@ export function buildApp() {
   app.addHook("onRequest", async (request) => {
     if (!["GET", "HEAD", "OPTIONS"].includes(request.method)) {
       const origin = request.headers.origin;
-      if (origin && origin !== config.origin)
-        throw Object.assign(new Error("Origem não permitida"), {
+      const referer = request.headers.referer;
+      const validOrigin = Boolean(origin && origin === config.origin);
+      const validReferer = Boolean(!origin && referer && referer.startsWith(config.origin));
+      if (!validOrigin && !validReferer) {
+        throw Object.assign(new Error("Origem não permitida ou ausente para mutações"), {
           statusCode: 403,
         });
+      }
     }
     const token = request.cookies.fonolife_session;
     if (!token) return;
