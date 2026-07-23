@@ -1,24 +1,24 @@
 # Graph Report - .  (2026-07-23)
 
 ## Corpus Check
-- Corpus is ~44.890 words - fits in a single context window. You may not need a graph.
+- Corpus is ~45.092 words - fits in a single context window. You may not need a graph.
 
 ## Summary
-- 292 nodes · 750 edges · 16 communities detected
+- 294 nodes · 789 edges · 15 communities detected
 - Extraction: 100% EXTRACTED · 0% INFERRED · 0% AMBIGUOUS
 - Token cost: 0 input · 0 output
-- Edge kinds: contains: 197 · ON_BRANCH: 184 · MODIFIES: 104 · imports: 101 · imports_from: 47 · PARENT_OF: 39 · references: 25 · calls: 22 · reads_from: 20 · triggers: 11
+- Edge kinds: ON_BRANCH: 222 · contains: 197 · MODIFIES: 104 · imports: 101 · imports_from: 47 · PARENT_OF: 40 · references: 25 · calls: 22 · reads_from: 20 · triggers: 11
 
 
 ## Input Scope
 - Requested: auto
 - Resolved: committed (source: default-auto)
-- Included files: 92 · Candidates: 212
+- Included files: 92 · Candidates: 213
 - Excluded: 0 untracked · 6227 ignored · 0 sensitive · 0 missing committed
 - Recommendation: Use --scope all or graphify.yaml inputs.corpus for a knowledge-base folder.
 
 ## Graph Freshness
-- Built from Git commit: `53e373d`
+- Built from Git commit: `552fbd9`
 - Compare this hash to `git rev-parse HEAD` before trusting freshness-sensitive graph output.
 ## God Nodes (most connected - your core abstractions)
 1. `financial_entries` - 11 edges
@@ -34,13 +34,9 @@
 
 ## Surprising Connections (you probably didn't know these)
 - `264533a feat(services): adicionar migracao, modelo de dominio e API de servicos e CMV em produtos` --ON_BRANCH--> `codex/01-servicos-catalogo-estoque`  [EXTRACTED]
-  git → git  _Bridges community 3 → community 2_
+  git → git  _Bridges community 3 → community 1_
 - `3f9e6cc feat: estabelecer núcleo seguro e executável da clínica Fonolife (#1)` --ON_BRANCH--> `codex/01-servicos-catalogo-estoque`  [EXTRACTED]
-  git → git  _Bridges community 5 → community 2_
-- `53e373d Merge branch 'codex/04-design-system-seed-demo' into main` --ON_BRANCH--> `main`  [EXTRACTED]
-  git → git  _Bridges community 7 → community 2_
-- `d7896dd Merge branch 'codex/01-servicos-catalogo-estoque' into main` --PARENT_OF--> `91c499c Merge branch 'codex/02-medico-responsavel-prontuario-global' into main`  [EXTRACTED]
-  git → git  _Bridges community 3 → community 7_
+  git → git  _Bridges community 5 → community 1_
 
 ## Communities
 
@@ -49,16 +45,16 @@ Cohesion: 0.08
 Nodes (39): ALLOWED_MIME_TYPES, AllowedMimeType, calculateFileHash(), sanitizeFilename(), validFileSize(), validMimeType(), calculateCsvHash(), CsvFinancialRow (+31 more)
 
 ### Community 1 - "Community 1"
+Cohesion: 0.23
+Nodes (40): codex/01-servicos-catalogo-estoque, codex/02-medico-responsavel-prontuario-global, codex/03-caixa-pdv-relatorio-financeiro, codex/04-design-system-seed-demo, codex/fix-seed-fk-constraint, codex/pr8-importacao-csv-seguranca, main, 0687af4 feat(privacy): implementar endpoints de exportação JSON e anonimização LGPD com auditoria (#12) (+32 more)
+
+### Community 2 - "Community 2"
 Cohesion: 0.06
 Nodes (28): api(), categoryLabels, CompanyAccount, Dashboard(), DashboardData, date(), DoctorCalendar(), eventTypes (+20 more)
 
-### Community 2 - "Community 2"
-Cohesion: 0.24
-Nodes (32): codex/01-servicos-catalogo-estoque, codex/02-medico-responsavel-prontuario-global, codex/03-caixa-pdv-relatorio-financeiro, codex/04-design-system-seed-demo, codex/pr8-importacao-csv-seguranca, main, 0687af4 feat(privacy): implementar endpoints de exportação JSON e anonimização LGPD com auditoria (#12), 077b08e feat(privacy): adicionar migration 010 para pseudonimização LGPD e campos de auditoria de privacidade (#12) (+24 more)
-
 ### Community 3 - "Community 3"
-Cohesion: 0.14
-Nodes (22): 264533a feat(services): adicionar migracao, modelo de dominio e API de servicos e CMV em produtos, 5fe1e04 feat(doctor): adicionar perfil médico, agenda calendário, prontuários de pacientes e atendimento clínico, d7896dd Merge branch 'codex/01-servicos-catalogo-estoque' into main, InventoryMovement, MOVEMENT_TYPES, MovementType, Product, validInventoryMovement() (+14 more)
+Cohesion: 0.11
+Nodes (26): 264533a feat(services): adicionar migracao, modelo de dominio e API de servicos e CMV em produtos, 5fe1e04 feat(doctor): adicionar perfil médico, agenda calendário, prontuários de pacientes e atendimento clínico, d7896dd Merge branch 'codex/01-servicos-catalogo-estoque' into main, buildCalendarDays(), CalendarDay, validLicenseNumber(), InventoryMovement, MOVEMENT_TYPES (+18 more)
 
 ### Community 4 - "Community 4"
 Cohesion: 0.15
@@ -73,45 +69,41 @@ Cohesion: 0.25
 Nodes (12): follow_up_tasks, follow_up_tasks_no_delete, follow_up_tasks_restrict_update, OLD.created_at, OLD.created_by, OLD.due_on, OLD.notes, OLD.patient_id (+4 more)
 
 ### Community 7 - "Community 7"
-Cohesion: 0.23
-Nodes (10): 53e373d Merge branch 'codex/04-design-system-seed-demo' into main, 864030b feat(frontend): implementar Caixa PDV, prontuario global por clique e relatorio financeiro reformulado, 91c499c Merge branch 'codex/02-medico-responsavel-prontuario-global' into main, 9bcad1d feat(seed): povoar banco de dados com informacoes realistas para demonstracao em deploy, 9cabae8 Merge branch 'codex/03-caixa-pdv-relatorio-financeiro' into main, b0009ad feat(patients): adicionar medico responsavel ao paciente e baixa automatica de insumos do servico, buildCalendarDays(), CalendarDay (+2 more)
-
-### Community 8 - "Community 8"
 Cohesion: 0.43
 Nodes (5): patient_events, patient_events_immutable, patients, patients_no_delete, users
 
-### Community 9 - "Community 9"
+### Community 8 - "Community 8"
 Cohesion: 0.43
 Nodes (5): audit_events, audit_events_immutable, company_accounts, user_sessions, users
 
-### Community 10 - "Community 10"
+### Community 9 - "Community 9"
 Cohesion: 0.29
 Nodes (4): accounts, clientRequestId, payload, summary
 
-### Community 11 - "Community 11"
+### Community 10 - "Community 10"
 Cohesion: 0.53
 Nodes (4): inventory_movements, products, trg_prevent_inventory_movement_modification, users
 
-### Community 12 - "Community 12"
+### Community 11 - "Community 11"
 Cohesion: 0.80
 Nodes (3): buildWhatsAppLink(), formatE164Phone(), WHATSAPP_TEMPLATES
 
-### Community 13 - "Community 13"
+### Community 12 - "Community 12"
 Cohesion: 0.83
 Nodes (2): FOLLOW_UP_FILTERS, saoPauloDate()
 
-### Community 14 - "Community 14"
+### Community 13 - "Community 13"
 Cohesion: 0.83
 Nodes (3): csv_import_errors, csv_import_jobs, users
 
-### Community 15 - "Community 15"
+### Community 14 - "Community 14"
 Cohesion: 0.83
 Nodes (3): patient_attachments, patients, users
 
 ## Knowledge Gaps
 - **42 isolated node(s):** `company_accounts`, `User`, `FastifyRequest`, `attempts`, `email` (+37 more)
   These have ≤1 connection - possible missing edges or undocumented components.
-- **Thin community `Community 13`** (2 nodes): `FOLLOW_UP_FILTERS`, `saoPauloDate()`
+- **Thin community `Community 12`** (2 nodes): `FOLLOW_UP_FILTERS`, `saoPauloDate()`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
 
 ## Suggested Questions
@@ -127,7 +119,7 @@ _Questions this graph is uniquely positioned to answer:_
   _42 weakly-connected nodes found - possible documentation gaps or missing edges._
 - **Should `Community 0` be split into smaller, more focused modules?**
   _Cohesion score 0.08295625942684766 - nodes in this community are weakly interconnected._
-- **Should `Community 1` be split into smaller, more focused modules?**
+- **Should `Community 2` be split into smaller, more focused modules?**
   _Cohesion score 0.056025369978858354 - nodes in this community are weakly interconnected._
 - **Should `Community 3` be split into smaller, more focused modules?**
-  _Cohesion score 0.1402116402116402 - nodes in this community are weakly interconnected._
+  _Cohesion score 0.11051693404634581 - nodes in this community are weakly interconnected._
