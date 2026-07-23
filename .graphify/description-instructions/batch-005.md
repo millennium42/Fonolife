@@ -17,6 +17,7 @@ No marketing language.
 Respond ONLY with a JSON object mapping each node id (as a string) to its
 one-sentence description — no prose, no markdown fences.
 
+- "migrations_005_finance": "005_finance.sql" | kind=code-symbol | source=migrations/005_finance.sql:L1 | neighbors=[2dd873d feat: consolidar financeiro úni…]
 - "migrations_007_inventory_prevent_inventory_movement_modification": "prevent_inventory_movement_modification()" | kind=code-symbol | source=migrations/007_inventory.sql:L24 | neighbors=[007_inventory.sql]
 - "migrations_008_whatsapp_shortcuts": "008_whatsapp_shortcuts.sql" | kind=code-symbol | source=migrations/008_whatsapp_shortcuts.sql:L1 | neighbors=[5ccde91 feat: implementar atalhos rápid…]
 - "migrations_010_lgpd_privacy": "010_lgpd_privacy.sql" | kind=code-symbol | source=migrations/010_lgpd_privacy.sql:L1 | neighbors=[077b08e feat(privacy): adicionar migrat…]
@@ -56,7 +57,6 @@ one-sentence description — no prose, no markdown fences.
 - "tests_finance_smoke_call": "call()" | kind=code-symbol | source=tests/finance-smoke.mjs:L6 | neighbors=[finance-smoke.mjs]
 - "tests_finance_smoke_clientrequestid": "clientRequestId" | kind=code-symbol | source=tests/finance-smoke.mjs:L11 | neighbors=[finance-smoke.mjs]
 - "tests_finance_smoke_login": "login()" | kind=code-symbol | source=tests/finance-smoke.mjs:L5 | neighbors=[finance-smoke.mjs]
-- "tests_finance_smoke_payload": "payload" | kind=code-symbol | source=tests/finance-smoke.mjs:L12 | neighbors=[finance-smoke.mjs]
 
 ## Instructions
 

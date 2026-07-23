@@ -1981,21 +1981,24 @@ function App() {
       .then((x) => setUser(x?.user ?? null))
       .finally(() => setLoading(false));
   }, []);
-  async function login(event: React.FormEvent<HTMLFormElement>) {
-    event.preventDefault();
+  async function doLogin(email: string, password: string) {
     setError("");
-    const form = event.currentTarget,
-      v = Object.fromEntries(new FormData(form));
     try {
       const body = await api("/api/auth/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(v),
+        body: JSON.stringify({ email, password }),
       });
       setUser(body.user);
     } catch (reason) {
       setError((reason as Error).message);
     }
+  }
+
+  async function login(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const v = Object.fromEntries(new FormData(event.currentTarget));
+    await doLogin(v.email as string, v.password as string);
   }
   async function logout() {
     await api("/api/auth/logout", { method: "POST" });
@@ -2042,13 +2045,24 @@ function App() {
             )}
             <button>Entrar</button>
           </form>
-          <details>
-            <summary>Contas da demonstração</summary>
-            <p>
-              Admin: admin@demo.local / admin123
-              <br />
-              Operador: operador@demo.local / operador123
-            </p>
+          <details open>
+            <summary>Contas de demonstração</summary>
+            <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem", marginTop: "0.5rem" }}>
+              <button
+                type="button"
+                className="secondary"
+                onClick={() => doLogin("admin@demo.local", "admin123")}
+              >
+                🔑 Entrar como Administrador
+              </button>
+              <button
+                type="button"
+                className="secondary"
+                onClick={() => doLogin("operador@demo.local", "operador123")}
+              >
+                👤 Entrar como Operador
+              </button>
+            </div>
           </details>
         </section>
       </main>

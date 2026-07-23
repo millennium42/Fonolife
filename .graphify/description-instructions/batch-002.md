@@ -24,6 +24,7 @@ No marketing language.
 Respond ONLY with a JSON object mapping each node id (as a string) to its
 one-sentence description — no prose, no markdown fences.
 
+- "commit:repo:github.com/millennium42/Fonolife@557b254c240c1cfccb0827e8b81c7b12b53bc931": "557b254 fix(deploy): corrigir render.yaml para sintaxe válida de Blueprint no R…" | kind=Commit | source=git | neighbors=[3a29c99 chore(deploy): preparar infraes…, main, b5a2180 fix(deploy): mover dependências…]
 - "commit:repo:github.com/millennium42/Fonolife@68c033be5d296cd83c164e2d674d672802b891ce": "68c033b chore: inicializar main para entregas independentes" | kind=Commit | source=git | neighbors=[codex/pr8-importacao-csv-seguranca, main, 3f9e6cc feat: estabelecer núcleo seguro…]
 - "db_migrate_migrate": "migrate()" | kind=code-symbol | source=src/db/migrate.ts:L7 | neighbors=[create-admin.ts, migrate.ts, server.ts]
 - "domain_attachments_calculatefilehash": "calculateFileHash()" | kind=code-symbol | source=src/domain/attachments.ts:L43 | neighbors=[attachments.ts, app.ts, attachments.test.ts]
@@ -63,7 +64,6 @@ one-sentence description — no prose, no markdown fences.
 - "migrations_009_attachments_patient_attachments": "patient_attachments" | kind=code-symbol | source=migrations/009_attachments.sql:L1 | neighbors=[009_attachments.sql, patients, users]
 - "src_main_finance": "Finance()" | kind=code-symbol | source=web/src/main.tsx:L1169 | neighbors=[main.tsx, money(), today()]
 - "src_main_money": "money()" | kind=code-symbol | source=web/src/main.tsx:L1142 | neighbors=[main.tsx, Dashboard(), Finance()]
-- "src_main_today": "today()" | kind=code-symbol | source=web/src/main.tsx:L145 | neighbors=[main.tsx, Finance(), SaleForm()]
 
 ## Instructions
 
