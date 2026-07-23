@@ -17,6 +17,13 @@ No marketing language.
 Respond ONLY with a JSON object mapping each node id (as a string) to its
 one-sentence description — no prose, no markdown fences.
 
+- "migrations_004_sales_old_product": "OLD.product" | kind=code-symbol | source=migrations/004_sales.sql:L73 | neighbors=[004_sales.sql, restrict_sale_update()]
+- "migrations_004_sales_old_quantity": "OLD.quantity" | kind=code-symbol | source=migrations/004_sales.sql:L73 | neighbors=[004_sales.sql, restrict_sale_update()]
+- "migrations_004_sales_old_sold_on": "OLD.sold_on" | kind=code-symbol | source=migrations/004_sales.sql:L73 | neighbors=[004_sales.sql, restrict_sale_update()]
+- "migrations_004_sales_old_total_amount_cents": "OLD.total_amount_cents" | kind=code-symbol | source=migrations/004_sales.sql:L73 | neighbors=[004_sales.sql, restrict_sale_update()]
+- "migrations_004_sales_receivable_installments_immutable": "receivable_installments_immutable" | kind=code-symbol | source=migrations/004_sales.sql:L82 | neighbors=[004_sales.sql, receivable_installments]
+- "migrations_004_sales_receivable_installments_total": "receivable_installments_total" | kind=code-symbol | source=migrations/004_sales.sql:L94 | neighbors=[004_sales.sql, receivable_installments]
+- "migrations_004_sales_reject_duplicate_active_receipt": "reject_duplicate_active_receipt()" | kind=code-symbol | source=migrations/004_sales.sql:L63 | neighbors=[004_sales.sql, financial_entries]
 - "migrations_004_sales_sales_restrict_update": "sales_restrict_update" | kind=code-symbol | source=migrations/004_sales.sql:L77 | neighbors=[004_sales.sql, sales]
 - "migrations_006_csv_imports_csv_import_errors": "csv_import_errors" | kind=code-symbol | source=migrations/006_csv_imports.sql:L14 | neighbors=[006_csv_imports.sql, csv_import_jobs]
 - "migrations_006_csv_imports_users": "users" | kind=code-symbol | source=migrations/006_csv_imports.sql:L9 | neighbors=[006_csv_imports.sql, csv_import_jobs]
@@ -29,7 +36,7 @@ one-sentence description — no prose, no markdown fences.
 - "migrations_012_services_and_inventory_services": "services" | kind=code-symbol | source=migrations/012_services_and_inventory.sql:L3 | neighbors=[012_services_and_inventory.sql, service_products]
 - "migrations_013_responsible_doctor": "013_responsible_doctor.sql" | kind=code-symbol | source=migrations/013_responsible_doctor.sql:L1 | neighbors=[91c499c Merge branch 'codex/02-medico-r…, b0009ad feat(patients): adicionar medic…]
 - "playwright_config": "playwright.config.ts" | kind=code-symbol | source=playwright.config.ts:L1 | neighbors=[0e1c4ad test: consolidar QA, acessibili…, 75e42fd fix(ui): aplicar flex min-width…]
-- "src_app_buildapp": "buildApp()" | kind=code-symbol | source=src/app.ts:L73 | neighbors=[app.ts, server.ts]
+- "src_app_buildapp": "buildApp()" | kind=code-symbol | source=src/app.ts:L77 | neighbors=[app.ts, server.ts]
 - "src_main_dashboard": "Dashboard()" | kind=code-symbol | source=web/src/main.tsx:L1610 | neighbors=[main.tsx, money()]
 - "src_main_date": "date()" | kind=code-symbol | source=web/src/main.tsx:L134 | neighbors=[main.tsx, PatientRecord()]
 - "src_main_doctorcalendar": "DoctorCalendar()" | kind=code-symbol | source=web/src/main.tsx:L2155 | neighbors=[main.tsx, today()]
@@ -50,13 +57,6 @@ one-sentence description — no prose, no markdown fences.
 - "domain_patients_contactsource": "ContactSource" | kind=code-symbol | source=src/domain/patients.ts:L6 | neighbors=[patients.ts]
 - "domain_patients_patienteventtype": "PatientEventType" | kind=code-symbol | source=src/domain/patients.ts:L7 | neighbors=[patients.ts]
 - "domain_patients_patientstatus": "PatientStatus" | kind=code-symbol | source=src/domain/patients.ts:L5 | neighbors=[patients.ts]
-- "domain_services_serviceinput": "ServiceInput" | kind=code-symbol | source=src/domain/services.ts:L8 | neighbors=[services.ts]
-- "domain_services_serviceitem": "ServiceItem" | kind=code-symbol | source=src/domain/services.ts:L17 | neighbors=[services.ts]
-- "domain_services_serviceproductinput": "ServiceProductInput" | kind=code-symbol | source=src/domain/services.ts:L3 | neighbors=[services.ts]
-- "e2e_critical_flow_spec_accessible": "accessible()" | kind=code-symbol | source=tests/e2e/critical-flow.spec.ts:L12 | neighbors=[critical-flow.spec.ts]
-- "e2e_critical_flow_spec_login": "login()" | kind=code-symbol | source=tests/e2e/critical-flow.spec.ts:L4 | neighbors=[critical-flow.spec.ts]
-- "migrations_001_base_company_accounts": "company_accounts" | kind=code-symbol | source=migrations/001_base.sql:L23 | neighbors=[001_base.sql]
-- "migrations_001_base_reject_audit_changes": "reject_audit_changes()" | kind=code-symbol | source=migrations/001_base.sql:L42 | neighbors=[001_base.sql]
 
 ## Instructions
 

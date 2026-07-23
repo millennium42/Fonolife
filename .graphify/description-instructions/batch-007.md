@@ -17,6 +17,16 @@ No marketing language.
 Respond ONLY with a JSON object mapping each node id (as a string) to its
 one-sentence description — no prose, no markdown fences.
 
+- "src_main_patient": "Patient" | kind=code-symbol | source=web/src/main.tsx:L14 | neighbors=[main.tsx]
+- "src_main_patientattachments": "PatientAttachments()" | kind=code-symbol | source=web/src/main.tsx:L533 | neighbors=[main.tsx]
+- "src_main_patientform": "PatientForm()" | kind=code-symbol | source=web/src/main.tsx:L385 | neighbors=[main.tsx]
+- "src_main_patientnamelink": "PatientNameLink()" | kind=code-symbol | source=web/src/main.tsx:L234 | neighbors=[main.tsx]
+- "src_main_patients": "Patients()" | kind=code-symbol | source=web/src/main.tsx:L1003 | neighbors=[main.tsx]
+- "src_main_paymentlabels": "paymentLabels" | kind=code-symbol | source=web/src/main.tsx:L1148 | neighbors=[main.tsx]
+- "src_main_productitem": "ProductItem" | kind=code-symbol | source=web/src/main.tsx:L90 | neighbors=[main.tsx]
+- "src_main_receivable": "Receivable" | kind=code-symbol | source=web/src/main.tsx:L69 | neighbors=[main.tsx]
+- "src_main_serviceitem": "ServiceItem" | kind=code-symbol | source=web/src/main.tsx:L80 | neighbors=[main.tsx]
+- "src_main_sources": "sources" | kind=code-symbol | source=web/src/main.tsx:L114 | neighbors=[main.tsx]
 - "src_main_statuses": "statuses" | kind=code-symbol | source=web/src/main.tsx:L104 | neighbors=[main.tsx]
 - "src_main_timelineitem": "TimelineItem" | kind=code-symbol | source=web/src/main.tsx:L32 | neighbors=[main.tsx]
 - "src_main_user": "User" | kind=code-symbol | source=web/src/main.tsx:L6 | neighbors=[main.tsx]

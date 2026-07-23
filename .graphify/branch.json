@@ -1,16 +1,16 @@
 {
   "schemaVersion": 1,
-  "branchName": "codex/quick-demo-login-buttons",
+  "branchName": "codex/p0-correcoes-criticas",
   "worktreePath": "C:\\Users\\milla\\Documents\\Projetos\\Git\\Fonolife",
   "upstream": null,
   "mergeBase": null,
-  "firstSeenHead": "bacc0034551890f1fcab390d37f4e7c45d66c7db",
-  "lastSeenHead": "bacc0034551890f1fcab390d37f4e7c45d66c7db",
-  "lastAnalyzedHead": "bacc0034551890f1fcab390d37f4e7c45d66c7db",
+  "firstSeenHead": "a412d5eba3d71b0e6d16922209342c9c9fad2a35",
+  "lastSeenHead": "a412d5eba3d71b0e6d16922209342c9c9fad2a35",
+  "lastAnalyzedHead": "a412d5eba3d71b0e6d16922209342c9c9fad2a35",
   "stale": false,
   "staleReason": null,
   "staleSince": null,
   "lifecycleEvent": null,
-  "createdAt": "2026-07-23T03:37:55.520Z",
-  "updatedAt": "2026-07-23T03:37:55.520Z"
+  "createdAt": "2026-07-23T21:50:31.927Z",
+  "updatedAt": "2026-07-23T21:50:31.927Z"
 }

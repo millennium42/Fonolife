@@ -1910,6 +1910,16 @@ function LoginForm({ onLogin }: { onLogin: (user: User) => void }) {
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [demoMode, setDemoMode] = useState(false);
+
+  useEffect(() => {
+    fetch("/api/config")
+      .then((res) => res.json())
+      .then((data) => {
+        if (data && data.demoMode) setDemoMode(true);
+      })
+      .catch(() => setDemoMode(false));
+  }, []);
 
   const handleLogin = async (loginEmail: string, loginPass: string) => {
     setLoading(true);
@@ -1949,55 +1959,57 @@ function LoginForm({ onLogin }: { onLogin: (user: User) => void }) {
           <button style={{ width: "100%", marginTop: "1rem" }} disabled={loading}>{loading ? "Autenticando..." : "Entrar no Sistema"}</button>
         </form>
 
-        <div style={{ marginTop: "2rem", paddingTop: "1.25rem", borderTop: "1px solid var(--border)" }}>
-          <p style={{ fontSize: "0.85rem", fontWeight: "bold", color: "#475569", marginBottom: "0.75rem", textAlign: "center" }}>
-            ⚡ Acesso Rápido — Perfis de Demonstração (Demo):
-          </p>
-          <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
-            <button
-              type="button"
-              className="secondary"
-              style={{ width: "100%", justifyContent: "space-between" }}
-              disabled={loading}
-              onClick={() => {
-                setEmail("admin@fonolife.com.br");
-                setPassword("admin123");
-                handleLogin("admin@fonolife.com.br", "admin123");
-              }}
-            >
-              <span>👑 Entrar como <strong>Administrador</strong></span>
-              <small style={{ opacity: 0.7 }}>Acesso Total</small>
-            </button>
-            <button
-              type="button"
-              className="secondary"
-              style={{ width: "100%", justifyContent: "space-between" }}
-              disabled={loading}
-              onClick={() => {
-                setEmail("operador@fonolife.com.br");
-                setPassword("operador123");
-                handleLogin("operador@fonolife.com.br", "operador123");
-              }}
-            >
-              <span>🛒 Entrar como <strong>Operador (Caixa / PDV)</strong></span>
-              <small style={{ opacity: 0.7 }}>Atendimento & Vendas</small>
-            </button>
-            <button
-              type="button"
-              className="secondary"
-              style={{ width: "100%", justifyContent: "space-between" }}
-              disabled={loading}
-              onClick={() => {
-                setEmail("carlos.fonolife@gmail.com");
-                setPassword("medico123");
-                handleLogin("carlos.fonolife@gmail.com", "medico123");
-              }}
-            >
-              <span>🩺 Entrar como <strong>Médico Fonoaudiólogo</strong></span>
-              <small style={{ opacity: 0.7 }}>Agenda & Prontuários</small>
-            </button>
+        {demoMode && (
+          <div style={{ marginTop: "2rem", paddingTop: "1.25rem", borderTop: "1px solid var(--border)" }}>
+            <p style={{ fontSize: "0.85rem", fontWeight: "bold", color: "#475569", marginBottom: "0.75rem", textAlign: "center" }}>
+              ⚡ Acesso Rápido — Perfis de Demonstração (Demo):
+            </p>
+            <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
+              <button
+                type="button"
+                className="secondary"
+                style={{ width: "100%", justifyContent: "space-between" }}
+                disabled={loading}
+                onClick={() => {
+                  setEmail("admin@fonolife.com.br");
+                  setPassword("admin123");
+                  handleLogin("admin@fonolife.com.br", "admin123");
+                }}
+              >
+                <span>👑 Entrar como <strong>Administrador</strong></span>
+                <small style={{ opacity: 0.7 }}>Acesso Total</small>
+              </button>
+              <button
+                type="button"
+                className="secondary"
+                style={{ width: "100%", justifyContent: "space-between" }}
+                disabled={loading}
+                onClick={() => {
+                  setEmail("operador@fonolife.com.br");
+                  setPassword("operador123");
+                  handleLogin("operador@fonolife.com.br", "operador123");
+                }}
+              >
+                <span>🛒 Entrar como <strong>Operador (Caixa / PDV)</strong></span>
+                <small style={{ opacity: 0.7 }}>Atendimento & Vendas</small>
+              </button>
+              <button
+                type="button"
+                className="secondary"
+                style={{ width: "100%", justifyContent: "space-between" }}
+                disabled={loading}
+                onClick={() => {
+                  setEmail("carlos.fonolife@gmail.com");
+                  setPassword("medico123");
+                  handleLogin("carlos.fonolife@gmail.com", "medico123");
+                }}
+              >
+                <span>🩺 Entrar como <strong>Médico Fonoaudiólogo</strong></span>
+                <small style={{ opacity: 0.7 }}>Agenda & Prontuários</small>
+              </button>
+            </div>
           </div>
-        </div>
+        )}
       </section>
     </div>
   );

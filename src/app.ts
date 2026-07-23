@@ -7,6 +7,10 @@ import { resolve } from "node:path";
 import { pool } from "./db/pool.js";
 import { config } from "./config.js";
 import {
+  canExportPatientData,
+  canReadAttachment,
+  canReadPatient,
+  canWritePatient,
   hashPassword,
   hashToken,
   validCnpj,
@@ -150,6 +154,10 @@ export function buildApp() {
     await pool.query("SELECT 1");
     return { status: "ok" };
   });
+  app.get("/api/config", async () => {
+    return { demoMode: config.demo };
+  });
+
   app.post<{ Body: { email?: string; password?: string } }>(
     "/api/auth/login",
     async (request, reply) => {
@@ -1162,6 +1170,13 @@ export function buildApp() {
         return reply.code(404).type("application/problem+json").send({ title: "Anexo não encontrado", status: 404 });
 
       const file = att.rows[0];
+      const patientRes = await pool.query("SELECT id, responsible_doctor_id FROM patients WHERE id=$1", [file.patient_id]);
+      const patient = patientRes.rows[0];
+      if (!patient || !canReadAttachment(request.currentUser!, patient)) {
+        await audit(request.currentUser!.id, "attachment_access_denied", "patient_attachment", request.params.id);
+        return reply.code(403).type("application/problem+json").send({ title: "Acesso negado a este anexo", status: 403 });
+      }
+
       const fullPath = resolve("storage/attachments", file.file_name);
       if (!existsSync(fullPath))
         return reply.code(404).type("application/problem+json").send({ title: "Arquivo físico não encontrado", status: 404 });
@@ -1208,6 +1223,11 @@ export function buildApp() {
         return reply.code(404).type("application/problem+json").send({ title: "Paciente não encontrado", status: 404 });
 
       const patient = patientRes.rows[0];
+      if (!canExportPatientData(request.currentUser!, patient)) {
+        await audit(request.currentUser!.id, "export_lgpd_access_denied", "patient", request.params.id);
+        return reply.code(403).type("application/problem+json").send({ title: "Acesso negado aos dados deste paciente", status: 403 });
+      }
+
       const [timeline, sales, financial, attachments] = await Promise.all([
         pool.query(
           "SELECT id,event_type,description,occurred_at,created_at FROM patient_events WHERE patient_id=$1 ORDER BY occurred_at DESC",
@@ -1297,11 +1317,12 @@ export function buildApp() {
           [anonymizedName, ANONYMIZED_PHONE, ANONYMIZED_TEXT_PLACEHOLDER, request.params.id]
         );
 
-        // Anonimiza descrições textuais das interações do paciente
+        // Registra a redação LGPD sem violar o trigger imutável de patient_events
         await client.query(
-          "UPDATE patient_events SET description=$1 WHERE patient_id=$2",
-          [ANONYMIZED_TEXT_PLACEHOLDER, request.params.id]
+          "INSERT INTO patient_redactions(patient_id, reason, requested_by) VALUES($1, 'LGPD_ANONYMIZATION', $2)",
+          [request.params.id, request.currentUser!.id]
         );
+
 
         // Registra evento crítico de audit_events com log de alta segurança
         await client.query(

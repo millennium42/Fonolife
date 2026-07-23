@@ -26,3 +26,42 @@ export function validCnpj(value: string) {
   };
   return check(digits.slice(0, 12), [5,4,3,2,9,8,7,6,5,4,3,2]) === Number(digits[12]) && check(digits.slice(0, 13), [6,5,4,3,2,9,8,7,6,5,4,3,2]) === Number(digits[13]);
 }
+
+export type UserRole = 'admin' | 'operator' | 'doctor';
+
+export type UserSubject = {
+  id: string;
+  role: UserRole;
+};
+
+export type PatientTarget = {
+  id: string;
+  responsible_doctor_id?: string | null;
+};
+
+export function canReadPatient(user: UserSubject, patient: PatientTarget): boolean {
+  if (!user || !patient) return false;
+  if (user.role === 'admin' || user.role === 'operator') return true;
+  if (user.role === 'doctor') {
+    return Boolean(patient.responsible_doctor_id && patient.responsible_doctor_id === user.id);
+  }
+  return false;
+}
+
+export function canWritePatient(user: UserSubject, patient: PatientTarget): boolean {
+  return canReadPatient(user, patient);
+}
+
+export function canExportPatientData(user: UserSubject, patient: PatientTarget): boolean {
+  if (!user || !patient) return false;
+  if (user.role === 'admin') return true;
+  if (user.role === 'doctor') {
+    return Boolean(patient.responsible_doctor_id && patient.responsible_doctor_id === user.id);
+  }
+  return false;
+}
+
+export function canReadAttachment(user: UserSubject, patient: PatientTarget): boolean {
+  return canReadPatient(user, patient);
+}
+
