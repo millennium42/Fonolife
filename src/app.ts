@@ -57,7 +57,9 @@ type User = {
   id: string;
   name: string;
   email: string;
-  role: "admin" | "operator";
+  role: "admin" | "operator" | "doctor";
+  license_number?: string | null;
+  specialty?: string | null;
   must_change_password: boolean;
 };
 declare module "fastify" {
@@ -101,7 +103,7 @@ export function buildApp() {
     const token = request.cookies.fonolife_session;
     if (!token) return;
     const result = await pool.query<User>(
-      `SELECT u.id,u.name,u.email,u.role,u.must_change_password FROM user_sessions s JOIN users u ON u.id=s.user_id WHERE s.token_hash=$1 AND s.expires_at>now() AND u.active`,
+      `SELECT u.id,u.name,u.email,u.role,u.license_number,u.specialty,u.must_change_password FROM user_sessions s JOIN users u ON u.id=s.user_id WHERE s.token_hash=$1 AND s.expires_at>now() AND u.active`,
       [hashToken(token)],
     );
     request.currentUser = result.rows[0];
@@ -1829,6 +1831,103 @@ export function buildApp() {
     }
     return response;
   });
+
+  app.get<{ Querystring: { year?: string; month?: string } }>(
+    "/api/doctor/schedule",
+    { preHandler: authenticated },
+    async (request) => {
+      const year = Number(request.query.year ?? new Date().getFullYear());
+      const month = Number(request.query.month ?? new Date().getMonth() + 1);
+      const doctorId = request.currentUser!.id;
+      const isAdmin = request.currentUser!.role === "admin";
+      
+      const startDate = `${year}-${String(month).padStart(2, "0")}-01`;
+      const endDate = `${year}-${String(month).padStart(2, "0")}-31`;
+
+      const tasks = await pool.query(
+        `SELECT t.id task_id, t.patient_id, p.name patient_name, p.phone, t.title, t.due_on, t.completed_at,
+          CASE WHEN t.due_on < (now() AT TIME ZONE 'America/Sao_Paulo')::date AND t.completed_at IS NULL THEN 'overdue'
+               WHEN t.due_on = (now() AT TIME ZONE 'America/Sao_Paulo')::date THEN 'today'
+               ELSE 'scheduled' END status
+         FROM follow_up_tasks t
+         JOIN patients p ON p.id = t.patient_id
+         WHERE t.cancelled_at IS NULL AND p.archived_at IS NULL
+           AND t.due_on >= $1 AND t.due_on <= $2
+           ${isAdmin ? "" : "AND (t.doctor_id = $3 OR p.assigned_user_id = $3)"}
+         ORDER BY t.due_on, p.name`,
+        isAdmin ? [startDate, endDate] : [startDate, endDate, doctorId],
+      );
+
+      const events = await pool.query(
+        `SELECT e.id event_id, e.patient_id, p.name patient_name, p.phone, e.event_type, e.description, e.created_at
+         FROM patient_events e
+         JOIN patients p ON p.id = e.patient_id
+         WHERE p.archived_at IS NULL
+           AND (e.created_at AT TIME ZONE 'America/Sao_Paulo')::date >= $1
+           AND (e.created_at AT TIME ZONE 'America/Sao_Paulo')::date <= $2
+           ${isAdmin ? "" : "AND (e.doctor_id = $3 OR e.user_id = $3)"}
+         ORDER BY e.created_at DESC`,
+        isAdmin ? [startDate, endDate] : [startDate, endDate, doctorId],
+      );
+
+      return { year, month, tasks: tasks.rows, events: events.rows };
+    },
+  );
+
+  app.get("/api/doctor/patients", { preHandler: authenticated }, async (request) => {
+    const doctorId = request.currentUser!.id;
+    const isAdmin = request.currentUser!.role === "admin";
+    const result = await pool.query(
+      `SELECT DISTINCT p.id, p.name, p.phone, p.journey_status, p.next_contact_on, p.care_alert, p.notes, p.updated_at
+       FROM patients p
+       LEFT JOIN patient_events e ON e.patient_id = p.id
+       LEFT JOIN follow_up_tasks t ON t.patient_id = p.id
+       WHERE p.archived_at IS NULL
+         ${isAdmin ? "" : "AND (p.assigned_user_id = $1 OR e.doctor_id = $1 OR e.user_id = $1 OR t.doctor_id = $1)"}
+       ORDER BY p.name LIMIT 200`,
+      isAdmin ? [] : [doctorId],
+    );
+    return { patients: result.rows };
+  });
+
+  app.post<{ Body: { patientId?: string; eventType?: string; description?: string; nextContactOn?: string } }>(
+    "/api/doctor/consultations",
+    { preHandler: authenticated },
+    async (request, reply) => {
+      const { patientId, eventType, description, nextContactOn } = request.body ?? {};
+      if (!patientId || !description || description.trim().length < 3) {
+        return reply.code(400).type("application/problem+json").send({ title: "Informe o paciente e a observação clínica", status: 400 });
+      }
+      const client = await pool.connect();
+      try {
+        await client.query("BEGIN");
+        const patient = await client.query("SELECT id FROM patients WHERE id=$1 AND archived_at IS NULL FOR UPDATE", [patientId]);
+        if (!patient.rowCount) {
+          await client.query("ROLLBACK");
+          return reply.code(404).type("application/problem+json").send({ title: "Paciente não encontrado", status: 404 });
+        }
+        const eventId = randomUUID();
+        await client.query(
+          `INSERT INTO patient_events(id, patient_id, user_id, doctor_id, event_type, description) VALUES($1, $2, $3, $3, $4, $5)`,
+          [eventId, patientId, request.currentUser!.id, eventType || "consultation", description.trim()],
+        );
+        if (nextContactOn) {
+          await client.query(`UPDATE patients SET next_contact_on=$2, updated_at=now() WHERE id=$1`, [patientId, nextContactOn]);
+        }
+        await client.query(
+          `INSERT INTO audit_events(user_id, action, entity_type, entity_id, details) VALUES($1, 'doctor_consultation', 'patient', $2, $3)`,
+          [request.currentUser!.id, patientId, { eventType: eventType || "consultation", nextContactOn }],
+        );
+        await client.query("COMMIT");
+        return reply.code(201).send({ id: eventId });
+      } catch (error) {
+        await client.query("ROLLBACK");
+        throw error;
+      } finally {
+        client.release();
+      }
+    },
+  );
 
   const publicDir = resolve("dist/public");
   if (existsSync(publicDir)) {

@@ -7,7 +7,9 @@ type User = {
   id: string;
   name: string;
   email: string;
-  role: "admin" | "operator";
+  role: "admin" | "operator" | "doctor";
+  license_number?: string | null;
+  specialty?: string | null;
 };
 type Patient = {
   id: string;
@@ -2062,22 +2064,31 @@ function App() {
               >
                 👤 Entrar como Operador
               </button>
+              <button
+                type="button"
+                className="secondary"
+                onClick={() => doLogin("medico@demo.local", "medico123")}
+              >
+                🩺 Entrar como Médico(a)
+              </button>
             </div>
           </details>
         </section>
       </main>
     );
 
-  const pages = user.role === "admin"
-    ? ["Início", "Pacientes", "Acompanhamento", "Financeiro", "Estoque", "Importação CSV"]
-    : ["Início", "Pacientes", "Acompanhamento", "Financeiro", "Estoque"];
+  const pages = user.role === "doctor"
+    ? ["Minha Agenda", "Meus Pacientes", "Atendimento Clínico"]
+    : user.role === "admin"
+      ? ["Início", "Pacientes", "Acompanhamento", "Financeiro", "Estoque", "Importação CSV"]
+      : ["Início", "Pacientes", "Acompanhamento", "Financeiro", "Estoque"];
 
   return (
     <div className="shell">
       <header>
         <span className="brand">Fonolife</span>
         <div>
-          <span>{user.name}</span>
+          <span>{user.name} {user.license_number && `<${user.license_number}>`}</span>
           <button className="link" onClick={logout}>
             Sair
           </button>
@@ -2099,21 +2110,33 @@ function App() {
           <div>
             <h1>{page}</h1>
             <p>
-              {page === "Pacientes"
-                ? "Cadastre e acompanhe cada pessoa em um só lugar."
-                : page === "Acompanhamento"
-                  ? "Veja quem precisa de contato ou cuidado hoje."
-                  : page === "Início"
-                    ? "O que precisa da sua atenção hoje."
-                    : page === "Estoque"
-                      ? "Catálogo de aparelhos e controle de estoque."
-                      : page === "Importação CSV"
-                        ? "Importação em lote de registros via planilha CSV."
-                        : "Registre uma vez e acompanhe realizado e previsões."}
+              {page === "Minha Agenda"
+                ? "Visualização mensal e diária das consultas fonoaudiológicas e retornos."
+                : page === "Meus Pacientes"
+                  ? "Prontuários e histórico dos pacientes vinculados ao seu atendimento."
+                  : page === "Atendimento Clínico"
+                    ? "Registro de observações clínicas, laudos e regulagem de aparelhos."
+                    : page === "Pacientes"
+                      ? "Cadastre e acompanhe cada pessoa em um só lugar."
+                      : page === "Acompanhamento"
+                        ? "Veja quem precisa de contato ou cuidado hoje."
+                        : page === "Início"
+                          ? "O que precisa da sua atenção hoje."
+                          : page === "Estoque"
+                            ? "Catálogo de aparelhos e controle de estoque."
+                            : page === "Importação CSV"
+                              ? "Importação em lote de registros via planilha CSV."
+                              : "Registre uma vez e acompanhe realizado e previsões."}
             </p>
           </div>
         </div>
-        {page === "Pacientes" ? (
+        {page === "Minha Agenda" ? (
+          <DoctorCalendar openPatient={(id) => { setPatientId(id); setPage("Pacientes"); }} />
+        ) : page === "Meus Pacientes" ? (
+          <DoctorPatients openPatient={(id) => { setPatientId(id); setPage("Pacientes"); }} />
+        ) : page === "Atendimento Clínico" ? (
+          <DoctorConsultationForm onDone={() => setPage("Minha Agenda")} />
+        ) : page === "Pacientes" ? (
           <Patients initialPatientId={patientId} />
         ) : page === "Acompanhamento" ? (
           <FollowUps />
@@ -2127,9 +2150,249 @@ function App() {
       </main>
     </div>
   );
-
-
 }
+
+function DoctorCalendar({ openPatient }: { openPatient: (id: string) => void }) {
+  const [currentDate, setCurrentDate] = useState(() => new Date());
+  const [scheduleData, setScheduleData] = useState<{ tasks: any[]; events: any[] }>({ tasks: [], events: [] });
+  const [loading, setLoading] = useState(true);
+
+  const year = currentDate.getFullYear();
+  const month = currentDate.getMonth() + 1;
+
+  const loadSchedule = () => {
+    setLoading(true);
+    api(`/api/doctor/schedule?year=${year}&month=${month}`)
+      .then((data) => {
+        setScheduleData({ tasks: data.tasks || [], events: data.events || [] });
+      })
+      .catch(() => {})
+      .finally(() => setLoading(false));
+  };
+
+  useEffect(() => {
+    loadSchedule();
+  }, [year, month]);
+
+  const monthNames = [
+    "Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho",
+    "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"
+  ];
+
+  const prevMonth = () => setCurrentDate(new Date(year, month - 2, 1));
+  const nextMonth = () => setCurrentDate(new Date(year, month, 1));
+
+  const daysInMonth = new Date(year, month, 0).getDate();
+  const firstDayOfWeek = new Date(year, month - 1, 1).getDay();
+
+  const days: Array<{ day: number; dateStr: string; isCurrentMonth: boolean }> = [];
+  const prevMonthDays = new Date(year, month - 1, 0).getDate();
+  for (let i = firstDayOfWeek - 1; i >= 0; i--) {
+    days.push({ day: prevMonthDays - i, dateStr: "", isCurrentMonth: false });
+  }
+  for (let d = 1; d <= daysInMonth; d++) {
+    const dateStr = `${year}-${String(month).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
+    days.push({ day: d, dateStr, isCurrentMonth: true });
+  }
+  while (days.length % 7 !== 0) {
+    days.push({ day: days.length - daysInMonth, dateStr: "", isCurrentMonth: false });
+  }
+
+  const todayStr = today();
+
+  return (
+    <section className="panel" style={{ marginTop: "1rem" }}>
+      <div className="section-title" style={{ marginBottom: "1rem" }}>
+        <h2>📅 Agenda de Atendimentos — {monthNames[month - 1]} {year}</h2>
+        <div className="actions">
+          <button type="button" className="secondary" onClick={prevMonth}>◄ Mês Anterior</button>
+          <button type="button" className="secondary" onClick={() => setCurrentDate(new Date())}>Hoje</button>
+          <button type="button" className="secondary" onClick={nextMonth}>Mês Seguinte ►</button>
+        </div>
+      </div>
+
+      {loading ? (
+        <p>Carregando agenda...</p>
+      ) : (
+        <div style={{ overflowX: "auto" }}>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(7, minmax(110px, 1fr))", gap: "2px", background: "#d7e0e3", border: "1px solid #d7e0e3", borderRadius: "8px" }}>
+            {["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"].map((d) => (
+              <div key={d} style={{ background: "#123944", color: "white", padding: "0.5rem", textAlign: "center", fontWeight: "bold", fontSize: "0.85rem" }}>
+                {d}
+              </div>
+            ))}
+            {days.map((item, index) => {
+              const dayTasks = scheduleData.tasks.filter((t) => t.due_on === item.dateStr);
+              const isToday = item.dateStr === todayStr;
+
+              return (
+                <div
+                  key={index}
+                  style={{
+                    background: item.isCurrentMonth ? (isToday ? "#e0f2f1" : "white") : "#f4f7f8",
+                    minHeight: "100px",
+                    padding: "0.4rem",
+                    boxSizing: "border-box",
+                    opacity: item.isCurrentMonth ? 1 : 0.4,
+                  }}
+                >
+                  <div style={{ fontWeight: isToday ? "bold" : "normal", color: isToday ? "#155e75" : "#333", fontSize: "0.9rem", marginBottom: "0.2rem" }}>
+                    {item.day} {isToday && <span style={{ fontSize: "0.7rem", background: "#155e75", color: "white", padding: "1px 4px", borderRadius: "4px" }}>HOJE</span>}
+                  </div>
+                  {item.isCurrentMonth && dayTasks.map((t) => (
+                    <button
+                      key={t.task_id}
+                      type="button"
+                      onClick={() => openPatient(t.patient_id)}
+                      style={{
+                        display: "block",
+                        width: "100%",
+                        textAlign: "left",
+                        padding: "0.2rem 0.35rem",
+                        marginBottom: "0.2rem",
+                        fontSize: "0.75rem",
+                        borderRadius: "4px",
+                        minHeight: "auto",
+                        background: t.status === "overdue" ? "#fff0f0" : t.status === "today" ? "#fff7d6" : "#e8f7ee",
+                        color: t.status === "overdue" ? "#8a0b0b" : t.status === "today" ? "#8a6d0b" : "#165c35",
+                        border: "1px solid #c2e0e5",
+                        cursor: "pointer",
+                      }}
+                      title={`${t.patient_name} — ${t.title}`}
+                    >
+                      <strong>{t.patient_name}</strong>
+                      <div style={{ fontSize: "0.7rem", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{t.title}</div>
+                    </button>
+                  ))}
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+    </section>
+  );
+}
+
+function DoctorPatients({ openPatient }: { openPatient: (id: string) => void }) {
+  const [patients, setPatients] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    api("/api/doctor/patients")
+      .then((data) => setPatients(data.patients || []))
+      .catch(() => {})
+      .finally(() => setLoading(false));
+  }, []);
+
+  if (loading) return <p>Carregando pacientes vinculados...</p>;
+
+  return (
+    <section className="panel" style={{ marginTop: "1rem" }}>
+      <h2>🩺 Meus Pacientes & Histórico Clínico</h2>
+      <p style={{ color: "#526a73", fontSize: "0.9rem" }}>Pacientes com atendimentos, retornos ou acompanhamento fonoaudiológico sob sua responsabilidade.</p>
+      {patients.length === 0 ? (
+        <p className="empty">Nenhum paciente vinculado no momento.</p>
+      ) : (
+        <div className="patient-list">
+          {patients.map((p) => (
+            <div key={p.id} className="patient-row" style={{ padding: "0.75rem" }}>
+              <div>
+                <strong>{p.name}</strong> <small>({p.phone})</small>
+                <div style={{ fontSize: "0.85rem", color: "#526a73" }}>Status: {statuses[p.journey_status]} · Próxima ação: {date(p.next_contact_on)}</div>
+                {p.care_alert && <p className="care-alert" style={{ marginTop: "0.3rem", padding: "0.3rem" }}>⚠️ {p.care_alert}</p>}
+              </div>
+              <button type="button" className="secondary" onClick={() => openPatient(p.id)}>
+                Ver Prontuário Completo →
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
+    </section>
+  );
+}
+
+function DoctorConsultationForm({ onDone }: { onDone: () => void }) {
+  const [patients, setPatients] = useState<any[]>([]);
+  const [patientId, setPatientId] = useState("");
+  const [eventType, setEventType] = useState("consultation");
+  const [description, setDescription] = useState("");
+  const [nextContactOn, setNextContactOn] = useState("");
+  const [saving, setSaving] = useState(false);
+  const [message, setMessage] = useState("");
+  const [error, setError] = useState("");
+
+  useEffect(() => {
+    api("/api/doctor/patients").then((data) => setPatients(data.patients || [])).catch(() => {});
+  }, []);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!patientId) { setError("Selecione um paciente"); return; }
+    if (!description.trim()) { setError("Escreva a observação clínica"); return; }
+    setSaving(true);
+    setError("");
+    setMessage("");
+    try {
+      await api("/api/doctor/consultations", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ patientId, eventType, description, nextContactOn: nextContactOn || null }),
+      });
+      setMessage("Atendimento clínico registrado com sucesso!");
+      setDescription("");
+      onDone();
+    } catch (err: any) {
+      setError(err.message);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <form className="panel form" onSubmit={handleSubmit} style={{ marginTop: "1rem" }}>
+      <h2>🩺 Novo Atendimento Clínico / Fonoaudiológico</h2>
+      {message && <p className="success" role="status">{message}</p>}
+      {error && <p className="error" role="alert">{error}</p>}
+      <div className="fields">
+        <label>
+          Paciente
+          <select value={patientId} onChange={(e) => setPatientId(e.target.value)} required>
+            <option value="">-- Selecione o Paciente --</option>
+            {patients.map((p) => (
+              <option key={p.id} value={p.id}>{p.name} ({p.phone})</option>
+            ))}
+          </select>
+        </label>
+        <label>
+          Tipo de Atendimento
+          <select value={eventType} onChange={(e) => setEventType(e.target.value)}>
+            {Object.entries(eventTypes).map(([key, label]) => (
+              <option key={key} value={key}>{label}</option>
+            ))}
+          </select>
+        </label>
+        <label className="wide">
+          Observações Clínicas & Laudo de Regulagem
+          <textarea
+            rows={5}
+            value={description}
+            onChange={(e) => setDescription(e.target.value)}
+            placeholder="Descreva os achados da audiometria, curvas otoscópicas, regulagem do aparelho ou conduta fonoaudiológica..."
+            required
+          />
+        </label>
+        <label>
+          Próxima Consulta / Retorno Recomendado
+          <input type="date" value={nextContactOn} onChange={(e) => setNextContactOn(e.target.value)} />
+        </label>
+      </div>
+      <button disabled={saving}>{saving ? "Salvando Prontuário..." : "Salvar Atendimento Clínico"}</button>
+    </form>
+  );
+}
+
 createRoot(document.getElementById("root")!).render(
   <React.StrictMode>
     <App />

@@ -55,7 +55,9 @@ one-sentence description — no prose, no markdown fences.
 - "tests_whatsapp_test": "whatsapp.test.ts" | kind=code-symbol | source=tests/whatsapp.test.ts:L1 | neighbors=[5ccde91 feat: implementar atalhos rápid…, whatsapp.ts, buildWhatsAppLink(), formatE164Phone(), WHATSAPP_TEMPLATES] | lang=en
 - "commit:repo:github.com/millennium42/Fonolife@4de92ceb139c8f6c4cd8917b5d4080934fbfa844": "4de92ce Graphify" | kind=Commit | source=git | neighbors=[0e1c4ad test: consolidar QA, acessibili…, codex/pr8-importacao-csv-seguranca, main, 98e15b2 feat: implementar importação CS…] | lang=en
 - "commit:repo:github.com/millennium42/Fonolife@75e42fd49d573ae4aef8872db7551c4eb01c82c4": "75e42fd fix(ui): aplicar flex min-width 0 e empilhamento em coluna no mobile 36…" | kind=Commit | source=git | neighbors=[main, 3a29c99 chore(deploy): preparar infraes…, playwright.config.ts, d13f663 fix(ui): garantir layout respon…] | lang=pt
+- "commit:repo:github.com/millennium42/Fonolife@a3720407ee59aafca15483b8c931e0eb8838b423": "a372040 fix(seed): executar auto-seeding automático de contas demo se a tabela …" | kind=Commit | source=git | neighbors=[main, seed.ts, server.ts, e5a9115 feat(auth): adicionar botões de…] | lang=en
 - "commit:repo:github.com/millennium42/Fonolife@d13f6631276508244a16ccd77efebf49e06cb312": "d13f663 fix(ui): garantir layout responsivo sem overflow horizontal no mobile (…" | kind=Commit | source=git | neighbors=[639a914 feat(privacy): adicionar botão …, main, 75e42fd fix(ui): aplicar flex min-width…, main.tsx] | lang=en
+- "commit:repo:github.com/millennium42/Fonolife@e5a9115ee3db00ac6905daf01256d50641f1396e": "e5a9115 feat(auth): adicionar botões de login direto 1-clique para contas de de…" | kind=Commit | source=git | neighbors=[b5a2180 fix(deploy): mover dependências…, main, a372040 fix(seed): executar auto-seedin…, main.tsx] | lang=pt
 - "domain_patients_patient_statuses": "PATIENT_STATUSES" | kind=code-symbol | source=src/domain/patients.ts:L1 | neighbors=[csv-import.ts, patients.ts, app.ts, patients.test.ts] | lang=en
 - "domain_sales_validateinstallments": "validateInstallments()" | kind=code-symbol | source=src/domain/sales.ts:L10 | neighbors=[sales.ts, validCents(), app.ts, sales.test.ts] | lang=en
 - "domain_security_verifypassword": "verifyPassword()" | kind=code-symbol | source=src/domain/security.ts:L11 | neighbors=[security.ts, scrypt, app.ts, security.test.ts] | lang=en
@@ -64,8 +66,6 @@ one-sentence description — no prose, no markdown fences.
 - "migrations_006_csv_imports": "006_csv_imports.sql" | kind=code-symbol | source=migrations/006_csv_imports.sql:L1 | neighbors=[98e15b2 feat: implementar importação CS…, csv_import_errors, csv_import_jobs, users] | lang=en
 - "migrations_007_inventory_inventory_movements": "inventory_movements" | kind=code-symbol | source=migrations/007_inventory.sql:L12 | neighbors=[007_inventory.sql, products, users, trg_prevent_inventory_movement_modifica…] | lang=en
 - "migrations_009_attachments": "009_attachments.sql" | kind=code-symbol | source=migrations/009_attachments.sql:L1 | neighbors=[c067885 feat(attachments): adicionar mi…, patient_attachments, patients, users] | lang=en
-- "tests_follow_ups_test": "follow-ups.test.ts" | kind=code-symbol | source=tests/follow-ups.test.ts:L1 | neighbors=[ff35345 feat: tornar o pós-atendimento …, follow-ups.ts, FOLLOW_UP_FILTERS, saoPauloDate()] | lang=en
-- "tests_sales_test": "sales.test.ts" | kind=code-symbol | source=tests/sales.test.ts:L1 | neighbors=[a740db5 feat: registrar vendas com parc…, sales.ts, splitMonthly(), validateInstallments()] | lang=en
 
 ## Instructions
 

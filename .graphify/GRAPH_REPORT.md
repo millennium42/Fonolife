@@ -1,24 +1,24 @@
 # Graph Report - .  (2026-07-23)
 
 ## Corpus Check
-- Corpus is ~39.276 words - fits in a single context window. You may not need a graph.
+- Corpus is ~40.868 words - fits in a single context window. You may not need a graph.
 
 ## Summary
-- 246 nodes · 518 edges · 15 communities detected
+- 250 nodes · 526 edges · 15 communities detected
 - Extraction: 100% EXTRACTED · 0% INFERRED · 0% AMBIGUOUS
 - Token cost: 0 input · 0 output
-- Edge kinds: contains: 172 · imports: 92 · MODIFIES: 74 · ON_BRANCH: 46 · imports_from: 41 · PARENT_OF: 25 · references: 23 · reads_from: 20 · calls: 14 · triggers: 11
+- Edge kinds: contains: 175 · imports: 92 · MODIFIES: 76 · ON_BRANCH: 47 · imports_from: 41 · PARENT_OF: 26 · references: 23 · reads_from: 20 · calls: 15 · triggers: 11
 
 
 ## Input Scope
 - Requested: auto
 - Resolved: committed (source: default-auto)
-- Included files: 80 · Candidates: 177
-- Excluded: 0 untracked · 6226 ignored · 0 sensitive · 0 missing committed
+- Included files: 80 · Candidates: 179
+- Excluded: 3 untracked · 6227 ignored · 0 sensitive · 0 missing committed
 - Recommendation: Use --scope all or graphify.yaml inputs.corpus for a knowledge-base folder.
 
 ## Graph Freshness
-- Built from Git commit: `e5a9115`
+- Built from Git commit: `a372040`
 - Compare this hash to `git rev-parse HEAD` before trusting freshness-sensitive graph output.
 ## God Nodes (most connected - your core abstractions)
 1. `financial_entries` - 11 edges
@@ -47,12 +47,12 @@
 ## Communities
 
 ### Community 0 - "Community 0"
-Cohesion: 0.11
-Nodes (22): codex/pr8-importacao-csv-seguranca, main, 0687af4 feat(privacy): implementar endpoints de exportação JSON e anonimização LGPD com auditoria (#12), 077b08e feat(privacy): adicionar migration 010 para pseudonimização LGPD e campos de auditoria de privacidade (#12), 0e1c4ad test: consolidar QA, acessibilidade e release do Fonolife (#7), 3a29c99 chore(deploy): preparar infraestrutura no Render com Blueprint, SSL e checagem estrita de segurança, 4de92ce Graphify, 557b254 fix(deploy): corrigir render.yaml para sintaxe válida de Blueprint no Render (+14 more)
+Cohesion: 0.10
+Nodes (23): codex/pr8-importacao-csv-seguranca, main, 0687af4 feat(privacy): implementar endpoints de exportação JSON e anonimização LGPD com auditoria (#12), 077b08e feat(privacy): adicionar migration 010 para pseudonimização LGPD e campos de auditoria de privacidade (#12), 0e1c4ad test: consolidar QA, acessibilidade e release do Fonolife (#7), 3a29c99 chore(deploy): preparar infraestrutura no Render com Blueprint, SSL e checagem estrita de segurança, 4de92ce Graphify, 557b254 fix(deploy): corrigir render.yaml para sintaxe válida de Blueprint no Render (+15 more)
 
 ### Community 1 - "Community 1"
 Cohesion: 0.07
-Nodes (21): categoryLabels, CompanyAccount, Dashboard(), DashboardData, date(), eventTypes, Finance(), FinanceSummary (+13 more)
+Nodes (22): categoryLabels, CompanyAccount, Dashboard(), DashboardData, date(), DoctorCalendar(), eventTypes, Finance() (+14 more)
 
 ### Community 2 - "Community 2"
 Cohesion: 0.16
@@ -122,8 +122,8 @@ _Questions this graph is uniquely positioned to answer:_
 - **What connects `company_accounts`, `User`, `FastifyRequest` to the rest of the system?**
   _36 weakly-connected nodes found - possible documentation gaps or missing edges._
 - **Should `Community 0` be split into smaller, more focused modules?**
-  _Cohesion score 0.10588235294117647 - nodes in this community are weakly interconnected._
+  _Cohesion score 0.10317460317460317 - nodes in this community are weakly interconnected._
 - **Should `Community 1` be split into smaller, more focused modules?**
-  _Cohesion score 0.07007575757575757 - nodes in this community are weakly interconnected._
+  _Cohesion score 0.06507936507936508 - nodes in this community are weakly interconnected._
 - **Should `Community 3` be split into smaller, more focused modules?**
   _Cohesion score 0.14814814814814814 - nodes in this community are weakly interconnected._
