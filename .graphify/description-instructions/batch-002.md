@@ -19,13 +19,15 @@ relations (neighbors) and the provided citations/evidence — e.g.
 Ground entity descriptions in the citations/evidence when present; do not
 speculate beyond the context, so a node with no supporting context may be
 left out of the reply.
-Write every description in English (en). Do not switch languages.
+Write every description in Portuguese (pt). Do not switch languages.
 No marketing language.
 Respond ONLY with a JSON object mapping each node id (as a string) to its
 one-sentence description — no prose, no markdown fences.
 
 - "commit:repo:github.com/millennium42/Fonolife@557b254c240c1cfccb0827e8b81c7b12b53bc931": "557b254 fix(deploy): corrigir render.yaml para sintaxe válida de Blueprint no R…" | kind=Commit | source=git | neighbors=[3a29c99 chore(deploy): preparar infraes…, main, b5a2180 fix(deploy): mover dependências…]
 - "commit:repo:github.com/millennium42/Fonolife@68c033be5d296cd83c164e2d674d672802b891ce": "68c033b chore: inicializar main para entregas independentes" | kind=Commit | source=git | neighbors=[codex/pr8-importacao-csv-seguranca, main, 3f9e6cc feat: estabelecer núcleo seguro…]
+- "commit:repo:github.com/millennium42/Fonolife@b5a21802bdb151bfd303eb064946ed6932e7090e": "b5a2180 fix(deploy): mover dependências de build TypeScript para dependencies e…" | kind=Commit | source=git | neighbors=[557b254 fix(deploy): corrigir render.ya…, main, e5a9115 feat(auth): adicionar botões de…]
+- "commit:repo:github.com/millennium42/Fonolife@e5a9115ee3db00ac6905daf01256d50641f1396e": "e5a9115 feat(auth): adicionar botões de login direto 1-clique para contas de de…" | kind=Commit | source=git | neighbors=[b5a2180 fix(deploy): mover dependências…, main, main.tsx]
 - "db_migrate_migrate": "migrate()" | kind=code-symbol | source=src/db/migrate.ts:L7 | neighbors=[create-admin.ts, migrate.ts, server.ts]
 - "domain_attachments_calculatefilehash": "calculateFileHash()" | kind=code-symbol | source=src/domain/attachments.ts:L43 | neighbors=[attachments.ts, app.ts, attachments.test.ts]
 - "domain_attachments_sanitizefilename": "sanitizeFilename()" | kind=code-symbol | source=src/domain/attachments.ts:L16 | neighbors=[attachments.ts, app.ts, attachments.test.ts]
@@ -62,8 +64,6 @@ one-sentence description — no prose, no markdown fences.
 - "migrations_004_sales_users": "users" | kind=code-symbol | source=migrations/004_sales.sql:L14 | neighbors=[004_sales.sql, financial_entries, sales]
 - "migrations_006_csv_imports_csv_import_jobs": "csv_import_jobs" | kind=code-symbol | source=migrations/006_csv_imports.sql:L1 | neighbors=[006_csv_imports.sql, csv_import_errors, users]
 - "migrations_009_attachments_patient_attachments": "patient_attachments" | kind=code-symbol | source=migrations/009_attachments.sql:L1 | neighbors=[009_attachments.sql, patients, users]
-- "src_main_finance": "Finance()" | kind=code-symbol | source=web/src/main.tsx:L1169 | neighbors=[main.tsx, money(), today()]
-- "src_main_money": "money()" | kind=code-symbol | source=web/src/main.tsx:L1142 | neighbors=[main.tsx, Dashboard(), Finance()]
 
 ## Instructions
 
