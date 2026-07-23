@@ -17,6 +17,9 @@ No marketing language.
 Respond ONLY with a JSON object mapping each node id (as a string) to its
 one-sentence description — no prose, no markdown fences.
 
+- "migrations_008_whatsapp_shortcuts": "008_whatsapp_shortcuts.sql" | kind=code-symbol | source=migrations/008_whatsapp_shortcuts.sql:L1 | neighbors=[5ccde91 feat: implementar atalhos rápid…]
+- "migrations_010_lgpd_privacy": "010_lgpd_privacy.sql" | kind=code-symbol | source=migrations/010_lgpd_privacy.sql:L1 | neighbors=[077b08e feat(privacy): adicionar migrat…]
+- "migrations_011_doctor_schedule": "011_doctor_schedule.sql" | kind=code-symbol | source=migrations/011_doctor_schedule.sql:L1 | neighbors=[5fe1e04 feat(doctor): adicionar perfil …]
 - "src_app_attempts": "attempts" | kind=code-symbol | source=src/app.ts:L71 | neighbors=[app.ts]
 - "src_app_fastifyrequest": "FastifyRequest" | kind=code-symbol | source=src/app.ts:L67 | neighbors=[app.ts]
 - "src_app_user": "User" | kind=code-symbol | source=src/app.ts:L57 | neighbors=[app.ts]
@@ -54,9 +57,6 @@ one-sentence description — no prose, no markdown fences.
 - "src_server_usercount": "userCount" | kind=code-symbol | source=src/server.ts:L8 | neighbors=[server.ts]
 - "tests_dashboard_smoke_dashboard": "dashboard()" | kind=code-symbol | source=tests/dashboard-smoke.mjs:L9 | neighbors=[dashboard-smoke.mjs]
 - "tests_dashboard_smoke_login": "login()" | kind=code-symbol | source=tests/dashboard-smoke.mjs:L4 | neighbors=[dashboard-smoke.mjs]
-- "tests_dashboard_test": "dashboard.test.ts" | kind=code-symbol | source=tests/dashboard.test.ts:L1 | neighbors=[a56a353 feat: priorizar filas acionávei…]
-- "tests_devsec_smoke_login": "login()" | kind=code-symbol | source=tests/devsec-smoke.mjs:L14 | neighbors=[devsec-smoke.mjs]
-- "tests_finance_smoke_accounts": "accounts" | kind=code-symbol | source=tests/finance-smoke.mjs:L10 | neighbors=[finance-smoke.mjs]
 
 ## Instructions
 
