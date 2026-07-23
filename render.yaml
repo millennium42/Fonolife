@@ -1,0 +1,26 @@
+services:
+  - type: web
+    name: fonolife
+    runtime: node
+    plan: free
+    buildCommand: npm run build
+    startCommand: npm start
+    healthCheckPath: /api/health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: DATABASE_URL
+        fromDatabase:
+          name: fonolife-db
+          property: connectionString
+      - key: APP_ORIGIN
+        fromService:
+          type: web
+          name: fonolife
+          property: url
+
+databases:
+  - name: fonolife-db
+    plan: free
+    databaseName: fonolife
+    user: fonolife

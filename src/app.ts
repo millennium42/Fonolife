@@ -93,7 +93,7 @@ export function buildApp() {
   app.addHook("onRequest", async (request) => {
     if (!["GET", "HEAD", "OPTIONS"].includes(request.method)) {
       const origin = request.headers.origin;
-      if (origin !== config.origin)
+      if (origin && origin !== config.origin)
         throw Object.assign(new Error("Origem não permitida"), {
           statusCode: 403,
         });

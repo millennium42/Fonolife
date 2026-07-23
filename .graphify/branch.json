@@ -3,14 +3,14 @@
   "branchName": "main",
   "worktreePath": "C:\\Users\\milla\\Documents\\Projetos\\Git\\Fonolife",
   "upstream": "origin/main",
-  "mergeBase": "d13f6631276508244a16ccd77efebf49e06cb312",
+  "mergeBase": "75e42fd49d573ae4aef8872db7551c4eb01c82c4",
   "firstSeenHead": "639a91490c9b9be8376e3dcd14e78693199cf77c",
-  "lastSeenHead": "d13f6631276508244a16ccd77efebf49e06cb312",
-  "lastAnalyzedHead": "d13f6631276508244a16ccd77efebf49e06cb312",
+  "lastSeenHead": "75e42fd49d573ae4aef8872db7551c4eb01c82c4",
+  "lastAnalyzedHead": "75e42fd49d573ae4aef8872db7551c4eb01c82c4",
   "stale": false,
   "staleReason": null,
   "staleSince": null,
   "lifecycleEvent": null,
   "createdAt": "2026-07-22T20:19:50.276Z",
-  "updatedAt": "2026-07-22T20:45:47.798Z"
+  "updatedAt": "2026-07-23T02:27:01.967Z"
 }
