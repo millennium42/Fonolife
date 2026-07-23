@@ -1,23 +1,23 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import {
-  calculateCsvHash,
+  calculateVersionedCsvHash,
   parseCsv,
   sanitizeCsvCell,
   validateFinancialCsvRow,
   validatePatientCsvRow,
 } from "../src/domain/csv-import.js";
 
-test("calcula hash SHA-256 de conteúdo CSV para idempotência", () => {
+test("calcula hash SHA-256 de conteúdo CSV para idempotência versionada", () => {
   const content = "nome,telefone\nJoão Silva,11999998888";
-  const hash1 = calculateCsvHash(content);
-  const hash2 = calculateCsvHash(content + "\n  ");
+  const hash1 = calculateVersionedCsvHash("patient", content);
+  const hash2 = calculateVersionedCsvHash("patient", content + "\n  ");
   assert.equal(typeof hash1, "string");
   assert.equal(hash1.length, 64);
   assert.equal(hash1, hash2, "Espaços vazios no final não alteram a idempotência do hash");
 });
 
-test("sanitiza células para prevenir injeção de fórmulas (CSV Injection)", () => {
+test("sanitiza células para prevenir injeção de fórmulas (somente em exportações)", () => {
   assert.equal(sanitizeCsvCell("=SUM(1+1)"), "'=SUM(1+1)");
   assert.equal(sanitizeCsvCell("+12345"), "'+12345");
   assert.equal(sanitizeCsvCell("-100"), "'-100");
@@ -51,9 +51,9 @@ test("valida linha de paciente em CSV", () => {
   assert.ok(invalidRes.error?.includes("Linha 3"));
 });
 
-test("valida linha de lançamento financeiro em CSV com centavos inteiros", () => {
+test("valida linha de lançamento financeiro em CSV com centavos inteiros e UUID", () => {
   const validRow = {
-    contaid: "11111111-1111-1111-1111-111111111111",
+    contaid: "a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11",
     tipo: "income",
     valorcentavos: "15000",
     datavencimento: "2026-08-10",
@@ -66,7 +66,7 @@ test("valida linha de lançamento financeiro em CSV com centavos inteiros", () =
   assert.equal(res.data?.amountCents, 15000);
 
   const invalidRow = {
-    contaid: "11111111-1111-1111-1111-111111111111",
+    contaid: "a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11",
     tipo: "income",
     valorcentavos: "150.50", // Não é inteiro!
     datavencimento: "2026-08-10",
