@@ -13,11 +13,6 @@ services:
         fromDatabase:
           name: fonolife-db
           property: connectionString
-      - key: APP_ORIGIN
-        fromService:
-          type: web
-          name: fonolife
-          property: url
 
 databases:
   - name: fonolife-db
