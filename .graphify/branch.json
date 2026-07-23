@@ -1,16 +1,16 @@
 {
   "schemaVersion": 1,
-  "branchName": "codex/03-caixa-pdv-relatorio-financeiro",
+  "branchName": "codex/04-design-system-seed-demo",
   "worktreePath": "C:\\Users\\milla\\Documents\\Projetos\\Git\\Fonolife",
   "upstream": null,
   "mergeBase": null,
-  "firstSeenHead": "91c499c57df3c64e982b2db16ebf99beafd0f305",
-  "lastSeenHead": "91c499c57df3c64e982b2db16ebf99beafd0f305",
-  "lastAnalyzedHead": "91c499c57df3c64e982b2db16ebf99beafd0f305",
+  "firstSeenHead": "9cabae8e21d837b46230cce3bdec88adb530b620",
+  "lastSeenHead": "9cabae8e21d837b46230cce3bdec88adb530b620",
+  "lastAnalyzedHead": "9cabae8e21d837b46230cce3bdec88adb530b620",
   "stale": false,
   "staleReason": null,
   "staleSince": null,
   "lifecycleEvent": null,
-  "createdAt": "2026-07-23T03:25:03.909Z",
-  "updatedAt": "2026-07-23T03:25:03.909Z"
+  "createdAt": "2026-07-23T03:26:34.087Z",
+  "updatedAt": "2026-07-23T03:26:34.087Z"
 }
