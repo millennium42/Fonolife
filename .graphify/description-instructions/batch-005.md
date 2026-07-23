@@ -1,4 +1,4 @@
-# Node Description Batch 6 of 7
+# Node Description Batch 6 of 8
 
 Graphify is running in assistant/skill mode (no API key). You are the host
 assistant (Claude Code / Codex / Gemini CLI). Read the prompt below and write
@@ -17,6 +17,14 @@ No marketing language.
 Respond ONLY with a JSON object mapping each node id (as a string) to its
 one-sentence description — no prose, no markdown fences.
 
+- "migrations_013_responsible_doctor": "013_responsible_doctor.sql" | kind=code-symbol | source=migrations/013_responsible_doctor.sql:L1 | neighbors=[91c499c Merge branch 'codex/02-medico-r…, b0009ad feat(patients): adicionar medic…]
+- "playwright_config": "playwright.config.ts" | kind=code-symbol | source=playwright.config.ts:L1 | neighbors=[0e1c4ad test: consolidar QA, acessibili…, 75e42fd fix(ui): aplicar flex min-width…]
+- "src_app_buildapp": "buildApp()" | kind=code-symbol | source=src/app.ts:L73 | neighbors=[app.ts, server.ts]
+- "src_main_dashboard": "Dashboard()" | kind=code-symbol | source=web/src/main.tsx:L1610 | neighbors=[main.tsx, money()]
+- "src_main_date": "date()" | kind=code-symbol | source=web/src/main.tsx:L134 | neighbors=[main.tsx, PatientRecord()]
+- "src_main_doctorcalendar": "DoctorCalendar()" | kind=code-symbol | source=web/src/main.tsx:L2155 | neighbors=[main.tsx, today()]
+- "src_main_patientrecord": "PatientRecord()" | kind=code-symbol | source=web/src/main.tsx:L604 | neighbors=[main.tsx, date()]
+- "src_main_saleform": "SaleForm()" | kind=code-symbol | source=web/src/main.tsx:L171 | neighbors=[main.tsx, today()]
 - "tests_devsec_smoke": "devsec-smoke.mjs" | kind=code-symbol | source=tests/devsec-smoke.mjs:L1 | neighbors=[0e1c4ad test: consolidar QA, acessibili…, login()]
 - "db_create_admin_email": "email" | kind=code-symbol | source=src/db/create-admin.ts:L6 | neighbors=[create-admin.ts]
 - "domain_attachments_allowed_mime_types": "ALLOWED_MIME_TYPES" | kind=code-symbol | source=src/domain/attachments.ts:L3 | neighbors=[attachments.ts]
@@ -49,14 +57,6 @@ one-sentence description — no prose, no markdown fences.
 - "migrations_008_whatsapp_shortcuts": "008_whatsapp_shortcuts.sql" | kind=code-symbol | source=migrations/008_whatsapp_shortcuts.sql:L1 | neighbors=[5ccde91 feat: implementar atalhos rápid…]
 - "migrations_010_lgpd_privacy": "010_lgpd_privacy.sql" | kind=code-symbol | source=migrations/010_lgpd_privacy.sql:L1 | neighbors=[077b08e feat(privacy): adicionar migrat…]
 - "migrations_011_doctor_schedule": "011_doctor_schedule.sql" | kind=code-symbol | source=migrations/011_doctor_schedule.sql:L1 | neighbors=[5fe1e04 feat(doctor): adicionar perfil …]
-- "src_app_attempts": "attempts" | kind=code-symbol | source=src/app.ts:L71 | neighbors=[app.ts]
-- "src_app_fastifyrequest": "FastifyRequest" | kind=code-symbol | source=src/app.ts:L67 | neighbors=[app.ts]
-- "src_app_user": "User" | kind=code-symbol | source=src/app.ts:L57 | neighbors=[app.ts]
-- "src_main_api": "api()" | kind=code-symbol | source=web/src/main.tsx:L140 | neighbors=[main.tsx]
-- "src_main_app": "App()" | kind=code-symbol | source=web/src/main.tsx:L1974 | neighbors=[main.tsx]
-- "src_main_categorylabels": "categoryLabels" | kind=code-symbol | source=web/src/main.tsx:L1157 | neighbors=[main.tsx]
-- "src_main_cents": "cents()" | kind=code-symbol | source=web/src/main.tsx:L151 | neighbors=[main.tsx]
-- "src_main_companyaccount": "CompanyAccount" | kind=code-symbol | source=web/src/main.tsx:L49 | neighbors=[main.tsx]
 
 ## Instructions
 

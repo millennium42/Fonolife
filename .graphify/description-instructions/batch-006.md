@@ -1,4 +1,4 @@
-# Node Description Batch 7 of 7
+# Node Description Batch 7 of 8
 
 Graphify is running in assistant/skill mode (no API key). You are the host
 assistant (Claude Code / Codex / Gemini CLI). Read the prompt below and write
@@ -17,26 +17,38 @@ No marketing language.
 Respond ONLY with a JSON object mapping each node id (as a string) to its
 one-sentence description — no prose, no markdown fences.
 
+- "src_app_attempts": "attempts" | kind=code-symbol | source=src/app.ts:L71 | neighbors=[app.ts]
+- "src_app_fastifyrequest": "FastifyRequest" | kind=code-symbol | source=src/app.ts:L67 | neighbors=[app.ts]
+- "src_app_user": "User" | kind=code-symbol | source=src/app.ts:L57 | neighbors=[app.ts]
+- "src_main_app": "App()" | kind=code-symbol | source=web/src/main.tsx:L1974 | neighbors=[main.tsx]
+- "src_main_async": "async()" | kind=code-symbol | source=web/src/main.tsx:L1656 | neighbors=[main.tsx]
+- "src_main_categorylabels": "categoryLabels" | kind=code-symbol | source=web/src/main.tsx:L1157 | neighbors=[main.tsx]
+- "src_main_cents": "cents()" | kind=code-symbol | source=web/src/main.tsx:L151 | neighbors=[main.tsx]
+- "src_main_companyaccount": "CompanyAccount" | kind=code-symbol | source=web/src/main.tsx:L51 | neighbors=[main.tsx]
 - "src_main_csvimport": "CsvImport()" | kind=code-symbol | source=web/src/main.tsx:L1852 | neighbors=[main.tsx]
-- "src_main_dashboarddata": "DashboardData" | kind=code-symbol | source=web/src/main.tsx:L92 | neighbors=[main.tsx]
+- "src_main_dashboarddata": "DashboardData" | kind=code-symbol | source=web/src/main.tsx:L114 | neighbors=[main.tsx]
 - "src_main_doctorconsultationform": "DoctorConsultationForm()" | kind=code-symbol | source=web/src/main.tsx:L2316 | neighbors=[main.tsx]
 - "src_main_doctorpatients": "DoctorPatients()" | kind=code-symbol | source=web/src/main.tsx:L2277 | neighbors=[main.tsx]
 - "src_main_eventtypes": "eventTypes" | kind=code-symbol | source=web/src/main.tsx:L122 | neighbors=[main.tsx]
-- "src_main_financesummary": "FinanceSummary" | kind=code-symbol | source=web/src/main.tsx:L78 | neighbors=[main.tsx]
-- "src_main_financialentry": "FinancialEntry" | kind=code-symbol | source=web/src/main.tsx:L55 | neighbors=[main.tsx]
-- "src_main_followup": "FollowUp" | kind=code-symbol | source=web/src/main.tsx:L38 | neighbors=[main.tsx]
+- "src_main_financesummary": "FinanceSummary" | kind=code-symbol | source=web/src/main.tsx:L100 | neighbors=[main.tsx]
+- "src_main_financialentry": "FinancialEntry" | kind=code-symbol | source=web/src/main.tsx:L57 | neighbors=[main.tsx]
+- "src_main_followup": "FollowUp" | kind=code-symbol | source=web/src/main.tsx:L40 | neighbors=[main.tsx]
 - "src_main_followups": "FollowUps()" | kind=code-symbol | source=web/src/main.tsx:L862 | neighbors=[main.tsx]
+- "src_main_globalpatientmodal": "GlobalPatientModal()" | kind=code-symbol | source=web/src/main.tsx:L219 | neighbors=[main.tsx]
+- "src_main_if": "if()" | kind=code-symbol | source=web/src/main.tsx:L534 | neighbors=[main.tsx]
 - "src_main_inventory": "Inventory()" | kind=code-symbol | source=web/src/main.tsx:L1665 | neighbors=[main.tsx]
-- "src_main_monthly": "monthly()" | kind=code-symbol | source=web/src/main.tsx:L156 | neighbors=[main.tsx]
 - "src_main_patient": "Patient" | kind=code-symbol | source=web/src/main.tsx:L14 | neighbors=[main.tsx]
 - "src_main_patientattachments": "PatientAttachments()" | kind=code-symbol | source=web/src/main.tsx:L533 | neighbors=[main.tsx]
 - "src_main_patientform": "PatientForm()" | kind=code-symbol | source=web/src/main.tsx:L385 | neighbors=[main.tsx]
+- "src_main_patientnamelink": "PatientNameLink()" | kind=code-symbol | source=web/src/main.tsx:L234 | neighbors=[main.tsx]
 - "src_main_patients": "Patients()" | kind=code-symbol | source=web/src/main.tsx:L1003 | neighbors=[main.tsx]
 - "src_main_paymentlabels": "paymentLabels" | kind=code-symbol | source=web/src/main.tsx:L1148 | neighbors=[main.tsx]
-- "src_main_receivable": "Receivable" | kind=code-symbol | source=web/src/main.tsx:L67 | neighbors=[main.tsx]
+- "src_main_productitem": "ProductItem" | kind=code-symbol | source=web/src/main.tsx:L90 | neighbors=[main.tsx]
+- "src_main_receivable": "Receivable" | kind=code-symbol | source=web/src/main.tsx:L69 | neighbors=[main.tsx]
+- "src_main_serviceitem": "ServiceItem" | kind=code-symbol | source=web/src/main.tsx:L80 | neighbors=[main.tsx]
 - "src_main_sources": "sources" | kind=code-symbol | source=web/src/main.tsx:L114 | neighbors=[main.tsx]
 - "src_main_statuses": "statuses" | kind=code-symbol | source=web/src/main.tsx:L104 | neighbors=[main.tsx]
-- "src_main_timelineitem": "TimelineItem" | kind=code-symbol | source=web/src/main.tsx:L30 | neighbors=[main.tsx]
+- "src_main_timelineitem": "TimelineItem" | kind=code-symbol | source=web/src/main.tsx:L32 | neighbors=[main.tsx]
 - "src_main_user": "User" | kind=code-symbol | source=web/src/main.tsx:L6 | neighbors=[main.tsx]
 - "src_main_whatsappbutton": "WhatsAppButton()" | kind=code-symbol | source=web/src/main.tsx:L1623 | neighbors=[main.tsx]
 - "src_server_usercount": "userCount" | kind=code-symbol | source=src/server.ts:L8 | neighbors=[server.ts]
@@ -45,13 +57,6 @@ one-sentence description — no prose, no markdown fences.
 - "tests_dashboard_test": "dashboard.test.ts" | kind=code-symbol | source=tests/dashboard.test.ts:L1 | neighbors=[a56a353 feat: priorizar filas acionávei…]
 - "tests_devsec_smoke_login": "login()" | kind=code-symbol | source=tests/devsec-smoke.mjs:L14 | neighbors=[devsec-smoke.mjs]
 - "tests_finance_smoke_accounts": "accounts" | kind=code-symbol | source=tests/finance-smoke.mjs:L10 | neighbors=[finance-smoke.mjs]
-- "tests_finance_smoke_call": "call()" | kind=code-symbol | source=tests/finance-smoke.mjs:L6 | neighbors=[finance-smoke.mjs]
-- "tests_finance_smoke_clientrequestid": "clientRequestId" | kind=code-symbol | source=tests/finance-smoke.mjs:L11 | neighbors=[finance-smoke.mjs]
-- "tests_finance_smoke_login": "login()" | kind=code-symbol | source=tests/finance-smoke.mjs:L5 | neighbors=[finance-smoke.mjs]
-- "tests_finance_smoke_payload": "payload" | kind=code-symbol | source=tests/finance-smoke.mjs:L12 | neighbors=[finance-smoke.mjs]
-- "tests_finance_smoke_summary": "summary" | kind=code-symbol | source=tests/finance-smoke.mjs:L18 | neighbors=[finance-smoke.mjs]
-- "tests_migrate_test": "migrate.test.ts" | kind=code-symbol | source=tests/migrate.test.ts:L1 | neighbors=[3f9e6cc feat: estabelecer núcleo seguro…]
-- "vite_config": "vite.config.ts" | kind=code-symbol | source=vite.config.ts:L1 | neighbors=[3f9e6cc feat: estabelecer núcleo seguro…]
 
 ## Instructions
 

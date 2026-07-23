@@ -1,24 +1,24 @@
 # Graph Report - .  (2026-07-23)
 
 ## Corpus Check
-- Corpus is ~42.632 words - fits in a single context window. You may not need a graph.
+- Corpus is ~43.004 words - fits in a single context window. You may not need a graph.
 
 ## Summary
-- 275 nodes · 642 edges · 15 communities detected
+- 287 nodes · 700 edges · 16 communities detected
 - Extraction: 100% EXTRACTED · 0% INFERRED · 0% AMBIGUOUS
 - Token cost: 0 input · 0 output
-- Edge kinds: contains: 189 · ON_BRANCH: 109 · imports: 101 · MODIFIES: 92 · imports_from: 47 · PARENT_OF: 30 · references: 25 · reads_from: 20 · calls: 18 · triggers: 11
+- Edge kinds: contains: 197 · ON_BRANCH: 144 · imports: 101 · MODIFIES: 100 · imports_from: 47 · PARENT_OF: 33 · references: 25 · calls: 22 · reads_from: 20 · triggers: 11
 
 
 ## Input Scope
 - Requested: auto
 - Resolved: committed (source: default-auto)
-- Included files: 87 · Candidates: 194
-- Excluded: 1 untracked · 6227 ignored · 0 sensitive · 0 missing committed
+- Included files: 89 · Candidates: 203
+- Excluded: 0 untracked · 6227 ignored · 0 sensitive · 0 missing committed
 - Recommendation: Use --scope all or graphify.yaml inputs.corpus for a knowledge-base folder.
 
 ## Graph Freshness
-- Built from Git commit: `d7896dd`
+- Built from Git commit: `91c499c`
 - Compare this hash to `git rev-parse HEAD` before trusting freshness-sensitive graph output.
 ## God Nodes (most connected - your core abstractions)
 1. `financial_entries` - 11 edges
@@ -34,23 +34,27 @@
 
 ## Surprising Connections (you probably didn't know these)
 - `264533a feat(services): adicionar migracao, modelo de dominio e API de servicos e CMV em produtos` --ON_BRANCH--> `codex/01-servicos-catalogo-estoque`  [EXTRACTED]
-  git → git  _Bridges community 3 → community 1_
+  git → git  _Bridges community 3 → community 2_
 - `3f9e6cc feat: estabelecer núcleo seguro e executável da clínica Fonolife (#1)` --ON_BRANCH--> `codex/01-servicos-catalogo-estoque`  [EXTRACTED]
-  git → git  _Bridges community 5 → community 1_
+  git → git  _Bridges community 5 → community 2_
+- `91c499c Merge branch 'codex/02-medico-responsavel-prontuario-global' into main` --ON_BRANCH--> `codex/03-caixa-pdv-relatorio-financeiro`  [EXTRACTED]
+  git → git  _Bridges community 0 → community 2_
+- `d7896dd Merge branch 'codex/01-servicos-catalogo-estoque' into main` --PARENT_OF--> `91c499c Merge branch 'codex/02-medico-responsavel-prontuario-global' into main`  [EXTRACTED]
+  git → git  _Bridges community 3 → community 0_
 
 ## Communities
 
 ### Community 0 - "Community 0"
-Cohesion: 0.08
-Nodes (39): ALLOWED_MIME_TYPES, AllowedMimeType, calculateFileHash(), sanitizeFilename(), validFileSize(), validMimeType(), calculateCsvHash(), CsvFinancialRow (+31 more)
+Cohesion: 0.09
+Nodes (38): 91c499c Merge branch 'codex/02-medico-responsavel-prontuario-global' into main, b0009ad feat(patients): adicionar medico responsavel ao paciente e baixa automatica de insumos do servico, ALLOWED_MIME_TYPES, AllowedMimeType, calculateFileHash(), sanitizeFilename(), validFileSize(), validMimeType() (+30 more)
 
 ### Community 1 - "Community 1"
-Cohesion: 0.19
-Nodes (30): codex/01-servicos-catalogo-estoque, codex/02-medico-responsavel-prontuario-global, codex/pr8-importacao-csv-seguranca, main, 0687af4 feat(privacy): implementar endpoints de exportação JSON e anonimização LGPD com auditoria (#12), 077b08e feat(privacy): adicionar migration 010 para pseudonimização LGPD e campos de auditoria de privacidade (#12), 0d2db0f feat: centralizar cadastro e histórico de pacientes (#2), 0e1c4ad test: consolidar QA, acessibilidade e release do Fonolife (#7) (+22 more)
+Cohesion: 0.06
+Nodes (28): api(), categoryLabels, CompanyAccount, Dashboard(), DashboardData, date(), DoctorCalendar(), eventTypes (+20 more)
 
 ### Community 2 - "Community 2"
-Cohesion: 0.07
-Nodes (22): categoryLabels, CompanyAccount, Dashboard(), DashboardData, date(), DoctorCalendar(), eventTypes, Finance() (+14 more)
+Cohesion: 0.22
+Nodes (31): codex/01-servicos-catalogo-estoque, codex/02-medico-responsavel-prontuario-global, codex/03-caixa-pdv-relatorio-financeiro, codex/pr8-importacao-csv-seguranca, main, 0687af4 feat(privacy): implementar endpoints de exportação JSON e anonimização LGPD com auditoria (#12), 077b08e feat(privacy): adicionar migration 010 para pseudonimização LGPD e campos de auditoria de privacidade (#12), 0d2db0f feat: centralizar cadastro e histórico de pacientes (#2) (+23 more)
 
 ### Community 3 - "Community 3"
 Cohesion: 0.11
@@ -85,41 +89,45 @@ Cohesion: 0.53
 Nodes (4): inventory_movements, products, trg_prevent_inventory_movement_modification, users
 
 ### Community 11 - "Community 11"
+Cohesion: 0.70
+Nodes (3): anonymizePatientName(), formatLgpdExportPackage(), isAnonymized()
+
+### Community 12 - "Community 12"
 Cohesion: 0.80
 Nodes (3): buildWhatsAppLink(), formatE164Phone(), WHATSAPP_TEMPLATES
 
-### Community 12 - "Community 12"
+### Community 13 - "Community 13"
 Cohesion: 0.83
 Nodes (2): FOLLOW_UP_FILTERS, saoPauloDate()
 
-### Community 13 - "Community 13"
+### Community 14 - "Community 14"
 Cohesion: 0.83
 Nodes (3): csv_import_errors, csv_import_jobs, users
 
-### Community 14 - "Community 14"
+### Community 15 - "Community 15"
 Cohesion: 0.83
 Nodes (3): patient_attachments, patients, users
 
 ## Knowledge Gaps
-- **40 isolated node(s):** `company_accounts`, `User`, `FastifyRequest`, `attempts`, `email` (+35 more)
+- **42 isolated node(s):** `company_accounts`, `User`, `FastifyRequest`, `attempts`, `email` (+37 more)
   These have ≤1 connection - possible missing edges or undocumented components.
-- **Thin community `Community 12`** (2 nodes): `FOLLOW_UP_FILTERS`, `saoPauloDate()`
+- **Thin community `Community 13`** (2 nodes): `FOLLOW_UP_FILTERS`, `saoPauloDate()`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
 
 ## Suggested Questions
 _Questions this graph is uniquely positioned to answer:_
 
 - **Why does `validProduct()` connect `Community 3` to `Community 0`?**
-  _High betweenness centrality (0.008) - this node is a cross-community bridge._
+  _High betweenness centrality (0.007) - this node is a cross-community bridge._
 - **Why does `validService()` connect `Community 3` to `Community 0`?**
   _High betweenness centrality (0.006) - this node is a cross-community bridge._
 - **Why does `hashPassword()` connect `Community 5` to `Community 0`?**
   _High betweenness centrality (0.004) - this node is a cross-community bridge._
 - **What connects `company_accounts`, `User`, `FastifyRequest` to the rest of the system?**
-  _40 weakly-connected nodes found - possible documentation gaps or missing edges._
+  _42 weakly-connected nodes found - possible documentation gaps or missing edges._
 - **Should `Community 0` be split into smaller, more focused modules?**
-  _Cohesion score 0.08295625942684766 - nodes in this community are weakly interconnected._
-- **Should `Community 2` be split into smaller, more focused modules?**
-  _Cohesion score 0.06507936507936508 - nodes in this community are weakly interconnected._
+  _Cohesion score 0.08734693877551021 - nodes in this community are weakly interconnected._
+- **Should `Community 1` be split into smaller, more focused modules?**
+  _Cohesion score 0.056025369978858354 - nodes in this community are weakly interconnected._
 - **Should `Community 3` be split into smaller, more focused modules?**
   _Cohesion score 0.11051693404634581 - nodes in this community are weakly interconnected._
