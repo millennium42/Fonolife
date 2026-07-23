@@ -17,6 +17,9 @@ No marketing language.
 Respond ONLY with a JSON object mapping each node id (as a string) to its
 one-sentence description — no prose, no markdown fences.
 
+- "src_main_statuses": "statuses" | kind=code-symbol | source=web/src/main.tsx:L104 | neighbors=[main.tsx]
+- "src_main_timelineitem": "TimelineItem" | kind=code-symbol | source=web/src/main.tsx:L32 | neighbors=[main.tsx]
+- "src_main_user": "User" | kind=code-symbol | source=web/src/main.tsx:L6 | neighbors=[main.tsx]
 - "src_main_whatsappbutton": "WhatsAppButton()" | kind=code-symbol | source=web/src/main.tsx:L1623 | neighbors=[main.tsx]
 - "src_server_usercount": "userCount" | kind=code-symbol | source=src/server.ts:L8 | neighbors=[server.ts]
 - "tests_dashboard_smoke_dashboard": "dashboard()" | kind=code-symbol | source=tests/dashboard-smoke.mjs:L9 | neighbors=[dashboard-smoke.mjs]

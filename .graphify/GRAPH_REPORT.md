@@ -1,24 +1,24 @@
 # Graph Report - .  (2026-07-23)
 
 ## Corpus Check
-- Corpus is ~45.092 words - fits in a single context window. You may not need a graph.
+- Corpus is ~45.446 words - fits in a single context window. You may not need a graph.
 
 ## Summary
-- 294 nodes · 789 edges · 15 communities detected
+- 297 nodes · 836 edges · 14 communities detected
 - Extraction: 100% EXTRACTED · 0% INFERRED · 0% AMBIGUOUS
 - Token cost: 0 input · 0 output
-- Edge kinds: ON_BRANCH: 222 · contains: 197 · MODIFIES: 104 · imports: 101 · imports_from: 47 · PARENT_OF: 40 · references: 25 · calls: 22 · reads_from: 20 · triggers: 11
+- Edge kinds: ON_BRANCH: 264 · contains: 197 · MODIFIES: 106 · imports: 101 · imports_from: 47 · PARENT_OF: 43 · references: 25 · calls: 22 · reads_from: 20 · triggers: 11
 
 
 ## Input Scope
 - Requested: auto
 - Resolved: committed (source: default-auto)
-- Included files: 92 · Candidates: 213
+- Included files: 93 · Candidates: 215
 - Excluded: 0 untracked · 6227 ignored · 0 sensitive · 0 missing committed
 - Recommendation: Use --scope all or graphify.yaml inputs.corpus for a knowledge-base folder.
 
 ## Graph Freshness
-- Built from Git commit: `552fbd9`
+- Built from Git commit: `bacc003`
 - Compare this hash to `git rev-parse HEAD` before trusting freshness-sensitive graph output.
 ## God Nodes (most connected - your core abstractions)
 1. `financial_entries` - 11 edges
@@ -42,11 +42,11 @@
 
 ### Community 0 - "Community 0"
 Cohesion: 0.08
-Nodes (39): ALLOWED_MIME_TYPES, AllowedMimeType, calculateFileHash(), sanitizeFilename(), validFileSize(), validMimeType(), calculateCsvHash(), CsvFinancialRow (+31 more)
+Nodes (41): ALLOWED_MIME_TYPES, AllowedMimeType, calculateFileHash(), sanitizeFilename(), validFileSize(), validMimeType(), calculateCsvHash(), CsvFinancialRow (+33 more)
 
 ### Community 1 - "Community 1"
-Cohesion: 0.23
-Nodes (40): codex/01-servicos-catalogo-estoque, codex/02-medico-responsavel-prontuario-global, codex/03-caixa-pdv-relatorio-financeiro, codex/04-design-system-seed-demo, codex/fix-seed-fk-constraint, codex/pr8-importacao-csv-seguranca, main, 0687af4 feat(privacy): implementar endpoints de exportação JSON e anonimização LGPD com auditoria (#12) (+32 more)
+Cohesion: 0.24
+Nodes (43): codex/01-servicos-catalogo-estoque, codex/02-medico-responsavel-prontuario-global, codex/03-caixa-pdv-relatorio-financeiro, codex/04-design-system-seed-demo, codex/fix-seed-fk-constraint, codex/pr8-importacao-csv-seguranca, codex/quick-demo-login-buttons, main (+35 more)
 
 ### Community 2 - "Community 2"
 Cohesion: 0.06
@@ -90,21 +90,15 @@ Nodes (3): buildWhatsAppLink(), formatE164Phone(), WHATSAPP_TEMPLATES
 
 ### Community 12 - "Community 12"
 Cohesion: 0.83
-Nodes (2): FOLLOW_UP_FILTERS, saoPauloDate()
-
-### Community 13 - "Community 13"
-Cohesion: 0.83
 Nodes (3): csv_import_errors, csv_import_jobs, users
 
-### Community 14 - "Community 14"
+### Community 13 - "Community 13"
 Cohesion: 0.83
 Nodes (3): patient_attachments, patients, users
 
 ## Knowledge Gaps
 - **42 isolated node(s):** `company_accounts`, `User`, `FastifyRequest`, `attempts`, `email` (+37 more)
   These have ≤1 connection - possible missing edges or undocumented components.
-- **Thin community `Community 12`** (2 nodes): `FOLLOW_UP_FILTERS`, `saoPauloDate()`
-  Too small to be a meaningful cluster - may be noise or needs more connections extracted.
 
 ## Suggested Questions
 _Questions this graph is uniquely positioned to answer:_
@@ -118,7 +112,7 @@ _Questions this graph is uniquely positioned to answer:_
 - **What connects `company_accounts`, `User`, `FastifyRequest` to the rest of the system?**
   _42 weakly-connected nodes found - possible documentation gaps or missing edges._
 - **Should `Community 0` be split into smaller, more focused modules?**
-  _Cohesion score 0.08295625942684766 - nodes in this community are weakly interconnected._
+  _Cohesion score 0.07597402597402597 - nodes in this community are weakly interconnected._
 - **Should `Community 2` be split into smaller, more focused modules?**
   _Cohesion score 0.056025369978858354 - nodes in this community are weakly interconnected._
 - **Should `Community 3` be split into smaller, more focused modules?**
