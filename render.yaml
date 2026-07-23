@@ -3,7 +3,7 @@ services:
     name: fonolife
     runtime: node
     plan: free
-    buildCommand: npm run build
+    buildCommand: npm install --include=dev && npm run build
     startCommand: npm start
     healthCheckPath: /api/health
     envVars:

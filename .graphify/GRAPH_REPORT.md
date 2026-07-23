@@ -1,13 +1,13 @@
 # Graph Report - .  (2026-07-23)
 
 ## Corpus Check
-- Corpus is ~38.926 words - fits in a single context window. You may not need a graph.
+- Corpus is ~39.137 words - fits in a single context window. You may not need a graph.
 
 ## Summary
-- 242 nodes · 508 edges · 15 communities detected
+- 243 nodes · 510 edges · 15 communities detected
 - Extraction: 100% EXTRACTED · 0% INFERRED · 0% AMBIGUOUS
 - Token cost: 0 input · 0 output
-- Edge kinds: contains: 171 · imports: 91 · MODIFIES: 73 · ON_BRANCH: 43 · imports_from: 40 · references: 23 · PARENT_OF: 22 · reads_from: 20 · calls: 14 · triggers: 11
+- Edge kinds: contains: 171 · imports: 91 · MODIFIES: 73 · ON_BRANCH: 44 · imports_from: 40 · PARENT_OF: 23 · references: 23 · reads_from: 20 · calls: 14 · triggers: 11
 
 
 ## Input Scope
@@ -18,7 +18,7 @@
 - Recommendation: Use --scope all or graphify.yaml inputs.corpus for a knowledge-base folder.
 
 ## Graph Freshness
-- Built from Git commit: `3a29c99`
+- Built from Git commit: `557b254`
 - Compare this hash to `git rev-parse HEAD` before trusting freshness-sensitive graph output.
 ## God Nodes (most connected - your core abstractions)
 1. `financial_entries` - 11 edges
@@ -34,25 +34,25 @@
 
 ## Surprising Connections (you probably didn't know these)
 - `0d2db0f feat: centralizar cadastro e histórico de pacientes (#2)` --ON_BRANCH--> `codex/pr8-importacao-csv-seguranca`  [EXTRACTED]
-  git → git  _Bridges community 2 → community 1_
+  git → git  _Bridges community 2 → community 0_
 - `0d2db0f feat: centralizar cadastro e histórico de pacientes (#2)` --PARENT_OF--> `ff35345 feat: tornar o pós-atendimento uma fila acionável (#3)`  [EXTRACTED]
   git → git  _Bridges community 2 → community 12_
 - `2dd873d feat: consolidar financeiro único para dois CNPJs (#5)` --ON_BRANCH--> `codex/pr8-importacao-csv-seguranca`  [EXTRACTED]
-  git → git  _Bridges community 4 → community 1_
-- `3a29c99 chore(deploy): preparar infraestrutura no Render com Blueprint, SSL e checagem estrita de segurança` --ON_BRANCH--> `main`  [EXTRACTED]
-  git → git  _Bridges community 5 → community 1_
+  git → git  _Bridges community 4 → community 0_
+- `3f9e6cc feat: estabelecer núcleo seguro e executável da clínica Fonolife (#1)` --ON_BRANCH--> `codex/pr8-importacao-csv-seguranca`  [EXTRACTED]
+  git → git  _Bridges community 5 → community 0_
 - `3f9e6cc feat: estabelecer núcleo seguro e executável da clínica Fonolife (#1)` --PARENT_OF--> `0d2db0f feat: centralizar cadastro e histórico de pacientes (#2)`  [EXTRACTED]
   git → git  _Bridges community 5 → community 2_
 
 ## Communities
 
 ### Community 0 - "Community 0"
-Cohesion: 0.07
-Nodes (21): categoryLabels, CompanyAccount, Dashboard(), DashboardData, date(), eventTypes, Finance(), FinanceSummary (+13 more)
+Cohesion: 0.11
+Nodes (20): codex/pr8-importacao-csv-seguranca, main, 0687af4 feat(privacy): implementar endpoints de exportação JSON e anonimização LGPD com auditoria (#12), 077b08e feat(privacy): adicionar migration 010 para pseudonimização LGPD e campos de auditoria de privacidade (#12), 0e1c4ad test: consolidar QA, acessibilidade e release do Fonolife (#7), 3a29c99 chore(deploy): preparar infraestrutura no Render com Blueprint, SSL e checagem estrita de segurança, 4de92ce Graphify, 557b254 fix(deploy): corrigir render.yaml para sintaxe válida de Blueprint no Render (+12 more)
 
 ### Community 1 - "Community 1"
-Cohesion: 0.12
-Nodes (18): codex/pr8-importacao-csv-seguranca, main, 0687af4 feat(privacy): implementar endpoints de exportação JSON e anonimização LGPD com auditoria (#12), 077b08e feat(privacy): adicionar migration 010 para pseudonimização LGPD e campos de auditoria de privacidade (#12), 0e1c4ad test: consolidar QA, acessibilidade e release do Fonolife (#7), 4de92ce Graphify, 639a914 feat(privacy): adicionar botão de portabilidade e anonimização LGPD e finalizar documentação da release (#12), 68c033b chore: inicializar main para entregas independentes (+10 more)
+Cohesion: 0.07
+Nodes (21): categoryLabels, CompanyAccount, Dashboard(), DashboardData, date(), eventTypes, Finance(), FinanceSummary (+13 more)
 
 ### Community 2 - "Community 2"
 Cohesion: 0.16
@@ -67,8 +67,8 @@ Cohesion: 0.13
 Nodes (15): 2dd873d feat: consolidar financeiro único para dois CNPJs (#5), a740db5 feat: registrar vendas com parcelas e pós-venda automático (#4), ENTRY_TYPES, FINANCE_CATEGORIES, validFinancialEntry(), DELIVERY_STATUSES, PAYMENT_METHODS, SaleInstallment (+7 more)
 
 ### Community 5 - "Community 5"
-Cohesion: 0.20
-Nodes (13): 3a29c99 chore(deploy): preparar infraestrutura no Render com Blueprint, SSL e checagem estrita de segurança, 3f9e6cc feat: estabelecer núcleo seguro e executável da clínica Fonolife (#1), email, migrate(), pool, seedDemo(), hashPassword(), hashToken() (+5 more)
+Cohesion: 0.21
+Nodes (12): 3f9e6cc feat: estabelecer núcleo seguro e executável da clínica Fonolife (#1), email, migrate(), pool, seedDemo(), hashPassword(), hashToken(), scrypt (+4 more)
 
 ### Community 6 - "Community 6"
 Cohesion: 0.19
@@ -122,8 +122,8 @@ _Questions this graph is uniquely positioned to answer:_
 - **What connects `company_accounts`, `User`, `FastifyRequest` to the rest of the system?**
   _35 weakly-connected nodes found - possible documentation gaps or missing edges._
 - **Should `Community 0` be split into smaller, more focused modules?**
-  _Cohesion score 0.07007575757575757 - nodes in this community are weakly interconnected._
+  _Cohesion score 0.11174242424242424 - nodes in this community are weakly interconnected._
 - **Should `Community 1` be split into smaller, more focused modules?**
-  _Cohesion score 0.11827956989247312 - nodes in this community are weakly interconnected._
+  _Cohesion score 0.07007575757575757 - nodes in this community are weakly interconnected._
 - **Should `Community 3` be split into smaller, more focused modules?**
   _Cohesion score 0.14814814814814814 - nodes in this community are weakly interconnected._

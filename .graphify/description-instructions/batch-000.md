@@ -65,7 +65,7 @@ one-sentence description — no prose, no markdown fences.
 - "tests_finance_smoke": "finance-smoke.mjs" | kind=code-symbol | source=tests/finance-smoke.mjs:L1 | neighbors=[2dd873d feat: consolidar financeiro úni…, accounts, call(), clientRequestId, login(), payload] | lang=en
 - "tests_inventory_test": "inventory.test.ts" | kind=code-symbol | source=tests/inventory.test.ts:L1 | neighbors=[bb925aa feat: implementar catálogo e co…, inventory.ts, validInventoryMovement(), validProduct(), validProductBrand(), validProductModel()] | lang=en
 - "tests_patients_test": "patients.test.ts" | kind=code-symbol | source=tests/patients.test.ts:L1 | neighbors=[0d2db0f feat: centralizar cadastro e hi…, patients.ts, isOneOf(), normalizePhone(), PATIENT_EVENT_TYPES, PATIENT_STATUSES] | lang=en
-- "commit:repo:github.com/millennium42/Fonolife@a7b6a8aa273cd821f47413a95b294051c96d51f8": "a7b6a8a feat(attachments): adicionar validação de exames, tipos MIME permitidos…" | kind=Commit | source=git | neighbors=[5ccde91 feat: implementar atalhos rápid…, codex/pr8-importacao-csv-seguranca, main, c067885 feat(attachments): adicionar mi…, attachments.ts, attachments.test.ts] | lang=pt
+- "commit:repo:github.com/millennium42/Fonolife@3a29c99a1263689e4b1f3d823a776b973aee3c9d": "3a29c99 chore(deploy): preparar infraestrutura no Render com Blueprint, SSL e c…" | kind=Commit | source=git | neighbors=[main, 557b254 fix(deploy): corrigir render.ya…, pool.ts, app.ts, config.ts, 75e42fd fix(ui): aplicar flex min-width…] | lang=pt
 
 ## Instructions
 

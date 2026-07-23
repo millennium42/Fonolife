@@ -17,6 +17,7 @@ No marketing language.
 Respond ONLY with a JSON object mapping each node id (as a string) to its
 one-sentence description — no prose, no markdown fences.
 
+- "tests_finance_smoke_summary": "summary" | kind=code-symbol | source=tests/finance-smoke.mjs:L18 | neighbors=[finance-smoke.mjs]
 - "tests_migrate_test": "migrate.test.ts" | kind=code-symbol | source=tests/migrate.test.ts:L1 | neighbors=[3f9e6cc feat: estabelecer núcleo seguro…]
 - "vite_config": "vite.config.ts" | kind=code-symbol | source=vite.config.ts:L1 | neighbors=[3f9e6cc feat: estabelecer núcleo seguro…]
 
