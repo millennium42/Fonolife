@@ -13,6 +13,7 @@
     "migrate": "tsx src/db/migrate.ts",
     "seed": "tsx src/db/seed.ts",
     "admin:create": "node dist/db/create-admin.js",
+    "bootstrap-admin": "tsx src/scripts/bootstrap-admin.ts",
     "typecheck": "tsc -p tsconfig.server.json --noEmit && tsc -p web/tsconfig.json --noEmit",
     "test": "node --import tsx --test tests/**/*.test.ts",
     "test:e2e": "playwright test"
