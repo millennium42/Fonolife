@@ -1,16 +1,16 @@
 {
   "schemaVersion": 1,
-  "branchName": "main",
+  "branchName": "codex/01-servicos-catalogo-estoque",
   "worktreePath": "C:\\Users\\milla\\Documents\\Projetos\\Git\\Fonolife",
-  "upstream": "origin/main",
-  "mergeBase": "a3720407ee59aafca15483b8c931e0eb8838b423",
-  "firstSeenHead": "639a91490c9b9be8376e3dcd14e78693199cf77c",
-  "lastSeenHead": "a3720407ee59aafca15483b8c931e0eb8838b423",
-  "lastAnalyzedHead": "a3720407ee59aafca15483b8c931e0eb8838b423",
+  "upstream": null,
+  "mergeBase": null,
+  "firstSeenHead": "5fe1e045c0647d5591345d25953b16479e6d481e",
+  "lastSeenHead": "5fe1e045c0647d5591345d25953b16479e6d481e",
+  "lastAnalyzedHead": "5fe1e045c0647d5591345d25953b16479e6d481e",
   "stale": false,
   "staleReason": null,
   "staleSince": null,
   "lifecycleEvent": null,
-  "createdAt": "2026-07-22T20:19:50.276Z",
-  "updatedAt": "2026-07-23T02:51:56.543Z"
+  "createdAt": "2026-07-23T03:20:17.114Z",
+  "updatedAt": "2026-07-23T03:20:17.114Z"
 }

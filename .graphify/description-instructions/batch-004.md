@@ -17,6 +17,13 @@ No marketing language.
 Respond ONLY with a JSON object mapping each node id (as a string) to its
 one-sentence description — no prose, no markdown fences.
 
+- "migrations_004_sales_old_client_request_id": "OLD.client_request_id" | kind=code-symbol | source=migrations/004_sales.sql:L73 | neighbors=[004_sales.sql, restrict_sale_update()]
+- "migrations_004_sales_old_company_account_id": "OLD.company_account_id" | kind=code-symbol | source=migrations/004_sales.sql:L73 | neighbors=[004_sales.sql, restrict_sale_update()]
+- "migrations_004_sales_old_created_at": "OLD.created_at" | kind=code-symbol | source=migrations/004_sales.sql:L73 | neighbors=[004_sales.sql, restrict_sale_update()]
+- "migrations_004_sales_old_created_by": "OLD.created_by" | kind=code-symbol | source=migrations/004_sales.sql:L73 | neighbors=[004_sales.sql, restrict_sale_update()]
+- "migrations_004_sales_old_patient_id": "OLD.patient_id" | kind=code-symbol | source=migrations/004_sales.sql:L73 | neighbors=[004_sales.sql, restrict_sale_update()]
+- "migrations_004_sales_old_product": "OLD.product" | kind=code-symbol | source=migrations/004_sales.sql:L73 | neighbors=[004_sales.sql, restrict_sale_update()]
+- "migrations_004_sales_old_quantity": "OLD.quantity" | kind=code-symbol | source=migrations/004_sales.sql:L73 | neighbors=[004_sales.sql, restrict_sale_update()]
 - "migrations_004_sales_old_sold_on": "OLD.sold_on" | kind=code-symbol | source=migrations/004_sales.sql:L73 | neighbors=[004_sales.sql, restrict_sale_update()]
 - "migrations_004_sales_old_total_amount_cents": "OLD.total_amount_cents" | kind=code-symbol | source=migrations/004_sales.sql:L73 | neighbors=[004_sales.sql, restrict_sale_update()]
 - "migrations_004_sales_receivable_installments_immutable": "receivable_installments_immutable" | kind=code-symbol | source=migrations/004_sales.sql:L82 | neighbors=[004_sales.sql, receivable_installments]
@@ -31,7 +38,7 @@ one-sentence description — no prose, no markdown fences.
 - "migrations_009_attachments_patients": "patients" | kind=code-symbol | source=migrations/009_attachments.sql:L3 | neighbors=[009_attachments.sql, patient_attachments]
 - "migrations_009_attachments_users": "users" | kind=code-symbol | source=migrations/009_attachments.sql:L9 | neighbors=[009_attachments.sql, patient_attachments]
 - "playwright_config": "playwright.config.ts" | kind=code-symbol | source=playwright.config.ts:L1 | neighbors=[0e1c4ad test: consolidar QA, acessibili…, 75e42fd fix(ui): aplicar flex min-width…]
-- "src_app_buildapp": "buildApp()" | kind=code-symbol | source=src/app.ts:L72 | neighbors=[app.ts, server.ts]
+- "src_app_buildapp": "buildApp()" | kind=code-symbol | source=src/app.ts:L73 | neighbors=[app.ts, server.ts]
 - "src_main_dashboard": "Dashboard()" | kind=code-symbol | source=web/src/main.tsx:L1610 | neighbors=[main.tsx, money()]
 - "src_main_date": "date()" | kind=code-symbol | source=web/src/main.tsx:L134 | neighbors=[main.tsx, PatientRecord()]
 - "src_main_doctorcalendar": "DoctorCalendar()" | kind=code-symbol | source=web/src/main.tsx:L2155 | neighbors=[main.tsx, today()]
@@ -44,19 +51,12 @@ one-sentence description — no prose, no markdown fences.
 - "domain_csv_import_csvfinancialrow": "CsvFinancialRow" | kind=code-symbol | source=src/domain/csv-import.ts:L27 | neighbors=[csv-import.ts]
 - "domain_csv_import_csvpatientrow": "CsvPatientRow" | kind=code-symbol | source=src/domain/csv-import.ts:L16 | neighbors=[csv-import.ts]
 - "domain_csv_import_parsedcsv": "ParsedCsv" | kind=code-symbol | source=src/domain/csv-import.ts:L38 | neighbors=[csv-import.ts]
-- "domain_inventory_inventorymovement": "InventoryMovement" | kind=code-symbol | source=src/domain/inventory.ts:L16 | neighbors=[inventory.ts]
+- "domain_doctors_calendarday": "CalendarDay" | kind=code-symbol | source=src/domain/doctors.ts:L7 | neighbors=[doctors.ts]
+- "domain_inventory_inventorymovement": "InventoryMovement" | kind=code-symbol | source=src/domain/inventory.ts:L17 | neighbors=[inventory.ts]
 - "domain_inventory_movement_types": "MOVEMENT_TYPES" | kind=code-symbol | source=src/domain/inventory.ts:L4 | neighbors=[inventory.ts]
 - "domain_inventory_movementtype": "MovementType" | kind=code-symbol | source=src/domain/inventory.ts:L5 | neighbors=[inventory.ts]
 - "domain_inventory_product": "Product" | kind=code-symbol | source=src/domain/inventory.ts:L7 | neighbors=[inventory.ts]
 - "domain_patients_contactsource": "ContactSource" | kind=code-symbol | source=src/domain/patients.ts:L6 | neighbors=[patients.ts]
-- "domain_patients_patienteventtype": "PatientEventType" | kind=code-symbol | source=src/domain/patients.ts:L7 | neighbors=[patients.ts]
-- "domain_patients_patientstatus": "PatientStatus" | kind=code-symbol | source=src/domain/patients.ts:L5 | neighbors=[patients.ts]
-- "e2e_critical_flow_spec_accessible": "accessible()" | kind=code-symbol | source=tests/e2e/critical-flow.spec.ts:L12 | neighbors=[critical-flow.spec.ts]
-- "e2e_critical_flow_spec_login": "login()" | kind=code-symbol | source=tests/e2e/critical-flow.spec.ts:L4 | neighbors=[critical-flow.spec.ts]
-- "migrations_001_base_company_accounts": "company_accounts" | kind=code-symbol | source=migrations/001_base.sql:L23 | neighbors=[001_base.sql]
-- "migrations_001_base_reject_audit_changes": "reject_audit_changes()" | kind=code-symbol | source=migrations/001_base.sql:L42 | neighbors=[001_base.sql]
-- "migrations_002_crm_patients_reject_patient_deletion": "reject_patient_deletion()" | kind=code-symbol | source=migrations/002_crm_patients.sql:L24 | neighbors=[002_crm_patients.sql]
-- "migrations_002_crm_patients_reject_patient_event_changes": "reject_patient_event_changes()" | kind=code-symbol | source=migrations/002_crm_patients.sql:L41 | neighbors=[002_crm_patients.sql]
 
 ## Instructions
 
