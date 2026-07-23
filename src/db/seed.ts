@@ -38,6 +38,14 @@ export async function seedDemo(force = false) {
       );
     }
 
+    // Busca IDs reais dos usuários cadastrados no banco para evitar violação de FK
+    const userRows = await client.query<{ id: string; email: string }>("SELECT id, email FROM users");
+    const userMap = new Map(userRows.rows.map((u) => [u.email, u.id]));
+
+    const realAdminId = userMap.get("admin@fonolife.com.br") || adminId;
+    const realDoctor1Id = userMap.get("carlos.fonolife@gmail.com") || doctor1Id;
+    const realDoctor2Id = userMap.get("ana.fonolife@gmail.com") || doctor2Id;
+
     // 2. Contas Jurídicas / Caixas
     const account1Id = randomUUID();
     const account2Id = randomUUID();
@@ -87,7 +95,7 @@ export async function seedDemo(force = false) {
         await client.query(
           `INSERT INTO inventory_movements(id, product_id, movement_type, quantity, notes, created_by)
            VALUES($1, $2, 'entry', 20, 'Estoque inicial para demonstração em deploy', $3)`,
-          [randomUUID(), id, adminId]
+          [randomUUID(), id, realAdminId]
         );
       }
     }
@@ -128,9 +136,9 @@ export async function seedDemo(force = false) {
     const pat3Id = randomUUID();
 
     const patientsData = [
-      [pat1Id, "Dona Maria Lurdes Santos", "11987654321", "1952-04-12", "João Santos (Filho)", "referral", "adaptation", "Usuária de aparelho auditivo Phonak. Relata ótima adaptação.", "Sensibilidade a sons agudos", doctor1Id],
-      [pat2Id, "Seu Antônio Ferreira", "11976543210", "1948-09-25", null, "whatsapp", "proposal", "Em teste comparativo de aparelhos Oticon e Phonak.", "Dificuldade motora leve nas mãos", doctor1Id],
-      [pat3Id, "Juliana Mendes", "11965432109", "1989-02-18", null, "google", "new_lead", "Procurou a clínica após resultado de audiometria alterado.", "", doctor2Id],
+      [pat1Id, "Dona Maria Lurdes Santos", "11987654321", "1952-04-12", "João Santos (Filho)", "referral", "adaptation", "Usuária de aparelho auditivo Phonak. Relata ótima adaptação.", "Sensibilidade a sons agudos", realDoctor1Id],
+      [pat2Id, "Seu Antônio Ferreira", "11976543210", "1948-09-25", null, "whatsapp", "proposal", "Em teste comparativo de aparelhos Oticon e Phonak.", "Dificuldade motora leve nas mãos", realDoctor1Id],
+      [pat3Id, "Juliana Mendes", "11965432109", "1989-02-18", null, "google", "new_lead", "Procurou a clínica após resultado de audiometria alterado.", "", realDoctor2Id],
     ] as const;
 
     for (const [id, name, phone, birth, guardian, source, status, notes, alert, doctorId] of patientsData) {
@@ -138,9 +146,14 @@ export async function seedDemo(force = false) {
         `INSERT INTO patients(id, name, phone, birth_date, guardian_name, contact_source, journey_status, notes, care_alert, assigned_user_id, responsible_doctor_id, created_by)
          VALUES($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
          ON CONFLICT (id) DO NOTHING`,
-        [id, name, phone, birth, guardian, source, status, notes, alert, doctorId, doctorId, adminId]
+        [id, name, phone, birth, guardian, source, status, notes, alert, doctorId, doctorId, realAdminId]
       );
     }
+
+    // Recupa ID do paciente real
+    const patRows = await client.query<{ id: string; phone: string }>("SELECT id, phone FROM patients");
+    const patMap = new Map(patRows.rows.map((p) => [p.phone, p.id]));
+    const realPat1Id = patMap.get("11987654321") || pat1Id;
 
     // 6. Vendas e Lançamentos Financeiros de Demonstração
     const saleId = randomUUID();
@@ -151,7 +164,7 @@ export async function seedDemo(force = false) {
       await client.query(
         `INSERT INTO sales(id, client_request_id, patient_id, product, quantity, total_amount_cents, sold_on, company_account_id, notes, delivery_status, created_by)
          VALUES($1, $2, $3, 'Aparelho Auditivo Phonak Audéo Paradise P90-R', 1, 850000, CURRENT_DATE - INTERVAL '5 days', $4, 'Venda com adaptação inclusa', 'completed', $5)`,
-        [saleId, randomUUID(), pat1Id, matrizAccount, adminId]
+        [saleId, randomUUID(), realPat1Id, matrizAccount, realAdminId]
       );
 
       await client.query(
@@ -163,7 +176,7 @@ export async function seedDemo(force = false) {
       await client.query(
         `INSERT INTO financial_entries(id, entry_type, category, description, amount_cents, competence_on, occurred_on, payment_method, company_account_id, patient_id, sale_id, receivable_installment_id, created_by)
          VALUES($1, 'income', 'hearing_aid_sale', 'Venda: Aparelho Auditivo Phonak Audéo Paradise P90-R', 850000, CURRENT_DATE - INTERVAL '5 days', CURRENT_DATE - INTERVAL '5 days', 'pix', $2, $3, $4, $5, $6)`,
-        [randomUUID(), matrizAccount, pat1Id, saleId, instId, adminId]
+        [randomUUID(), matrizAccount, realPat1Id, saleId, instId, realAdminId]
       );
     }
 
