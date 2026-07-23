@@ -44,8 +44,8 @@
     "hash": "77d343f0409925b7afd2fcba5ce18fc9"
   },
   "C:/Users/milla/Documents/Projetos/Git/Fonolife/src/db/seed.ts": {
-    "mtime": 1784777146242.513,
-    "hash": "f132fa4b111a3bd2c850c956a4e197f1"
+    "mtime": 1784777220307.3232,
+    "hash": "6c1730cab0daccf0d365c40906e88eab"
   },
   "C:/Users/milla/Documents/Projetos/Git/Fonolife/src/domain/finance.ts": {
     "mtime": 1784747865828.1047,
@@ -232,32 +232,32 @@
     "hash": "15590811358cad921f9e5cd04fe79561"
   },
   "C:/Users/milla/Documents/Projetos/Git/Fonolife/.graphify/GRAPH_REPORT.md": {
-    "mtime": 1784777129199.4397,
-    "hash": "a459f7fdcfa8cc88639771bb1fdf4d10"
+    "mtime": 1784777220274.367,
+    "hash": "4686d89dd31efc1742e8f24681f03ad7"
   },
   "C:/Users/milla/Documents/Projetos/Git/Fonolife/.graphify/description-instructions/batch-000.md": {
-    "mtime": 1784777129199.4397,
-    "hash": "c070d048958812b3b0277cdad8ca9ce8"
+    "mtime": 1784777220276.054,
+    "hash": "9b8103d70f75385851a476e1644daebe"
   },
   "C:/Users/milla/Documents/Projetos/Git/Fonolife/.graphify/description-instructions/batch-001.md": {
-    "mtime": 1784777129199.4397,
-    "hash": "bb9c7a5206978e374754172284cba887"
+    "mtime": 1784777220276.054,
+    "hash": "b26c0916797af6520cdf5367973f38c8"
   },
   "C:/Users/milla/Documents/Projetos/Git/Fonolife/.graphify/description-instructions/batch-002.md": {
-    "mtime": 1784777129215.0872,
-    "hash": "ea12eeb4cfc7c1540034db5e35ac4f53"
+    "mtime": 1784777220276.054,
+    "hash": "2e78404c5b749590938b5d3d108f9679"
   },
   "C:/Users/milla/Documents/Projetos/Git/Fonolife/.graphify/description-instructions/batch-003.md": {
-    "mtime": 1784777129223.1536,
-    "hash": "19293a2255279999ff5ca0c0c0815cec"
+    "mtime": 1784777220276.054,
+    "hash": "be0aa63657e7beb909ee21ff05e807b1"
   },
   "C:/Users/milla/Documents/Projetos/Git/Fonolife/.graphify/description-instructions/batch-004.md": {
-    "mtime": 1784777129223.1536,
-    "hash": "b127612699c714ecf8c3a3802d7dbd31"
+    "mtime": 1784777220276.054,
+    "hash": "d2626901bbdcec392d9add1628234f53"
   },
   "C:/Users/milla/Documents/Projetos/Git/Fonolife/.graphify/label-instructions/communities.md": {
-    "mtime": 1784777129238.8005,
-    "hash": "7f70e3c7d5c42a7e0aa9a856cfad1cb9"
+    "mtime": 1784777220291.6958,
+    "hash": "a2542a5ef6d22ac7c4084b874ce799be"
   },
   "C:/Users/milla/Documents/Projetos/Git/Fonolife/migrations/007_inventory.sql": {
     "mtime": 1784751121952.3164,
@@ -296,8 +296,8 @@
     "hash": "f45164580df37136ca5ecfc6a712f0db"
   },
   "C:/Users/milla/Documents/Projetos/Git/Fonolife/.graphify/description-instructions/batch-005.md": {
-    "mtime": 1784777129223.1536,
-    "hash": "8d54421e6312e749efbe09bd6caec055"
+    "mtime": 1784777220276.054,
+    "hash": "2ae60b02c45c496b74a52cfac07de36b"
   },
   "C:/Users/milla/Documents/Projetos/Git/Fonolife/migrations/010_lgpd_privacy.sql": {
     "mtime": 1784751121952.3164,
@@ -312,8 +312,8 @@
     "hash": "81e1f7734f1cf3c3940d91c5e0dc5879"
   },
   "C:/Users/milla/Documents/Projetos/Git/Fonolife/.graphify/description-instructions/batch-006.md": {
-    "mtime": 1784777129223.1536,
-    "hash": "3ab66a684fb745f5535a7f5dbc750195"
+    "mtime": 1784777220291.6958,
+    "hash": "8217d1fc01036de60cfedfe27563c2ba"
   },
   "C:/Users/milla/Documents/Projetos/Git/Fonolife/render.yaml": {
     "mtime": 1784774675579.723,
@@ -356,11 +356,15 @@
     "hash": "8e090f410e82f5669fd08029bdfa37d3"
   },
   "C:/Users/milla/Documents/Projetos/Git/Fonolife/.graphify/description-instructions/batch-007.md": {
-    "mtime": 1784777129223.1536,
-    "hash": "1eb3ee2d638ecdba5125ddd0cded26d3"
+    "mtime": 1784777220291.6958,
+    "hash": "40d6475d5a7e55f9c508ff0aebc1104d"
   },
   "C:/Users/milla/Documents/Projetos/Git/Fonolife/docs/5w2h-03-caixa-pdv-relatorio-financeiro.md": {
     "mtime": 1784777129238.8005,
     "hash": "08afddc3dfa228edd18d9ef19e167d6c"
+  },
+  "C:/Users/milla/Documents/Projetos/Git/Fonolife/docs/5w2h-04-design-system-seed-demo.md": {
+    "mtime": 1784777220307.3232,
+    "hash": "14b021f0f108bd3036abeb016d6a827f"
   }
 }

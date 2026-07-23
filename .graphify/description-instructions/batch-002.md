@@ -19,12 +19,13 @@ relations (neighbors) and the provided citations/evidence — e.g.
 Ground entity descriptions in the citations/evidence when present; do not
 speculate beyond the context, so a node with no supporting context may be
 left out of the reply.
-Write every description in English (en). Do not switch languages.
+Write every description in Portuguese (pt). Do not switch languages.
 No marketing language.
 Respond ONLY with a JSON object mapping each node id (as a string) to its
 one-sentence description — no prose, no markdown fences.
 
-- "commit:repo:github.com/millennium42/Fonolife@9cabae8e21d837b46230cce3bdec88adb530b620": "9cabae8 Merge branch 'codex/03-caixa-pdv-relatorio-financeiro' into main" | kind=Commit | source=git | neighbors=[864030b feat(frontend): implementar Cai…, 91c499c Merge branch 'codex/02-medico-r…, codex/04-design-system-seed-demo, main, main.tsx]
+- "tests_security_test": "security.test.ts" | kind=code-symbol | source=tests/security.test.ts:L1 | neighbors=[3f9e6cc feat: estabelecer núcleo seguro…, security.ts, hashPassword(), hashToken(), validCnpj(), verifyPassword()]
+- "commit:repo:github.com/millennium42/Fonolife@9bcad1d4dc8e1e57867350c198d32e13ad147621": "9bcad1d feat(seed): povoar banco de dados com informacoes realistas para demons…" | kind=Commit | source=git | neighbors=[codex/04-design-system-seed-demo, main, 53e373d Merge branch 'codex/04-design-s…, seed.ts, 9cabae8 Merge branch 'codex/03-caixa-pd…]
 - "domain_doctors": "doctors.ts" | kind=code-symbol | source=src/domain/doctors.ts:L1 | neighbors=[5fe1e04 feat(doctor): adicionar perfil …, buildCalendarDays(), CalendarDay, validLicenseNumber(), doctors.test.ts]
 - "domain_follow_ups": "follow-ups.ts" | kind=code-symbol | source=src/domain/follow-ups.ts:L1 | neighbors=[ff35345 feat: tornar o pós-atendimento …, FOLLOW_UP_FILTERS, saoPauloDate(), app.ts, follow-ups.test.ts]
 - "domain_patients_isoneof": "isOneOf()" | kind=code-symbol | source=src/domain/patients.ts:L9 | neighbors=[csv-import.ts, inventory.ts, patients.ts, app.ts, patients.test.ts]
@@ -36,6 +37,7 @@ one-sentence description — no prose, no markdown fences.
 - "src_config_config": "config" | kind=code-symbol | source=src/config.ts:L1 | neighbors=[pool.ts, seed.ts, app.ts, config.ts, server.ts]
 - "tests_privacy_test": "privacy.test.ts" | kind=code-symbol | source=tests/privacy.test.ts:L1 | neighbors=[ee6a73e feat(privacy): adicionar regras…, privacy.ts, anonymizePatientName(), formatLgpdExportPackage(), isAnonymized()]
 - "tests_whatsapp_test": "whatsapp.test.ts" | kind=code-symbol | source=tests/whatsapp.test.ts:L1 | neighbors=[5ccde91 feat: implementar atalhos rápid…, whatsapp.ts, buildWhatsAppLink(), formatE164Phone(), WHATSAPP_TEMPLATES]
+- "commit:repo:github.com/millennium42/Fonolife@53e373d34bd5576ad198ae4d314d7188c0affda4": "53e373d Merge branch 'codex/04-design-system-seed-demo' into main" | kind=Commit | source=git | neighbors=[main, seed.ts, 9bcad1d feat(seed): povoar banco de dad…, 9cabae8 Merge branch 'codex/03-caixa-pd…]
 - "domain_patients_patient_statuses": "PATIENT_STATUSES" | kind=code-symbol | source=src/domain/patients.ts:L1 | neighbors=[csv-import.ts, patients.ts, app.ts, patients.test.ts]
 - "domain_sales_validateinstallments": "validateInstallments()" | kind=code-symbol | source=src/domain/sales.ts:L10 | neighbors=[sales.ts, validCents(), app.ts, sales.test.ts]
 - "domain_security_verifypassword": "verifyPassword()" | kind=code-symbol | source=src/domain/security.ts:L11 | neighbors=[security.ts, scrypt, app.ts, security.test.ts]
@@ -62,8 +64,6 @@ one-sentence description — no prose, no markdown fences.
 - "domain_inventory_validnonnegativecents": "validNonNegativeCents()" | kind=code-symbol | source=src/domain/inventory.ts:L39 | neighbors=[inventory.ts, validProduct(), services.ts]
 - "domain_inventory_validproductbrand": "validProductBrand()" | kind=code-symbol | source=src/domain/inventory.ts:L31 | neighbors=[inventory.ts, validProduct(), inventory.test.ts]
 - "domain_inventory_validproductmodel": "validProductModel()" | kind=code-symbol | source=src/domain/inventory.ts:L35 | neighbors=[inventory.ts, validProduct(), inventory.test.ts]
-- "domain_inventory_validproductname": "validProductName()" | kind=code-symbol | source=src/domain/inventory.ts:L27 | neighbors=[inventory.ts, validProduct(), inventory.test.ts]
-- "domain_patients_contact_sources": "CONTACT_SOURCES" | kind=code-symbol | source=src/domain/patients.ts:L2 | neighbors=[csv-import.ts, patients.ts, app.ts]
 
 ## Instructions
 
