@@ -1,4 +1,4 @@
-# Node Description Batch 7 of 8
+# Node Description Batch 7 of 9
 
 Graphify is running in assistant/skill mode (no API key). You are the host
 assistant (Claude Code / Codex / Gemini CLI). Read the prompt below and write
@@ -17,6 +17,17 @@ No marketing language.
 Respond ONLY with a JSON object mapping each node id (as a string) to its
 one-sentence description — no prose, no markdown fences.
 
+- "playwright_config": "playwright.config.ts" | kind=code-symbol | source=playwright.config.ts:L1 | neighbors=[0e1c4ad test: consolidar QA, acessibili…, 75e42fd fix(ui): aplicar flex min-width…]
+- "src_main_dashboard": "Dashboard()" | kind=code-symbol | source=web/src/main.tsx:L1610 | neighbors=[main.tsx, money()]
+- "src_main_date": "date()" | kind=code-symbol | source=web/src/main.tsx:L134 | neighbors=[main.tsx, PatientRecord()]
+- "src_main_doctorcalendar": "DoctorCalendar()" | kind=code-symbol | source=web/src/main.tsx:L2155 | neighbors=[main.tsx, today()]
+- "src_main_patientrecord": "PatientRecord()" | kind=code-symbol | source=web/src/main.tsx:L604 | neighbors=[main.tsx, date()]
+- "src_main_saleform": "SaleForm()" | kind=code-symbol | source=web/src/main.tsx:L171 | neighbors=[main.tsx, today()]
+- "tests_devsec_smoke": "devsec-smoke.mjs" | kind=code-symbol | source=tests/devsec-smoke.mjs:L1 | neighbors=[0e1c4ad test: consolidar QA, acessibili…, login()]
+- "auth_routes_authroutes": "authRoutes()" | kind=code-symbol | source=src/modules/auth/routes.ts:L7 | neighbors=[routes.ts]
+- "db_create_admin_email": "email" | kind=code-symbol | source=src/db/create-admin.ts:L6 | neighbors=[create-admin.ts]
+- "domain_attachments_allowed_mime_types": "ALLOWED_MIME_TYPES" | kind=code-symbol | source=src/domain/attachments.ts:L3 | neighbors=[attachments.ts]
+- "domain_attachments_allowedmimetype": "AllowedMimeType" | kind=code-symbol | source=src/domain/attachments.ts:L10 | neighbors=[attachments.ts]
 - "domain_csv_import_csvfinancialrow": "CsvFinancialRow" | kind=code-symbol | source=src/domain/csv-import.ts:L27 | neighbors=[csv-import.ts]
 - "domain_csv_import_csvpatientrow": "CsvPatientRow" | kind=code-symbol | source=src/domain/csv-import.ts:L16 | neighbors=[csv-import.ts]
 - "domain_csv_import_parsedcsv": "ParsedCsv" | kind=code-symbol | source=src/domain/csv-import.ts:L38 | neighbors=[csv-import.ts]
@@ -28,9 +39,7 @@ one-sentence description — no prose, no markdown fences.
 - "domain_patients_contactsource": "ContactSource" | kind=code-symbol | source=src/domain/patients.ts:L6 | neighbors=[patients.ts]
 - "domain_patients_patienteventtype": "PatientEventType" | kind=code-symbol | source=src/domain/patients.ts:L7 | neighbors=[patients.ts]
 - "domain_patients_patientstatus": "PatientStatus" | kind=code-symbol | source=src/domain/patients.ts:L5 | neighbors=[patients.ts]
-- "domain_security_patienttarget": "PatientTarget" | kind=code-symbol | source=src/domain/security.ts:L37 | neighbors=[security.ts]
 - "domain_security_userrole": "UserRole" | kind=code-symbol | source=src/domain/security.ts:L30 | neighbors=[security.ts]
-- "domain_security_usersubject": "UserSubject" | kind=code-symbol | source=src/domain/security.ts:L32 | neighbors=[security.ts]
 - "domain_services_serviceinput": "ServiceInput" | kind=code-symbol | source=src/domain/services.ts:L8 | neighbors=[services.ts]
 - "domain_services_serviceitem": "ServiceItem" | kind=code-symbol | source=src/domain/services.ts:L17 | neighbors=[services.ts]
 - "domain_services_serviceproductinput": "ServiceProductInput" | kind=code-symbol | source=src/domain/services.ts:L3 | neighbors=[services.ts]
@@ -48,15 +57,6 @@ one-sentence description — no prose, no markdown fences.
 - "migrations_008_whatsapp_shortcuts": "008_whatsapp_shortcuts.sql" | kind=code-symbol | source=migrations/008_whatsapp_shortcuts.sql:L1 | neighbors=[5ccde91 feat: implementar atalhos rápid…]
 - "migrations_010_lgpd_privacy": "010_lgpd_privacy.sql" | kind=code-symbol | source=migrations/010_lgpd_privacy.sql:L1 | neighbors=[077b08e feat(privacy): adicionar migrat…]
 - "migrations_011_doctor_schedule": "011_doctor_schedule.sql" | kind=code-symbol | source=migrations/011_doctor_schedule.sql:L1 | neighbors=[5fe1e04 feat(doctor): adicionar perfil …]
-- "src_app_attempts": "attempts" | kind=code-symbol | source=src/app.ts:L75 | neighbors=[app.ts]
-- "src_app_fastifyrequest": "FastifyRequest" | kind=code-symbol | source=src/app.ts:L71 | neighbors=[app.ts]
-- "src_app_user": "User" | kind=code-symbol | source=src/app.ts:L61 | neighbors=[app.ts]
-- "src_main_app": "App()" | kind=code-symbol | source=web/src/main.tsx:L1974 | neighbors=[main.tsx]
-- "src_main_async": "async()" | kind=code-symbol | source=web/src/main.tsx:L1656 | neighbors=[main.tsx]
-- "src_main_categorylabels": "categoryLabels" | kind=code-symbol | source=web/src/main.tsx:L1157 | neighbors=[main.tsx]
-- "src_main_cents": "cents()" | kind=code-symbol | source=web/src/main.tsx:L151 | neighbors=[main.tsx]
-- "src_main_companyaccount": "CompanyAccount" | kind=code-symbol | source=web/src/main.tsx:L51 | neighbors=[main.tsx]
-- "src_main_csvimport": "CsvImport()" | kind=code-symbol | source=web/src/main.tsx:L1852 | neighbors=[main.tsx]
 
 ## Instructions
 

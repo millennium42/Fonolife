@@ -1,4 +1,4 @@
-# Node Description Batch 8 of 8
+# Node Description Batch 8 of 9
 
 Graphify is running in assistant/skill mode (no API key). You are the host
 assistant (Claude Code / Codex / Gemini CLI). Read the prompt below and write
@@ -17,6 +17,15 @@ No marketing language.
 Respond ONLY with a JSON object mapping each node id (as a string) to its
 one-sentence description — no prose, no markdown fences.
 
+- "src_app_attempts": "attempts" | kind=code-symbol | source=src/app.ts:L76 | neighbors=[app.ts]
+- "src_app_fastifyrequest": "FastifyRequest" | kind=code-symbol | source=src/app.ts:L72 | neighbors=[app.ts]
+- "src_app_user": "User" | kind=code-symbol | source=src/app.ts:L62 | neighbors=[app.ts]
+- "src_main_app": "App()" | kind=code-symbol | source=web/src/main.tsx:L1974 | neighbors=[main.tsx]
+- "src_main_async": "async()" | kind=code-symbol | source=web/src/main.tsx:L1656 | neighbors=[main.tsx]
+- "src_main_categorylabels": "categoryLabels" | kind=code-symbol | source=web/src/main.tsx:L1157 | neighbors=[main.tsx]
+- "src_main_cents": "cents()" | kind=code-symbol | source=web/src/main.tsx:L151 | neighbors=[main.tsx]
+- "src_main_companyaccount": "CompanyAccount" | kind=code-symbol | source=web/src/main.tsx:L51 | neighbors=[main.tsx]
+- "src_main_csvimport": "CsvImport()" | kind=code-symbol | source=web/src/main.tsx:L1852 | neighbors=[main.tsx]
 - "src_main_dashboarddata": "DashboardData" | kind=code-symbol | source=web/src/main.tsx:L114 | neighbors=[main.tsx]
 - "src_main_doctorconsultationform": "DoctorConsultationForm()" | kind=code-symbol | source=web/src/main.tsx:L2316 | neighbors=[main.tsx]
 - "src_main_doctorpatients": "DoctorPatients()" | kind=code-symbol | source=web/src/main.tsx:L2277 | neighbors=[main.tsx]
@@ -48,13 +57,6 @@ one-sentence description — no prose, no markdown fences.
 - "tests_dashboard_test": "dashboard.test.ts" | kind=code-symbol | source=tests/dashboard.test.ts:L1 | neighbors=[a56a353 feat: priorizar filas acionávei…]
 - "tests_devsec_smoke_login": "login()" | kind=code-symbol | source=tests/devsec-smoke.mjs:L14 | neighbors=[devsec-smoke.mjs]
 - "tests_finance_smoke_accounts": "accounts" | kind=code-symbol | source=tests/finance-smoke.mjs:L10 | neighbors=[finance-smoke.mjs]
-- "tests_finance_smoke_call": "call()" | kind=code-symbol | source=tests/finance-smoke.mjs:L6 | neighbors=[finance-smoke.mjs]
-- "tests_finance_smoke_clientrequestid": "clientRequestId" | kind=code-symbol | source=tests/finance-smoke.mjs:L11 | neighbors=[finance-smoke.mjs]
-- "tests_finance_smoke_login": "login()" | kind=code-symbol | source=tests/finance-smoke.mjs:L5 | neighbors=[finance-smoke.mjs]
-- "tests_finance_smoke_payload": "payload" | kind=code-symbol | source=tests/finance-smoke.mjs:L12 | neighbors=[finance-smoke.mjs]
-- "tests_finance_smoke_summary": "summary" | kind=code-symbol | source=tests/finance-smoke.mjs:L18 | neighbors=[finance-smoke.mjs]
-- "tests_migrate_test": "migrate.test.ts" | kind=code-symbol | source=tests/migrate.test.ts:L1 | neighbors=[3f9e6cc feat: estabelecer núcleo seguro…]
-- "vite_config": "vite.config.ts" | kind=code-symbol | source=vite.config.ts:L1 | neighbors=[3f9e6cc feat: estabelecer núcleo seguro…]
 
 ## Instructions
 

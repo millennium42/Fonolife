@@ -12,8 +12,8 @@ language. Do not normalize every name to one common language.
 
 ## Communities
 
-Community 0: normalizePhone(, e517fa0 refactor(core): implementa correcoes de confiabilida, attachments.ts, ALLOWED_MIME_TYPES, AllowedMimeType, calculateFileHash(, detectMimeTypeFromMagicBytes(, sanitizeFilename(, validFileSize(, validMimeType(, csv-import.ts, calculateCsvHash( [lang=nl]
-Community 1: codex/01-servicos-catalogo-estoque, codex/02-medico-responsavel-prontuario-global, codex/03-caixa-pdv-relatorio-financeiro, codex/04-design-system-seed-demo, codex/fix-seed-fk-constraint, codex/p0-correcoes-criticas, codex/p1-refatoracao-tecnica, codex/p2-melhorias-operacionais, codex/pr8-importacao-csv-seguranca, codex/quick-demo-login-buttons, main, 0687af4 feat(privacy): implementar endpoints de exportação J [lang=pt]
+Community 0: codex/01-servicos-catalogo-estoque, codex/02-medico-responsavel-prontuario-global, codex/03-caixa-pdv-relatorio-financeiro, codex/04-design-system-seed-demo, codex/fix-seed-fk-constraint, codex/p0-correcoes-criticas, codex/p1-refatoracao-tecnica, codex/p2-melhorias-operacionais, codex/pr-01-security-object-lgpd, codex/pr8-importacao-csv-seguranca, codex/quick-demo-login-buttons, main [lang=en]
+Community 1: normalizePhone(, 0b8c651 fix(csrf): endurecer validacao de origem, 1091aa4 feat(core): implementa melhorias operacionais e de q, 55ec728 Merge branch 'main' of https://github.com/millennium, a01c4f0 fix(security): centralizar carregamento e autorizaca, cbaee24 docs(security): documentar matriz de acesso e anonim, e517fa0 refactor(core): implementa correcoes de confiabilida, attachments.ts, ALLOWED_MIME_TYPES, AllowedMimeType, calculateFileHash(, detectMimeTypeFromMagicBytes( [lang=nl]
 Community 2: main.tsx, api(, App(, async(, categoryLabels, cents(, CompanyAccount, CsvImport(, Dashboard(, DashboardData, date(, DoctorCalendar( [lang=en]
 Community 3: pool, hashPassword(, config, routes.ts, authRoutes(, 3f9e6cc feat: estabelecer núcleo seguro e executável da clín, 4693487 fix(security): implementa correcoes criticas P0 de p, create-admin.ts, email, migrate.ts, migrate(, pool.ts [lang=en]
 Community 4: financial_entries, receivable_installments, restrict_sale_update(, sales, 004_sales.sql, actual, check_sale_installment_total(, company_accounts, expected, financial_entries_immutable, financial_entries_one_active_receipt, OLD.client_request_id [lang=en]
@@ -24,13 +24,15 @@ Community 8: 001_base.sql, audit_events, audit_events_immutable, company_account
 Community 9: finance-smoke.mjs, accounts, call(, clientRequestId, login(, payload, summary [lang=en]
 Community 10: doctors.ts, buildCalendarDays(, CalendarDay, validLicenseNumber(, validDoctorId(, doctors.test.ts [lang=en]
 Community 11: 007_inventory.sql, inventory_movements, prevent_inventory_movement_modification(, products, trg_prevent_inventory_movement_modification, users [lang=en]
-Community 12: 006_csv_imports.sql, csv_import_errors, csv_import_jobs, users [lang=en]
-Community 13: 009_attachments.sql, patient_attachments, patients, users [lang=en]
-Community 14: 012_services_and_inventory.sql, products, service_products, services [lang=en]
-Community 15: 014_lgpd_redactions.sql, patient_redactions, patients, users [lang=en]
-Community 16: critical-flow.spec.ts, accessible(, login( [lang=en]
-Community 17: dashboard-smoke.mjs, dashboard(, login( [lang=en]
-Community 18: devsec-smoke.mjs, login( [lang=en]
+Community 12: privacy.ts, anonymizePatientName(, formatLgpdExportPackage(, isAnonymized(, privacy.test.ts [lang=en]
+Community 13: whatsapp.ts, buildWhatsAppLink(, formatE164Phone(, WHATSAPP_TEMPLATES, whatsapp.test.ts [lang=en]
+Community 14: 006_csv_imports.sql, csv_import_errors, csv_import_jobs, users [lang=en]
+Community 15: 009_attachments.sql, patient_attachments, patients, users [lang=en]
+Community 16: 012_services_and_inventory.sql, products, service_products, services [lang=en]
+Community 17: 014_lgpd_redactions.sql, patient_redactions, patients, users [lang=en]
+Community 18: critical-flow.spec.ts, accessible(, login( [lang=en]
+Community 19: dashboard-smoke.mjs, dashboard(, login( [lang=en]
+Community 20: devsec-smoke.mjs, login( [lang=en]
 
 ## Instructions
 

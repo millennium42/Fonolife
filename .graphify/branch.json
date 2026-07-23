@@ -1,16 +1,16 @@
 {
   "schemaVersion": 1,
-  "branchName": "codex/p2-melhorias-operacionais",
+  "branchName": "codex/pr-01-security-object-lgpd",
   "worktreePath": "C:\\Users\\milla\\Documents\\Projetos\\Git\\Fonolife",
   "upstream": null,
   "mergeBase": null,
-  "firstSeenHead": "e517fa0fbf903d361cecc9acc57d2d1b20695f69",
-  "lastSeenHead": "e517fa0fbf903d361cecc9acc57d2d1b20695f69",
-  "lastAnalyzedHead": "e517fa0fbf903d361cecc9acc57d2d1b20695f69",
+  "firstSeenHead": "cbaee24106a956b67a20e79e71b0d137ffd1bfa2",
+  "lastSeenHead": "cbaee24106a956b67a20e79e71b0d137ffd1bfa2",
+  "lastAnalyzedHead": "cbaee24106a956b67a20e79e71b0d137ffd1bfa2",
   "stale": false,
   "staleReason": null,
   "staleSince": null,
   "lifecycleEvent": null,
-  "createdAt": "2026-07-23T22:05:29.524Z",
-  "updatedAt": "2026-07-23T22:05:29.524Z"
+  "createdAt": "2026-07-23T22:49:49.117Z",
+  "updatedAt": "2026-07-23T22:49:49.117Z"
 }
