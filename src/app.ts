@@ -64,6 +64,9 @@ import {
   formatLgpdExportPackage,
 } from "./domain/privacy.js";
 
+import { authRoutes } from "./modules/auth/routes.js";
+import { revokeUserSessions } from "./modules/auth/middleware.js";
+
 type User = {
   id: string;
   name: string;
@@ -78,10 +81,10 @@ declare module "fastify" {
     currentUser?: User;
   }
 }
-const attempts = new Map<string, { count: number; reset: number }>();
 
 export function buildApp(customStorage?: AttachmentStorage) {
-  const app = Fastify({ logger: true });
+  const app = Fastify({ logger: true, trustProxy: true });
+  app.register(authRoutes);
 
   const attachmentStorage: AttachmentStorage = customStorage ?? (
     config.storageProvider === "s3"
@@ -245,129 +248,6 @@ export function buildApp(customStorage?: AttachmentStorage) {
     return { demoMode: config.demo };
   });
 
-  app.post<{ Body: { email?: string; password?: string } }>(
-    "/api/auth/login",
-    async (request, reply) => {
-      const key = request.ip;
-      const now = Date.now();
-      const state = attempts.get(key);
-      if (state && state.reset <= now) attempts.delete(key);
-      if (state && state.reset > now && state.count >= 5)
-        return reply
-          .code(429)
-          .send({
-            title: "Muitas tentativas. Aguarde 15 minutos.",
-            status: 429,
-          });
-      const email = request.body?.email?.trim().toLowerCase();
-      const password = request.body?.password;
-      const result = email
-        ? await pool.query("SELECT * FROM users WHERE email=$1 AND active", [
-            email,
-          ])
-        : { rows: [] };
-      const user = result.rows[0];
-      if (
-        !user ||
-        !password ||
-        !(await verifyPassword(password, user.password_hash))
-      ) {
-        attempts.set(key, {
-          count: state?.reset && state.reset > now ? state.count + 1 : 1,
-          reset: now + 900_000,
-        });
-        return reply
-          .code(401)
-          .send({ title: "E-mail ou senha incorretos", status: 401 });
-      }
-      attempts.delete(key);
-      const token = randomBytes(32).toString("base64url");
-      await pool.query(
-        `INSERT INTO user_sessions(id,user_id,token_hash,expires_at) VALUES($1,$2,$3,now()+interval '8 hours')`,
-        [randomUUID(), user.id, hashToken(token)],
-      );
-      await audit(user.id, "login", "user", user.id);
-      reply.setCookie("fonolife_session", token, {
-        httpOnly: true,
-        sameSite: "lax",
-        secure: config.production,
-        path: "/",
-        maxAge: 28_800,
-      });
-      return {
-        user: {
-          id: user.id,
-          name: user.name,
-          email: user.email,
-          role: user.role,
-          mustChangePassword: user.must_change_password,
-        },
-      };
-    },
-  );
-  app.post(
-    "/api/auth/logout",
-    { preHandler: authenticated },
-    async (request, reply) => {
-      const token = request.cookies.fonolife_session;
-      if (token)
-        await pool.query("DELETE FROM user_sessions WHERE token_hash=$1", [
-          hashToken(token),
-        ]);
-      await audit(
-        request.currentUser!.id,
-        "logout",
-        "user",
-        request.currentUser!.id,
-      );
-      reply.clearCookie("fonolife_session", { path: "/" });
-      return reply.code(204).send();
-    },
-  );
-  app.get("/api/auth/me", { preHandler: authenticated }, async (request) => ({
-    user: request.currentUser,
-  }));
-  app.post<{ Body: { currentPassword?: string; newPassword?: string } }>(
-    "/api/auth/change-password",
-    { preHandler: authenticated },
-    async (request, reply) => {
-      const { currentPassword, newPassword } = request.body ?? {};
-      const stored = await pool.query<{ password_hash: string }>(
-        "SELECT password_hash FROM users WHERE id=$1",
-        [request.currentUser!.id],
-      );
-      if (
-        !currentPassword ||
-        !(await verifyPassword(
-          currentPassword,
-          stored.rows[0].password_hash,
-        )) ||
-        !newPassword ||
-        newPassword.length < 8
-      )
-        return reply
-          .code(400)
-          .type("application/problem+json")
-          .send({
-            title:
-              "Confira a senha atual e use ao menos 8 caracteres na nova senha",
-            status: 400,
-          });
-      await pool.query(
-        "UPDATE users SET password_hash=$1,must_change_password=false WHERE id=$2",
-        [await hashPassword(newPassword), request.currentUser!.id],
-      );
-      // Revoga todas as sessões ativas do usuário após troca de senha e limpa expiradas (Item 4.10)
-      await pool.query("DELETE FROM user_sessions WHERE user_id=$1 OR expires_at < now()", [request.currentUser!.id]);
-      await audit(
-        request.currentUser!.id,
-        "change_password",
-        "user",
-        request.currentUser!.id,
-      );
-      return reply.code(204).send();
-    },
-  );
   app.get("/api/admin/users", { preHandler: admin }, async () => ({
     users: (
       await pool.query(
@@ -1767,6 +1647,12 @@ export function buildApp(customStorage?: AttachmentStorage) {
           request.params.id,
         ],
       );
+
+      // Invalidação imediata de sessões ativas se o usuário for desativado, tiver a senha alterada ou perfil modificado
+      if (active === false || temporaryPassword || role !== undefined) {
+        await client.query("DELETE FROM user_sessions WHERE user_id=$1", [request.params.id]);
+      }
+
       await client.query(
         "INSERT INTO audit_events(user_id,action,entity_type,entity_id,details) VALUES($1,$2,$3,$4,$5)",
         [
