@@ -19,11 +19,23 @@ relations (neighbors) and the provided citations/evidence — e.g.
 Ground entity descriptions in the citations/evidence when present; do not
 speculate beyond the context, so a node with no supporting context may be
 left out of the reply.
-Write every description in Portuguese (pt). Do not switch languages.
+Write every description in English (en). Do not switch languages.
 No marketing language.
 Respond ONLY with a JSON object mapping each node id (as a string) to its
 one-sentence description — no prose, no markdown fences.
 
+- "domain_security_canmodifydoctorassignment": "canModifyDoctorAssignment()" | kind=code-symbol | source=src/domain/security.ts:L75 | neighbors=[security.ts, app.ts, security-object-lgpd.test.ts]
+- "domain_security_scrypt": "scrypt" | kind=code-symbol | source=src/domain/security.ts:L3 | neighbors=[security.ts, hashPassword(), verifyPassword()]
+- "domain_security_validcnpj": "validCnpj()" | kind=code-symbol | source=src/domain/security.ts:L20 | neighbors=[security.ts, app.ts, security.test.ts]
+- "domain_services_validexecutiontime": "validExecutionTime()" | kind=code-symbol | source=src/domain/services.ts:L29 | neighbors=[services.ts, validService(), services.test.ts]
+- "domain_services_validservicename": "validServiceName()" | kind=code-symbol | source=src/domain/services.ts:L25 | neighbors=[services.ts, validService(), services.test.ts]
+- "domain_whatsapp_buildwhatsapplink": "buildWhatsAppLink()" | kind=code-symbol | source=src/domain/whatsapp.ts:L15 | neighbors=[whatsapp.ts, formatE164Phone(), whatsapp.test.ts]
+- "domain_whatsapp_formate164phone": "formatE164Phone()" | kind=code-symbol | source=src/domain/whatsapp.ts:L6 | neighbors=[whatsapp.ts, buildWhatsAppLink(), whatsapp.test.ts]
+- "e2e_critical_flow_spec": "critical-flow.spec.ts" | kind=code-symbol | source=tests/e2e/critical-flow.spec.ts:L1 | neighbors=[0e1c4ad test: consolidar QA, acessibili…, accessible(), login()]
+- "migrations_001_base_audit_events": "audit_events" | kind=code-symbol | source=migrations/001_base.sql:L32 | neighbors=[001_base.sql, users, audit_events_immutable]
+- "migrations_001_base_users": "users" | kind=code-symbol | source=migrations/001_base.sql:L3 | neighbors=[001_base.sql, audit_events, user_sessions]
+- "migrations_002_crm_patients_users": "users" | kind=code-symbol | source=migrations/002_crm_patients.sql:L12 | neighbors=[002_crm_patients.sql, patient_events, patients]
+- "migrations_004_sales_company_accounts": "company_accounts" | kind=code-symbol | source=migrations/004_sales.sql:L9 | neighbors=[004_sales.sql, financial_entries, sales]
 - "migrations_004_sales_patients": "patients" | kind=code-symbol | source=migrations/004_sales.sql:L4 | neighbors=[004_sales.sql, financial_entries, sales]
 - "migrations_004_sales_users": "users" | kind=code-symbol | source=migrations/004_sales.sql:L14 | neighbors=[004_sales.sql, financial_entries, sales]
 - "migrations_006_csv_imports_csv_import_jobs": "csv_import_jobs" | kind=code-symbol | source=migrations/006_csv_imports.sql:L1 | neighbors=[006_csv_imports.sql, csv_import_errors, users]
@@ -40,7 +52,7 @@ one-sentence description — no prose, no markdown fences.
 - "tests_finance_test": "finance.test.ts" | kind=code-symbol | source=tests/finance.test.ts:L1 | neighbors=[2dd873d feat: consolidar financeiro úni…, finance.ts, validFinancialEntry()]
 - "auth_middleware_cleanupexpiredsessions": "cleanupExpiredSessions()" | kind=code-symbol | source=src/modules/auth/middleware.ts:L102 | neighbors=[middleware.ts, auth-session.test.ts]
 - "auth_routes_authroutes": "authRoutes()" | kind=code-symbol | source=src/modules/auth/routes.ts:L13 | neighbors=[routes.ts, app.ts]
-- "commit:repo:github.com/millennium42/Fonolife@733ff418eec1259b9a805218440a84d835b15545": "733ff41 docs(auth): documentar sessão, proxy e recuperação" | kind=Commit | source=git | neighbors=[codex/pr-03-auth-session-reliability, 80a2483 feat(admin): criar bootstrap se…]
+- "commit:repo:github.com/millennium42/Fonolife@5c001158883c49947b61534f6a16cc6432768cf7": "5c00115 docs(import): documentar formato, erros e reprocessamento" | kind=Commit | source=git | neighbors=[5648d01 feat(validation): aplicar schem…, codex/pr-04-csv-validation]
 - "db_seed_seeddemo": "seedDemo()" | kind=code-symbol | source=src/db/seed.ts:L6 | neighbors=[seed.ts, server.ts]
 - "domain_attachments_attachmentscanner": "AttachmentScanner" | kind=code-symbol | source=src/domain/attachments.ts:L184 | neighbors=[attachments.ts, DevAttachmentScanner]
 - "domain_attachments_devattachmentscanner_scan": ".scan()" | kind=code-symbol | source=src/domain/attachments.ts:L195 | neighbors=[DevAttachmentScanner, detectMimeTypeFromMagicBytes()]
@@ -52,18 +64,6 @@ one-sentence description — no prose, no markdown fences.
 - "domain_doctors_buildcalendardays": "buildCalendarDays()" | kind=code-symbol | source=src/domain/doctors.ts:L14 | neighbors=[doctors.ts, doctors.test.ts]
 - "domain_doctors_validlicensenumber": "validLicenseNumber()" | kind=code-symbol | source=src/domain/doctors.ts:L1 | neighbors=[doctors.ts, doctors.test.ts]
 - "domain_finance_entry_types": "ENTRY_TYPES" | kind=code-symbol | source=src/domain/finance.ts:L3 | neighbors=[csv-import.ts, finance.ts]
-- "domain_finance_finance_categories": "FINANCE_CATEGORIES" | kind=code-symbol | source=src/domain/finance.ts:L4 | neighbors=[csv-import.ts, finance.ts]
-- "domain_follow_ups_saopaulodate": "saoPauloDate()" | kind=code-symbol | source=src/domain/follow-ups.ts:L3 | neighbors=[follow-ups.ts, follow-ups.test.ts]
-- "domain_patients_validdoctorid": "validDoctorId()" | kind=code-symbol | source=src/domain/patients.ts:L13 | neighbors=[patients.ts, doctors.test.ts]
-- "domain_privacy_isanonymized": "isAnonymized()" | kind=code-symbol | source=src/domain/privacy.ts:L15 | neighbors=[privacy.ts, privacy.test.ts]
-- "domain_sales_delivery_statuses": "DELIVERY_STATUSES" | kind=code-symbol | source=src/domain/sales.ts:L2 | neighbors=[sales.ts, app.ts]
-- "domain_sales_saleinstallment": "SaleInstallment" | kind=code-symbol | source=src/domain/sales.ts:L4 | neighbors=[sales.ts, app.ts]
-- "domain_security_patienttarget": "PatientTarget" | kind=code-symbol | source=src/domain/security.ts:L37 | neighbors=[security.ts, security-object-lgpd.test.ts]
-- "domain_security_usersubject": "UserSubject" | kind=code-symbol | source=src/domain/security.ts:L32 | neighbors=[security.ts, security-object-lgpd.test.ts]
-- "domain_whatsapp_whatsapp_templates": "WHATSAPP_TEMPLATES" | kind=code-symbol | source=src/domain/whatsapp.ts:L25 | neighbors=[whatsapp.ts, whatsapp.test.ts]
-- "migrations_001_base_audit_events_immutable": "audit_events_immutable" | kind=code-symbol | source=migrations/001_base.sql:L45 | neighbors=[001_base.sql, audit_events]
-- "migrations_001_base_user_sessions": "user_sessions" | kind=code-symbol | source=migrations/001_base.sql:L14 | neighbors=[001_base.sql, users]
-- "migrations_002_crm_patients_patient_events_immutable": "patient_events_immutable" | kind=code-symbol | source=migrations/002_crm_patients.sql:L44 | neighbors=[002_crm_patients.sql, patient_events]
 
 ## Instructions
 

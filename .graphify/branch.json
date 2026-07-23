@@ -1,16 +1,16 @@
 {
   "schemaVersion": 1,
-  "branchName": "codex/pr-03-auth-session-reliability",
+  "branchName": "codex/pr-04-csv-validation",
   "worktreePath": "C:\\Users\\milla\\Documents\\Projetos\\Git\\Fonolife",
   "upstream": null,
   "mergeBase": null,
-  "firstSeenHead": "733ff418eec1259b9a805218440a84d835b15545",
-  "lastSeenHead": "733ff418eec1259b9a805218440a84d835b15545",
-  "lastAnalyzedHead": "733ff418eec1259b9a805218440a84d835b15545",
+  "firstSeenHead": "5c001158883c49947b61534f6a16cc6432768cf7",
+  "lastSeenHead": "5c001158883c49947b61534f6a16cc6432768cf7",
+  "lastAnalyzedHead": "5c001158883c49947b61534f6a16cc6432768cf7",
   "stale": false,
   "staleReason": null,
   "staleSince": null,
   "lifecycleEvent": null,
-  "createdAt": "2026-07-23T23:17:50.515Z",
-  "updatedAt": "2026-07-23T23:17:50.515Z"
+  "createdAt": "2026-07-23T23:27:27.877Z",
+  "updatedAt": "2026-07-23T23:27:27.877Z"
 }

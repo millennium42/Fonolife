@@ -17,6 +17,19 @@ No marketing language.
 Respond ONLY with a JSON object mapping each node id (as a string) to its
 one-sentence description — no prose, no markdown fences.
 
+- "migrations_004_sales_sales_restrict_update": "sales_restrict_update" | kind=code-symbol | source=migrations/004_sales.sql:L77 | neighbors=[004_sales.sql, sales]
+- "migrations_006_csv_imports_csv_import_errors": "csv_import_errors" | kind=code-symbol | source=migrations/006_csv_imports.sql:L14 | neighbors=[006_csv_imports.sql, csv_import_jobs]
+- "migrations_006_csv_imports_users": "users" | kind=code-symbol | source=migrations/006_csv_imports.sql:L9 | neighbors=[006_csv_imports.sql, csv_import_jobs]
+- "migrations_007_inventory_products": "products" | kind=code-symbol | source=migrations/007_inventory.sql:L1 | neighbors=[007_inventory.sql, inventory_movements]
+- "migrations_007_inventory_trg_prevent_inventory_movement_modification": "trg_prevent_inventory_movement_modification" | kind=code-symbol | source=migrations/007_inventory.sql:L32 | neighbors=[007_inventory.sql, inventory_movements]
+- "migrations_007_inventory_users": "users" | kind=code-symbol | source=migrations/007_inventory.sql:L18 | neighbors=[007_inventory.sql, inventory_movements]
+- "migrations_009_attachments_patients": "patients" | kind=code-symbol | source=migrations/009_attachments.sql:L3 | neighbors=[009_attachments.sql, patient_attachments]
+- "migrations_009_attachments_users": "users" | kind=code-symbol | source=migrations/009_attachments.sql:L9 | neighbors=[009_attachments.sql, patient_attachments]
+- "migrations_012_services_and_inventory_products": "products" | kind=code-symbol | source=migrations/012_services_and_inventory.sql:L17 | neighbors=[012_services_and_inventory.sql, service_products]
+- "migrations_012_services_and_inventory_services": "services" | kind=code-symbol | source=migrations/012_services_and_inventory.sql:L3 | neighbors=[012_services_and_inventory.sql, service_products]
+- "migrations_013_responsible_doctor": "013_responsible_doctor.sql" | kind=code-symbol | source=migrations/013_responsible_doctor.sql:L1 | neighbors=[91c499c Merge branch 'codex/02-medico-r…, b0009ad feat(patients): adicionar medic…]
+- "migrations_014_lgpd_redactions_patients": "patients" | kind=code-symbol | source=migrations/014_lgpd_redactions.sql:L4 | neighbors=[014_lgpd_redactions.sql, patient_redactions]
+- "migrations_014_lgpd_redactions_users": "users" | kind=code-symbol | source=migrations/014_lgpd_redactions.sql:L7 | neighbors=[014_lgpd_redactions.sql, patient_redactions]
 - "migrations_016_auth_sessions": "016_auth_sessions.sql" | kind=code-symbol | source=migrations/016_auth_sessions.sql:L1 | neighbors=[2600ae3 feat(auth): persistir tentativa…, login_rate_limits]
 - "playwright_config": "playwright.config.ts" | kind=code-symbol | source=playwright.config.ts:L1 | neighbors=[0e1c4ad test: consolidar QA, acessibili…, 75e42fd fix(ui): aplicar flex min-width…]
 - "scripts_bootstrap_admin_bootstrapfirstadmin": "bootstrapFirstAdmin()" | kind=code-symbol | source=src/scripts/bootstrap-admin.ts:L7 | neighbors=[bootstrap-admin.ts, auth-session.test.ts]
@@ -44,19 +57,6 @@ one-sentence description — no prose, no markdown fences.
 - "domain_csv_import_csvpatientrow": "CsvPatientRow" | kind=code-symbol | source=src/domain/csv-import.ts:L16 | neighbors=[csv-import.ts]
 - "domain_csv_import_parsedcsv": "ParsedCsv" | kind=code-symbol | source=src/domain/csv-import.ts:L38 | neighbors=[csv-import.ts]
 - "domain_doctors_calendarday": "CalendarDay" | kind=code-symbol | source=src/domain/doctors.ts:L7 | neighbors=[doctors.ts]
-- "domain_inventory_inventorymovement": "InventoryMovement" | kind=code-symbol | source=src/domain/inventory.ts:L17 | neighbors=[inventory.ts]
-- "domain_inventory_movement_types": "MOVEMENT_TYPES" | kind=code-symbol | source=src/domain/inventory.ts:L4 | neighbors=[inventory.ts]
-- "domain_inventory_movementtype": "MovementType" | kind=code-symbol | source=src/domain/inventory.ts:L5 | neighbors=[inventory.ts]
-- "domain_inventory_product": "Product" | kind=code-symbol | source=src/domain/inventory.ts:L7 | neighbors=[inventory.ts]
-- "domain_patients_contactsource": "ContactSource" | kind=code-symbol | source=src/domain/patients.ts:L6 | neighbors=[patients.ts]
-- "domain_patients_patienteventtype": "PatientEventType" | kind=code-symbol | source=src/domain/patients.ts:L7 | neighbors=[patients.ts]
-- "domain_patients_patientstatus": "PatientStatus" | kind=code-symbol | source=src/domain/patients.ts:L5 | neighbors=[patients.ts]
-- "domain_security_userrole": "UserRole" | kind=code-symbol | source=src/domain/security.ts:L30 | neighbors=[security.ts]
-- "domain_services_serviceinput": "ServiceInput" | kind=code-symbol | source=src/domain/services.ts:L8 | neighbors=[services.ts]
-- "domain_services_serviceitem": "ServiceItem" | kind=code-symbol | source=src/domain/services.ts:L17 | neighbors=[services.ts]
-- "domain_services_serviceproductinput": "ServiceProductInput" | kind=code-symbol | source=src/domain/services.ts:L3 | neighbors=[services.ts]
-- "e2e_critical_flow_spec_accessible": "accessible()" | kind=code-symbol | source=tests/e2e/critical-flow.spec.ts:L12 | neighbors=[critical-flow.spec.ts]
-- "e2e_critical_flow_spec_login": "login()" | kind=code-symbol | source=tests/e2e/critical-flow.spec.ts:L4 | neighbors=[critical-flow.spec.ts]
 
 ## Instructions
 
