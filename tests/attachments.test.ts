@@ -2,6 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import {
   calculateFileHash,
+  detectMimeTypeFromMagicBytes,
   MAX_FILE_SIZE_BYTES,
   sanitizeFilename,
   validFileSize,
@@ -36,3 +37,14 @@ test("calcula hash SHA-256 do conteúdo do anexo", () => {
   assert.equal(typeof hash, "string");
   assert.equal(hash.length, 64);
 });
+
+test("detecta tipo MIME real através de magic bytes", () => {
+  const pdfHeader = Buffer.from([0x25, 0x50, 0x44, 0x46, 0x2d]);
+  const pngHeader = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a]);
+  const fakeHeader = Buffer.from([0x4d, 0x5a, 0x90, 0x00]); // DOS MZ header
+
+  assert.equal(detectMimeTypeFromMagicBytes(pdfHeader), "application/pdf");
+  assert.equal(detectMimeTypeFromMagicBytes(pngHeader), "image/png");
+  assert.equal(detectMimeTypeFromMagicBytes(fakeHeader), null);
+});
+

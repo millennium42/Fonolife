@@ -12,25 +12,26 @@ language. Do not normalize every name to one common language.
 
 ## Communities
 
-Community 0: codex/01-servicos-catalogo-estoque, codex/02-medico-responsavel-prontuario-global, codex/03-caixa-pdv-relatorio-financeiro, codex/04-design-system-seed-demo, codex/fix-seed-fk-constraint, codex/p0-correcoes-criticas, codex/pr8-importacao-csv-seguranca, codex/quick-demo-login-buttons, main, 0687af4 feat(privacy): implementar endpoints de exportação J, 077b08e feat(privacy): adicionar migration 010 para pseudoni, 0d2db0f feat: centralizar cadastro e histórico de pacientes  [lang=pt]
-Community 1: normalizePhone(, validPatientPhone(, attachments.ts, ALLOWED_MIME_TYPES, AllowedMimeType, calculateFileHash(, sanitizeFilename(, validFileSize(, validMimeType(, csv-import.ts, calculateCsvHash(, CsvFinancialRow [lang=en]
+Community 0: codex/01-servicos-catalogo-estoque, codex/02-medico-responsavel-prontuario-global, codex/03-caixa-pdv-relatorio-financeiro, codex/04-design-system-seed-demo, codex/fix-seed-fk-constraint, codex/p0-correcoes-criticas, codex/p1-refatoracao-tecnica, codex/pr8-importacao-csv-seguranca, codex/quick-demo-login-buttons, main, 0687af4 feat(privacy): implementar endpoints de exportação J, 077b08e feat(privacy): adicionar migration 010 para pseudoni [lang=pt]
+Community 1: normalizePhone(, validPatientPhone(, csv-import.ts, calculateCsvHash(, CsvFinancialRow, CsvPatientRow, parseCsv(, ParsedCsv, sanitizeCsvCell(, validateFinancialCsvRow(, validatePatientCsvRow(, finance.ts [lang=en]
 Community 2: main.tsx, api(, App(, async(, categoryLabels, cents(, CompanyAccount, CsvImport(, Dashboard(, DashboardData, date(, DoctorCalendar( [lang=en]
-Community 3: pool, hashPassword(, 3f9e6cc feat: estabelecer núcleo seguro e executável da clín, create-admin.ts, email, migrate.ts, migrate(, pool.ts, seed.ts, seedDemo(, security.ts, canExportPatientData( [lang=pt]
+Community 3: pool, hashPassword(, 3f9e6cc feat: estabelecer núcleo seguro e executável da clín, 4693487 fix(security): implementa correcoes criticas P0 de p, create-admin.ts, email, migrate.ts, migrate(, pool.ts, seed.ts, seedDemo(, security.ts [lang=en]
 Community 4: financial_entries, receivable_installments, restrict_sale_update(, sales, 004_sales.sql, actual, check_sale_installment_total(, company_accounts, expected, financial_entries_immutable, financial_entries_one_active_receipt, OLD.client_request_id [lang=en]
 Community 5: validProduct(, inventory.ts, InventoryMovement, MOVEMENT_TYPES, MovementType, Product, validInventoryMovement(, validNonNegativeCents(, validProductBrand(, validProductModel(, validProductName(, services.ts [lang=en]
 Community 6: restrict_follow_up_update(, 003_follow_up_tasks.sql, follow_up_tasks, follow_up_tasks_no_delete, follow_up_tasks_restrict_update, OLD.created_at, OLD.created_by, OLD.due_on, OLD.notes, OLD.patient_id, OLD.title, patients [lang=en]
-Community 7: 002_crm_patients.sql, patient_events, patient_events_immutable, patients, patients_no_delete, reject_patient_deletion(, reject_patient_event_changes(, users [lang=en]
-Community 8: 001_base.sql, audit_events, audit_events_immutable, company_accounts, reject_audit_changes(, user_sessions, users [lang=en]
-Community 9: finance-smoke.mjs, accounts, call(, clientRequestId, login(, payload, summary [lang=en]
-Community 10: doctors.ts, buildCalendarDays(, CalendarDay, validLicenseNumber(, validDoctorId(, doctors.test.ts [lang=en]
-Community 11: 007_inventory.sql, inventory_movements, prevent_inventory_movement_modification(, products, trg_prevent_inventory_movement_modification, users [lang=en]
-Community 12: whatsapp.ts, buildWhatsAppLink(, formatE164Phone(, WHATSAPP_TEMPLATES, whatsapp.test.ts [lang=en]
+Community 7: attachments.ts, ALLOWED_MIME_TYPES, AllowedMimeType, calculateFileHash(, detectMimeTypeFromMagicBytes(, sanitizeFilename(, validFileSize(, validMimeType(, attachments.test.ts [lang=en]
+Community 8: 002_crm_patients.sql, patient_events, patient_events_immutable, patients, patients_no_delete, reject_patient_deletion(, reject_patient_event_changes(, users [lang=en]
+Community 9: 001_base.sql, audit_events, audit_events_immutable, company_accounts, reject_audit_changes(, user_sessions, users [lang=en]
+Community 10: finance-smoke.mjs, accounts, call(, clientRequestId, login(, payload, summary [lang=en]
+Community 11: doctors.ts, buildCalendarDays(, CalendarDay, validLicenseNumber(, validDoctorId(, doctors.test.ts [lang=en]
+Community 12: 007_inventory.sql, inventory_movements, prevent_inventory_movement_modification(, products, trg_prevent_inventory_movement_modification, users [lang=en]
 Community 13: 006_csv_imports.sql, csv_import_errors, csv_import_jobs, users [lang=en]
 Community 14: 009_attachments.sql, patient_attachments, patients, users [lang=en]
 Community 15: 012_services_and_inventory.sql, products, service_products, services [lang=en]
-Community 16: critical-flow.spec.ts, accessible(, login( [lang=en]
-Community 17: dashboard-smoke.mjs, dashboard(, login( [lang=en]
-Community 18: devsec-smoke.mjs, login( [lang=en]
+Community 16: 014_lgpd_redactions.sql, patient_redactions, patients, users [lang=en]
+Community 17: critical-flow.spec.ts, accessible(, login( [lang=en]
+Community 18: dashboard-smoke.mjs, dashboard(, login( [lang=en]
+Community 19: devsec-smoke.mjs, login( [lang=en]
 
 ## Instructions
 

@@ -1,16 +1,16 @@
 {
   "schemaVersion": 1,
-  "branchName": "codex/p0-correcoes-criticas",
+  "branchName": "codex/p1-refatoracao-tecnica",
   "worktreePath": "C:\\Users\\milla\\Documents\\Projetos\\Git\\Fonolife",
   "upstream": null,
   "mergeBase": null,
-  "firstSeenHead": "a412d5eba3d71b0e6d16922209342c9c9fad2a35",
-  "lastSeenHead": "a412d5eba3d71b0e6d16922209342c9c9fad2a35",
-  "lastAnalyzedHead": "a412d5eba3d71b0e6d16922209342c9c9fad2a35",
+  "firstSeenHead": "46934875f17d823f3ccf6ce5ce2813f01697fa4b",
+  "lastSeenHead": "46934875f17d823f3ccf6ce5ce2813f01697fa4b",
+  "lastAnalyzedHead": "46934875f17d823f3ccf6ce5ce2813f01697fa4b",
   "stale": false,
   "staleReason": null,
   "staleSince": null,
   "lifecycleEvent": null,
-  "createdAt": "2026-07-23T21:50:31.927Z",
-  "updatedAt": "2026-07-23T21:50:31.927Z"
+  "createdAt": "2026-07-23T22:02:45.299Z",
+  "updatedAt": "2026-07-23T22:02:45.299Z"
 }

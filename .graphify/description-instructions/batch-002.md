@@ -12,19 +12,16 @@ describing what it is or does. Use only the provided context.
 For a code symbol (kind=code-symbol — a function, class, or constant),
 describe what the function/symbol does based on its name, source location
 and neighbors — e.g. "Resolves the configured ontology profile from graphify.yaml.".
-For an entity node (any other kind — e.g. a person, place, event, object),
-describe what the entity is and its role, grounded in its type, its
-relations (neighbors) and the provided citations/evidence — e.g.
-"Lady Carfax, a wealthy heiress who disappears en route to Lausanne.".
-Ground entity descriptions in the citations/evidence when present; do not
-speculate beyond the context, so a node with no supporting context may be
-left out of the reply.
-Write every description in Portuguese (pt). Do not switch languages.
+Write every description in English (en). Do not switch languages.
 No marketing language.
 Respond ONLY with a JSON object mapping each node id (as a string) to its
 one-sentence description — no prose, no markdown fences.
 
-- "commit:repo:github.com/millennium42/Fonolife@23a1618f94b22fd8c3a4e2e35b26c4ca85dfa9a0": "23a1618 feat(frontend): adicionar botoes de atalho para login instantaneo nos 3…" | kind=Commit | source=git | neighbors=[codex/p0-correcoes-criticas, codex/quick-demo-login-buttons, main, a412d5e Merge branch 'codex/quick-demo-…, main.tsx, bacc003 Merge branch 'codex/fix-seed-fk…]
+- "tests_attachments_test": "attachments.test.ts" | kind=code-symbol | source=tests/attachments.test.ts:L1 | neighbors=[a7b6a8a feat(attachments): adicionar va…, attachments.ts, calculateFileHash(), detectMimeTypeFromMagicBytes(), sanitizeFilename(), validFileSize()]
+- "tests_csv_import_test": "csv-import.test.ts" | kind=code-symbol | source=tests/csv-import.test.ts:L1 | neighbors=[98e15b2 feat: implementar importação CS…, csv-import.ts, calculateCsvHash(), parseCsv(), sanitizeCsvCell(), validateFinancialCsvRow()]
+- "tests_finance_smoke": "finance-smoke.mjs" | kind=code-symbol | source=tests/finance-smoke.mjs:L1 | neighbors=[2dd873d feat: consolidar financeiro úni…, accounts, call(), clientRequestId, login(), payload]
+- "tests_inventory_test": "inventory.test.ts" | kind=code-symbol | source=tests/inventory.test.ts:L1 | neighbors=[bb925aa feat: implementar catálogo e co…, inventory.ts, validInventoryMovement(), validProduct(), validProductBrand(), validProductModel()]
+- "tests_patients_test": "patients.test.ts" | kind=code-symbol | source=tests/patients.test.ts:L1 | neighbors=[0d2db0f feat: centralizar cadastro e hi…, patients.ts, isOneOf(), normalizePhone(), PATIENT_EVENT_TYPES, PATIENT_STATUSES]
 - "db_migrate": "migrate.ts" | kind=code-symbol | source=src/db/migrate.ts:L1 | neighbors=[3f9e6cc feat: estabelecer núcleo seguro…, create-admin.ts, migrate(), pool.ts, pool, server.ts]
 - "db_pool_pool": "pool" | kind=code-symbol | source=src/db/pool.ts:L9 | neighbors=[create-admin.ts, migrate.ts, pool.ts, seed.ts, app.ts, server.ts]
 - "domain_patients_normalizephone": "normalizePhone()" | kind=code-symbol | source=src/domain/patients.ts:L10 | neighbors=[csv-import.ts, patients.ts, validPatientPhone(), whatsapp.ts, app.ts, patients.test.ts]
@@ -33,8 +30,6 @@ one-sentence description — no prose, no markdown fences.
 - "domain_security_hashpassword": "hashPassword()" | kind=code-symbol | source=src/domain/security.ts:L5 | neighbors=[create-admin.ts, seed.ts, security.ts, scrypt, app.ts, security.test.ts]
 - "migrations_004_sales_receivable_installments": "receivable_installments" | kind=code-symbol | source=migrations/004_sales.sql:L25 | neighbors=[004_sales.sql, check_sale_installment_total(), financial_entries, sales, receivable_installments_immutable, receivable_installments_total]
 - "migrations_007_inventory": "007_inventory.sql" | kind=code-symbol | source=migrations/007_inventory.sql:L1 | neighbors=[bb925aa feat: implementar catálogo e co…, inventory_movements, prevent_inventory_movement_modification…, products, trg_prevent_inventory_movement_modifica…, users]
-- "tests_attachments_test": "attachments.test.ts" | kind=code-symbol | source=tests/attachments.test.ts:L1 | neighbors=[a7b6a8a feat(attachments): adicionar va…, attachments.ts, calculateFileHash(), sanitizeFilename(), validFileSize(), validMimeType()]
-- "commit:repo:github.com/millennium42/Fonolife@a412d5eba3d71b0e6d16922209342c9c9fad2a35": "a412d5e Merge branch 'codex/quick-demo-login-buttons' into main" | kind=Commit | source=git | neighbors=[23a1618 feat(frontend): adicionar botoe…, codex/p0-correcoes-criticas, main, main.tsx, bacc003 Merge branch 'codex/fix-seed-fk…]
 - "domain_doctors": "doctors.ts" | kind=code-symbol | source=src/domain/doctors.ts:L1 | neighbors=[5fe1e04 feat(doctor): adicionar perfil …, buildCalendarDays(), CalendarDay, validLicenseNumber(), doctors.test.ts]
 - "domain_follow_ups": "follow-ups.ts" | kind=code-symbol | source=src/domain/follow-ups.ts:L1 | neighbors=[ff35345 feat: tornar o pós-atendimento …, FOLLOW_UP_FILTERS, saoPauloDate(), app.ts, follow-ups.test.ts]
 - "domain_patients_isoneof": "isOneOf()" | kind=code-symbol | source=src/domain/patients.ts:L9 | neighbors=[csv-import.ts, inventory.ts, patients.ts, app.ts, patients.test.ts]
@@ -47,6 +42,7 @@ one-sentence description — no prose, no markdown fences.
 - "src_config_config": "config" | kind=code-symbol | source=src/config.ts:L9 | neighbors=[pool.ts, seed.ts, app.ts, config.ts, server.ts]
 - "tests_privacy_test": "privacy.test.ts" | kind=code-symbol | source=tests/privacy.test.ts:L1 | neighbors=[ee6a73e feat(privacy): adicionar regras…, privacy.ts, anonymizePatientName(), formatLgpdExportPackage(), isAnonymized()]
 - "tests_whatsapp_test": "whatsapp.test.ts" | kind=code-symbol | source=tests/whatsapp.test.ts:L1 | neighbors=[5ccde91 feat: implementar atalhos rápid…, whatsapp.ts, buildWhatsAppLink(), formatE164Phone(), WHATSAPP_TEMPLATES]
+- "domain_csv_import_parsecsv": "parseCsv()" | kind=code-symbol | source=src/domain/csv-import.ts:L66 | neighbors=[csv-import.ts, sanitizeCsvCell(), app.ts, csv-import.test.ts]
 - "domain_patients_patient_statuses": "PATIENT_STATUSES" | kind=code-symbol | source=src/domain/patients.ts:L1 | neighbors=[csv-import.ts, patients.ts, app.ts, patients.test.ts]
 - "domain_sales_validateinstallments": "validateInstallments()" | kind=code-symbol | source=src/domain/sales.ts:L10 | neighbors=[sales.ts, validCents(), app.ts, sales.test.ts]
 - "domain_security_canreadattachment": "canReadAttachment()" | kind=code-symbol | source=src/domain/security.ts:L64 | neighbors=[security.ts, canReadPatient(), app.ts, security.test.ts]
@@ -57,13 +53,10 @@ one-sentence description — no prose, no markdown fences.
 - "migrations_006_csv_imports": "006_csv_imports.sql" | kind=code-symbol | source=migrations/006_csv_imports.sql:L1 | neighbors=[98e15b2 feat: implementar importação CS…, csv_import_errors, csv_import_jobs, users]
 - "migrations_007_inventory_inventory_movements": "inventory_movements" | kind=code-symbol | source=migrations/007_inventory.sql:L12 | neighbors=[007_inventory.sql, products, users, trg_prevent_inventory_movement_modifica…]
 - "migrations_009_attachments": "009_attachments.sql" | kind=code-symbol | source=migrations/009_attachments.sql:L1 | neighbors=[c067885 feat(attachments): adicionar mi…, patient_attachments, patients, users]
+- "migrations_014_lgpd_redactions": "014_lgpd_redactions.sql" | kind=code-symbol | source=migrations/014_lgpd_redactions.sql:L1 | neighbors=[4693487 fix(security): implementa corre…, patient_redactions, patients, users]
 - "src_main_today": "today()" | kind=code-symbol | source=web/src/main.tsx:L147 | neighbors=[main.tsx, DoctorCalendar(), Finance(), SaleForm()]
 - "tests_follow_ups_test": "follow-ups.test.ts" | kind=code-symbol | source=tests/follow-ups.test.ts:L1 | neighbors=[ff35345 feat: tornar o pós-atendimento …, follow-ups.ts, FOLLOW_UP_FILTERS, saoPauloDate()]
 - "tests_sales_test": "sales.test.ts" | kind=code-symbol | source=tests/sales.test.ts:L1 | neighbors=[a740db5 feat: registrar vendas com parc…, sales.ts, splitMonthly(), validateInstallments()]
-- "db_migrate_migrate": "migrate()" | kind=code-symbol | source=src/db/migrate.ts:L7 | neighbors=[create-admin.ts, migrate.ts, server.ts]
-- "domain_attachments_calculatefilehash": "calculateFileHash()" | kind=code-symbol | source=src/domain/attachments.ts:L43 | neighbors=[attachments.ts, app.ts, attachments.test.ts]
-- "domain_attachments_sanitizefilename": "sanitizeFilename()" | kind=code-symbol | source=src/domain/attachments.ts:L16 | neighbors=[attachments.ts, app.ts, attachments.test.ts]
-- "domain_attachments_validfilesize": "validFileSize()" | kind=code-symbol | source=src/domain/attachments.ts:L35 | neighbors=[attachments.ts, app.ts, attachments.test.ts]
 
 ## Instructions
 

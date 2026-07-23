@@ -17,13 +17,18 @@ No marketing language.
 Respond ONLY with a JSON object mapping each node id (as a string) to its
 one-sentence description — no prose, no markdown fences.
 
+- "migrations_012_services_and_inventory_service_products": "service_products" | kind=code-symbol | source=migrations/012_services_and_inventory.sql:L15 | neighbors=[012_services_and_inventory.sql, products, services]
+- "migrations_014_lgpd_redactions_patient_redactions": "patient_redactions" | kind=code-symbol | source=migrations/014_lgpd_redactions.sql:L2 | neighbors=[014_lgpd_redactions.sql, patients, users]
+- "src_main_api": "api()" | kind=code-symbol | source=web/src/main.tsx:L187 | neighbors=[main.tsx, for(), submit()]
+- "src_main_finance": "Finance()" | kind=code-symbol | source=web/src/main.tsx:L1171 | neighbors=[main.tsx, money(), today()]
+- "src_main_for": "for()" | kind=code-symbol | source=web/src/main.tsx:L543 | neighbors=[main.tsx, api(), monthly()]
 - "src_main_money": "money()" | kind=code-symbol | source=web/src/main.tsx:L1144 | neighbors=[main.tsx, Dashboard(), Finance()]
 - "src_main_monthly": "monthly()" | kind=code-symbol | source=web/src/main.tsx:L204 | neighbors=[main.tsx, for(), submit()]
 - "src_main_submit": "submit()" | kind=code-symbol | source=web/src/main.tsx:L293 | neighbors=[main.tsx, api(), monthly()]
 - "tests_dashboard_smoke": "dashboard-smoke.mjs" | kind=code-symbol | source=tests/dashboard-smoke.mjs:L1 | neighbors=[a56a353 feat: priorizar filas acionávei…, dashboard(), login()]
 - "tests_finance_test": "finance.test.ts" | kind=code-symbol | source=tests/finance.test.ts:L1 | neighbors=[2dd873d feat: consolidar financeiro úni…, finance.ts, validFinancialEntry()]
 - "db_seed_seeddemo": "seedDemo()" | kind=code-symbol | source=src/db/seed.ts:L6 | neighbors=[seed.ts, server.ts]
-- "domain_csv_import_sanitizecsvcell": "sanitizeCsvCell()" | kind=code-symbol | source=src/domain/csv-import.ts:L54 | neighbors=[csv-import.ts, csv-import.test.ts]
+- "domain_attachments_detectmimetypefrommagicbytes": "detectMimeTypeFromMagicBytes()" | kind=code-symbol | source=src/domain/attachments.ts:L50 | neighbors=[attachments.ts, attachments.test.ts]
 - "domain_doctors_buildcalendardays": "buildCalendarDays()" | kind=code-symbol | source=src/domain/doctors.ts:L14 | neighbors=[doctors.ts, doctors.test.ts]
 - "domain_doctors_validlicensenumber": "validLicenseNumber()" | kind=code-symbol | source=src/domain/doctors.ts:L1 | neighbors=[doctors.ts, doctors.test.ts]
 - "domain_finance_entry_types": "ENTRY_TYPES" | kind=code-symbol | source=src/domain/finance.ts:L3 | neighbors=[csv-import.ts, finance.ts]
@@ -52,11 +57,6 @@ one-sentence description — no prose, no markdown fences.
 - "migrations_004_sales_expected": "expected" | kind=code-symbol | source=migrations/004_sales.sql:L88 | neighbors=[004_sales.sql, check_sale_installment_total()]
 - "migrations_004_sales_financial_entries_immutable": "financial_entries_immutable" | kind=code-symbol | source=migrations/004_sales.sql:L61 | neighbors=[004_sales.sql, financial_entries]
 - "migrations_004_sales_financial_entries_one_active_receipt": "financial_entries_one_active_receipt" | kind=code-symbol | source=migrations/004_sales.sql:L69 | neighbors=[004_sales.sql, financial_entries]
-- "migrations_004_sales_old_client_request_id": "OLD.client_request_id" | kind=code-symbol | source=migrations/004_sales.sql:L73 | neighbors=[004_sales.sql, restrict_sale_update()]
-- "migrations_004_sales_old_company_account_id": "OLD.company_account_id" | kind=code-symbol | source=migrations/004_sales.sql:L73 | neighbors=[004_sales.sql, restrict_sale_update()]
-- "migrations_004_sales_old_created_at": "OLD.created_at" | kind=code-symbol | source=migrations/004_sales.sql:L73 | neighbors=[004_sales.sql, restrict_sale_update()]
-- "migrations_004_sales_old_created_by": "OLD.created_by" | kind=code-symbol | source=migrations/004_sales.sql:L73 | neighbors=[004_sales.sql, restrict_sale_update()]
-- "migrations_004_sales_old_patient_id": "OLD.patient_id" | kind=code-symbol | source=migrations/004_sales.sql:L73 | neighbors=[004_sales.sql, restrict_sale_update()]
 
 ## Instructions
 

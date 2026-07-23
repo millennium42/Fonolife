@@ -17,6 +17,13 @@ No marketing language.
 Respond ONLY with a JSON object mapping each node id (as a string) to its
 one-sentence description — no prose, no markdown fences.
 
+- "domain_inventory_inventorymovement": "InventoryMovement" | kind=code-symbol | source=src/domain/inventory.ts:L17 | neighbors=[inventory.ts]
+- "domain_inventory_movement_types": "MOVEMENT_TYPES" | kind=code-symbol | source=src/domain/inventory.ts:L4 | neighbors=[inventory.ts]
+- "domain_inventory_movementtype": "MovementType" | kind=code-symbol | source=src/domain/inventory.ts:L5 | neighbors=[inventory.ts]
+- "domain_inventory_product": "Product" | kind=code-symbol | source=src/domain/inventory.ts:L7 | neighbors=[inventory.ts]
+- "domain_patients_contactsource": "ContactSource" | kind=code-symbol | source=src/domain/patients.ts:L6 | neighbors=[patients.ts]
+- "domain_patients_patienteventtype": "PatientEventType" | kind=code-symbol | source=src/domain/patients.ts:L7 | neighbors=[patients.ts]
+- "domain_patients_patientstatus": "PatientStatus" | kind=code-symbol | source=src/domain/patients.ts:L5 | neighbors=[patients.ts]
 - "domain_security_patienttarget": "PatientTarget" | kind=code-symbol | source=src/domain/security.ts:L37 | neighbors=[security.ts]
 - "domain_security_userrole": "UserRole" | kind=code-symbol | source=src/domain/security.ts:L30 | neighbors=[security.ts]
 - "domain_security_usersubject": "UserSubject" | kind=code-symbol | source=src/domain/security.ts:L32 | neighbors=[security.ts]
@@ -50,13 +57,6 @@ one-sentence description — no prose, no markdown fences.
 - "src_main_doctorconsultationform": "DoctorConsultationForm()" | kind=code-symbol | source=web/src/main.tsx:L2316 | neighbors=[main.tsx]
 - "src_main_doctorpatients": "DoctorPatients()" | kind=code-symbol | source=web/src/main.tsx:L2277 | neighbors=[main.tsx]
 - "src_main_eventtypes": "eventTypes" | kind=code-symbol | source=web/src/main.tsx:L122 | neighbors=[main.tsx]
-- "src_main_financesummary": "FinanceSummary" | kind=code-symbol | source=web/src/main.tsx:L100 | neighbors=[main.tsx]
-- "src_main_financialentry": "FinancialEntry" | kind=code-symbol | source=web/src/main.tsx:L57 | neighbors=[main.tsx]
-- "src_main_followup": "FollowUp" | kind=code-symbol | source=web/src/main.tsx:L40 | neighbors=[main.tsx]
-- "src_main_followups": "FollowUps()" | kind=code-symbol | source=web/src/main.tsx:L862 | neighbors=[main.tsx]
-- "src_main_globalpatientmodal": "GlobalPatientModal()" | kind=code-symbol | source=web/src/main.tsx:L219 | neighbors=[main.tsx]
-- "src_main_if": "if()" | kind=code-symbol | source=web/src/main.tsx:L534 | neighbors=[main.tsx]
-- "src_main_inventory": "Inventory()" | kind=code-symbol | source=web/src/main.tsx:L1665 | neighbors=[main.tsx]
 
 ## Instructions
 

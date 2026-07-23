@@ -17,6 +17,13 @@ No marketing language.
 Respond ONLY with a JSON object mapping each node id (as a string) to its
 one-sentence description — no prose, no markdown fences.
 
+- "src_main_financesummary": "FinanceSummary" | kind=code-symbol | source=web/src/main.tsx:L100 | neighbors=[main.tsx]
+- "src_main_financialentry": "FinancialEntry" | kind=code-symbol | source=web/src/main.tsx:L57 | neighbors=[main.tsx]
+- "src_main_followup": "FollowUp" | kind=code-symbol | source=web/src/main.tsx:L40 | neighbors=[main.tsx]
+- "src_main_followups": "FollowUps()" | kind=code-symbol | source=web/src/main.tsx:L862 | neighbors=[main.tsx]
+- "src_main_globalpatientmodal": "GlobalPatientModal()" | kind=code-symbol | source=web/src/main.tsx:L219 | neighbors=[main.tsx]
+- "src_main_if": "if()" | kind=code-symbol | source=web/src/main.tsx:L534 | neighbors=[main.tsx]
+- "src_main_inventory": "Inventory()" | kind=code-symbol | source=web/src/main.tsx:L1665 | neighbors=[main.tsx]
 - "src_main_patient": "Patient" | kind=code-symbol | source=web/src/main.tsx:L14 | neighbors=[main.tsx]
 - "src_main_patientattachments": "PatientAttachments()" | kind=code-symbol | source=web/src/main.tsx:L533 | neighbors=[main.tsx]
 - "src_main_patientform": "PatientForm()" | kind=code-symbol | source=web/src/main.tsx:L385 | neighbors=[main.tsx]

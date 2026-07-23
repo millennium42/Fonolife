@@ -270,6 +270,8 @@ export function buildApp() {
         "UPDATE users SET password_hash=$1,must_change_password=false WHERE id=$2",
         [await hashPassword(newPassword), request.currentUser!.id],
       );
+      // Revoga todas as sessões ativas do usuário após troca de senha e limpa expiradas (Item 4.10)
+      await pool.query("DELETE FROM user_sessions WHERE user_id=$1 OR expires_at < now()", [request.currentUser!.id]);
       await audit(
         request.currentUser!.id,
         "change_password",

@@ -61,50 +61,98 @@ export function sanitizeCsvCell(value: string): string {
 }
 
 /**
- * Parser de CSV tolerante a delimitadores (vírgula ou ponto e vírgula) e células entre aspas.
+ * Parser de CSV compatível com RFC 4180 (suporta campos multilinha entre aspas, remoção de BOM e delimitadores vírgula/ponto-e-vírgula).
  */
 export function parseCsv(content: string): ParsedCsv {
-  const lines = content.replace(/\r\n/g, "\n").replace(/\r/g, "\n").split("\n");
-  const filteredLines = lines.filter((line) => line.trim().length > 0);
-  if (filteredLines.length === 0) {
+  if (!content || typeof content !== "string") {
     return { headers: [], rows: [] };
   }
 
-  // Detecta o delimitador observando a primeira linha
-  const firstLine = filteredLines[0];
-  const delimiter = firstLine.includes(";") ? ";" : ",";
-
-  function parseLine(line: string): string[] {
-    const cells: string[] = [];
-    let currentCell = "";
-    let inQuotes = false;
-
-    for (let i = 0; i < line.length; i++) {
-      const char = line[i];
-      if (char === '"') {
-        if (inQuotes && line[i + 1] === '"') {
-          currentCell += '"';
-          i++; // ignora aspas escapadas
-        } else {
-          inQuotes = !inQuotes;
-        }
-      } else if (char === delimiter && !inQuotes) {
-        cells.push(sanitizeCsvCell(currentCell));
-        currentCell = "";
-      } else {
-        currentCell += char;
-      }
-    }
-    cells.push(sanitizeCsvCell(currentCell));
-    return cells;
+  // Remove UTF-8 BOM se presente
+  let cleanContent = content.startsWith("\uFEFF") ? content.slice(1) : content;
+  if (!cleanContent.trim()) {
+    return { headers: [], rows: [] };
   }
 
-  const rawHeaders = parseLine(filteredLines[0]);
+  // Detecta o delimitador observando a primeira linha fora de aspas
+  let delimiter = ",";
+  const firstLine = cleanContent.split(/[\r\n]+/)[0] || "";
+  let semicolons = 0;
+  let commas = 0;
+  let inQ = false;
+  for (let i = 0; i < firstLine.length; i++) {
+    if (firstLine[i] === '"') inQ = !inQ;
+    else if (!inQ) {
+      if (firstLine[i] === ";") semicolons++;
+      if (firstLine[i] === ",") commas++;
+    }
+  }
+  if (semicolons > commas) delimiter = ";";
+
+  const records: string[][] = [];
+  let currentRecord: string[] = [];
+  let currentField = "";
+  let inQuotes = false;
+
+  for (let i = 0; i < cleanContent.length; i++) {
+    const char = cleanContent[i];
+    const nextChar = cleanContent[i + 1];
+
+    if (inQuotes) {
+      if (char === '"') {
+        if (nextChar === '"') {
+          currentField += '"';
+          i++; // ignora aspas duplas escapadas ("")
+        } else {
+          inQuotes = false;
+        }
+      } else {
+        currentField += char;
+      }
+    } else {
+      if (char === '"') {
+        inQuotes = true;
+      } else if (char === delimiter) {
+        currentRecord.push(sanitizeCsvCell(currentField));
+        currentField = "";
+      } else if (char === "\r") {
+        if (nextChar === "\n") i++; // CRLF
+        currentRecord.push(sanitizeCsvCell(currentField));
+        currentField = "";
+        if (currentRecord.some((f) => f.trim().length > 0)) {
+          records.push(currentRecord);
+        }
+        currentRecord = [];
+      } else if (char === "\n") {
+        currentRecord.push(sanitizeCsvCell(currentField));
+        currentField = "";
+        if (currentRecord.some((f) => f.trim().length > 0)) {
+          records.push(currentRecord);
+        }
+        currentRecord = [];
+      } else {
+        currentField += char;
+      }
+    }
+  }
+
+  if (currentField.length > 0 || currentRecord.length > 0) {
+    currentRecord.push(sanitizeCsvCell(currentField));
+    if (currentRecord.some((f) => f.trim().length > 0)) {
+      records.push(currentRecord);
+    }
+  }
+
+  if (records.length === 0) {
+    return { headers: [], rows: [] };
+  }
+
+  const rawHeaders = records[0];
   const headers = rawHeaders.map((h) => h.toLowerCase().trim());
 
   const rows: Record<string, string>[] = [];
-  for (let i = 1; i < filteredLines.length; i++) {
-    const values = parseLine(filteredLines[i]);
+  for (let i = 1; i < records.length; i++) {
+    const values = records[i];
     const rowObj: Record<string, string> = {};
     for (let h = 0; h < headers.length; h++) {
       rowObj[headers[h]] = values[h] ?? "";
@@ -114,6 +162,7 @@ export function parseCsv(content: string): ParsedCsv {
 
   return { headers, rows };
 }
+
 
 /**
  * Valida os campos de uma linha de CSV destinada ao cadastro de paciente.
