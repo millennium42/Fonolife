@@ -119,8 +119,30 @@ export function buildApp(customStorage?: AttachmentStorage) {
     if (!["GET", "HEAD", "OPTIONS"].includes(request.method)) {
       const origin = request.headers.origin;
       const referer = request.headers.referer;
-      const validOrigin = Boolean(origin && origin === config.origin);
-      const validReferer = Boolean(!origin && referer && referer.startsWith(config.origin));
+
+      let allowedOrigin = config.origin;
+      try {
+        allowedOrigin = new URL(config.origin).origin;
+      } catch {}
+
+      let validOrigin = false;
+      if (origin) {
+        try {
+          validOrigin = new URL(origin).origin === allowedOrigin;
+        } catch {
+          validOrigin = false;
+        }
+      }
+
+      let validReferer = false;
+      if (!origin && referer) {
+        try {
+          validReferer = new URL(referer).origin === allowedOrigin;
+        } catch {
+          validReferer = false;
+        }
+      }
+
       if (!validOrigin && !validReferer) {
         throw Object.assign(new Error("Origem não permitida ou ausente para mutações"), {
           statusCode: 403,
