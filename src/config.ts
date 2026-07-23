@@ -11,6 +11,12 @@ export const config = {
   port: Number(process.env.PORT ?? 3000),
   origin: process.env.APP_ORIGIN ?? process.env.RENDER_EXTERNAL_URL ?? 'http://localhost:5173',
   production,
-  demo
+  demo,
+  storageProvider: process.env.STORAGE_PROVIDER ?? 'local',
+  s3Bucket: process.env.S3_BUCKET ?? 'fonolife-attachments-private',
+  s3Region: process.env.S3_REGION ?? 'us-east-1',
+  s3Endpoint: process.env.S3_ENDPOINT,
+  s3AccessKeyId: process.env.S3_ACCESS_KEY_ID,
+  s3SecretAccessKey: process.env.S3_SECRET_ACCESS_KEY,
 };
 
