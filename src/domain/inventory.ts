@@ -10,6 +10,7 @@ export type Product = {
   brand: string;
   model: string;
   priceCents: number;
+  costCents: number;
   active: boolean;
 };
 
@@ -35,17 +36,23 @@ export function validProductModel(model?: string): boolean {
   return Boolean(model && model.trim().length >= 1);
 }
 
+export function validNonNegativeCents(cents?: number): boolean {
+  return typeof cents === "number" && Number.isInteger(cents) && cents >= 0;
+}
+
 export function validProduct(product: {
   name?: string;
   brand?: string;
   model?: string;
   priceCents?: number;
+  costCents?: number;
 }): boolean {
   return (
     validProductName(product.name) &&
     validProductBrand(product.brand) &&
     validProductModel(product.model) &&
-    validCents(product.priceCents)
+    validCents(product.priceCents) &&
+    (product.costCents === undefined || validNonNegativeCents(product.costCents))
   );
 }
 
