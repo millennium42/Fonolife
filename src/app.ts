@@ -2,7 +2,7 @@ import { randomBytes, randomUUID } from "node:crypto";
 import Fastify, { type FastifyRequest } from "fastify";
 import cookie from "@fastify/cookie";
 import staticFiles from "@fastify/static";
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { existsSync } from "node:fs";
 import { resolve } from "node:path";
 import { pool } from "./db/pool.js";
 import { config } from "./config.js";
@@ -49,6 +49,13 @@ import {
   sanitizeFilename,
   validFileSize,
   validMimeType,
+  generateStorageKey,
+  validateBase64Strict,
+  reconcileOrphanAttachments,
+  LocalAttachmentStorage,
+  S3AttachmentStorage,
+  DevAttachmentScanner,
+  type AttachmentStorage,
 } from "./domain/attachments.js";
 import {
   ANONYMIZED_PHONE,
@@ -56,8 +63,6 @@ import {
   anonymizePatientName,
   formatLgpdExportPackage,
 } from "./domain/privacy.js";
-
-
 
 type User = {
   id: string;
@@ -75,8 +80,15 @@ declare module "fastify" {
 }
 const attempts = new Map<string, { count: number; reset: number }>();
 
-export function buildApp() {
+export function buildApp(customStorage?: AttachmentStorage) {
   const app = Fastify({ logger: true });
+
+  const attachmentStorage: AttachmentStorage = customStorage ?? (
+    config.storageProvider === "s3"
+      ? new S3AttachmentStorage({ bucket: config.s3Bucket })
+      : new LocalAttachmentStorage()
+  );
+  const attachmentScanner = new DevAttachmentScanner();
   app.register(cookie);
   app.addHook("onSend", async (_request, reply, payload) => {
     reply.header("x-content-type-options", "nosniff");
@@ -221,7 +233,13 @@ export function buildApp() {
 
   app.get("/api/health", async () => {
     await pool.query("SELECT 1");
-    return { status: "ok" };
+    let storageStatus = "ok";
+    try {
+      await attachmentStorage.exists("__health_check__");
+    } catch {
+      storageStatus = "degraded";
+    }
+    return { status: "ok", storage: storageStatus, storageProvider: config.storageProvider };
   });
   app.get("/api/config", async () => {
     return { demoMode: config.demo };
@@ -1174,10 +1192,10 @@ export function buildApp() {
       const authorized = await loadAndAuthorizePatient(request, reply, request.params.id, "attachment");
       if (!authorized) return;
       const attachments = await pool.query(
-        `SELECT a.id,a.original_name,a.mime_type,a.size_bytes,a.file_hash,a.created_at,u.name created_by_name
+        `SELECT a.id,a.original_name,a.mime_type,a.size_bytes,a.file_hash,a.status,a.created_at,u.name created_by_name
          FROM patient_attachments a
          JOIN users u ON u.id=a.created_by
-         WHERE a.patient_id=$1 AND a.archived_at IS NULL
+         WHERE a.patient_id=$1 AND a.archived_at IS NULL AND a.status != 'failed'
          ORDER BY a.created_at DESC`,
         [request.params.id]
       );
@@ -1209,12 +1227,12 @@ export function buildApp() {
 
       let buffer: Buffer;
       try {
-        buffer = Buffer.from(contentBase64, "base64");
-      } catch (_) {
+        buffer = validateBase64Strict(contentBase64);
+      } catch (err: any) {
         return reply
           .code(400)
           .type("application/problem+json")
-          .send({ title: "Conteúdo base64 inválido", status: 400 });
+          .send({ title: err?.message || "Conteúdo base64 inválido", status: 400 });
       }
 
       if (!validFileSize(buffer.length))
@@ -1223,32 +1241,58 @@ export function buildApp() {
           .type("application/problem+json")
           .send({ title: "Tamanho de arquivo excede o limite seguro de 10MB", status: 400 });
 
-      const sanitizedOriginal = sanitizeFilename(fileName);
-      const fileHash = calculateFileHash(buffer);
-      const attachmentId = randomUUID();
-      const storageDir = resolve("storage/attachments");
-      if (!existsSync(storageDir)) {
-        mkdirSync(storageDir, { recursive: true });
+      // Inspeciona Magic Bytes e valida integridade via scanner
+      const scanResult = await attachmentScanner.scan(buffer, mimeType);
+      if (!scanResult.clean) {
+        return reply
+          .code(400)
+          .type("application/problem+json")
+          .send({ title: `Falha na verificação de segurança do anexo: ${scanResult.reason}`, status: 400 });
       }
-      const storageFileName = `${attachmentId}_${sanitizedOriginal}`;
-      const fullPath = resolve(storageDir, storageFileName);
 
-      // Salva o arquivo fisicamente no armazenamento privado
-      writeFileSync(fullPath, buffer);
+      const sanitizedOriginal = sanitizeFilename(fileName);
+      const attachmentId = randomUUID();
+      const storageKey = generateStorageKey(sanitizedOriginal);
+      const providerName = config.storageProvider;
 
-      // Registra no banco de dados e auditoria
+      // Persiste o arquivo fisicamente no storage privado com compensação em caso de falha no banco
+      let saveRes: { sizeBytes: number; hash: string };
+      try {
+        saveRes = await attachmentStorage.save(storageKey, buffer, mimeType);
+      } catch (err: any) {
+        return reply
+          .code(500)
+          .type("application/problem+json")
+          .send({ title: `Falha no armazenamento do anexo: ${err?.message}`, status: 500 });
+      }
+
       const client = await pool.connect();
       try {
         await client.query("BEGIN");
         const pat = await client.query("SELECT 1 FROM patients WHERE id=$1 AND archived_at IS NULL", [request.params.id]);
         if (!pat.rowCount) {
           await client.query("ROLLBACK");
+          await attachmentStorage.delete(storageKey);
           return reply.code(404).type("application/problem+json").send({ title: "Paciente não encontrado", status: 404 });
         }
 
         await client.query(
-          "INSERT INTO patient_attachments(id,patient_id,file_name,original_name,mime_type,size_bytes,file_hash,created_by) VALUES($1,$2,$3,$4,$5,$6,$7,$8)",
-          [attachmentId, request.params.id, storageFileName, sanitizedOriginal, mimeType, buffer.length, fileHash, request.currentUser!.id]
+          `INSERT INTO patient_attachments(id,patient_id,file_name,original_name,mime_type,size_bytes,file_hash,storage_provider,storage_key,status,detected_mime_type,scanned_at,created_by)
+           VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,now(),$12)`,
+          [
+            attachmentId,
+            request.params.id,
+            storageKey,
+            sanitizedOriginal,
+            mimeType,
+            saveRes.sizeBytes,
+            saveRes.hash,
+            providerName,
+            storageKey,
+            "ready",
+            scanResult.detectedMimeType ?? mimeType,
+            request.currentUser!.id,
+          ]
         );
 
         // Registra evento na timeline do paciente
@@ -1259,13 +1303,15 @@ export function buildApp() {
 
         await client.query(
           "INSERT INTO audit_events(user_id,action,entity_type,entity_id,details) VALUES($1,'create','patient_attachment',$2,$3)",
-          [request.currentUser!.id, attachmentId, { patientId: request.params.id, originalName: sanitizedOriginal, mimeType, fileHash }]
+          [request.currentUser!.id, attachmentId, { patientId: request.params.id, originalName: sanitizedOriginal, mimeType, fileHash: saveRes.hash, storageKey }]
         );
 
         await client.query("COMMIT");
-        return reply.code(201).send({ id: attachmentId });
+        return reply.code(201).send({ id: attachmentId, status: "ready" });
       } catch (err) {
         await client.query("ROLLBACK");
+        // Compensação: desfaz arquivo no storage se a transação do banco falhar
+        await attachmentStorage.delete(storageKey);
         throw err;
       } finally {
         client.release();
@@ -1285,20 +1331,28 @@ export function buildApp() {
         return reply.code(404).type("application/problem+json").send({ title: "Anexo não encontrado", status: 404 });
 
       const file = att.rows[0];
+      if (file.status !== "ready") {
+        return reply
+          .code(403)
+          .type("application/problem+json")
+          .send({ title: `Anexo não disponível para download (situação: ${file.status})`, status: 403 });
+      }
+
       const authorized = await loadAndAuthorizePatient(request, reply, file.patient_id, "attachment");
       if (!authorized) return;
 
-      const fullPath = resolve("storage/attachments", file.file_name);
-      if (!existsSync(fullPath))
+      const key = file.storage_key || file.file_name;
+      try {
+        const stream = await attachmentStorage.getStream(key);
+        reply
+          .header("Content-Type", file.detected_mime_type || file.mime_type)
+          .header("Content-Disposition", `inline; filename="${file.original_name}"`)
+          .header("X-Content-Type-Options", "nosniff")
+          .header("Content-Security-Policy", "default-src 'none'");
+        return reply.send(stream);
+      } catch {
         return reply.code(404).type("application/problem+json").send({ title: "Arquivo físico não encontrado", status: 404 });
-
-      const content = readFileSync(fullPath);
-      reply
-        .header("Content-Type", file.mime_type)
-        .header("Content-Disposition", `inline; filename="${file.original_name}"`)
-        .header("X-Content-Type-Options", "nosniff")
-        .header("Content-Security-Policy", "default-src 'none'");
-      return reply.send(content);
+      }
     }
   );
 
@@ -1317,7 +1371,7 @@ export function buildApp() {
       if (!authorized) return;
 
       await pool.query(
-        "UPDATE patient_attachments SET archived_at=now() WHERE id=$1",
+        "UPDATE patient_attachments SET archived_at=now(), status='archived' WHERE id=$1",
         [request.params.id]
       );
 
@@ -1329,6 +1383,11 @@ export function buildApp() {
       return reply.code(204).send();
     }
   );
+
+  app.post("/api/admin/reconcile-attachments", { preHandler: admin }, async (_request, _reply) => {
+    const result = await reconcileOrphanAttachments(pool, attachmentStorage as any);
+    return result;
+  });
 
   app.get<{ Params: { id: string } }>(
     "/api/patients/:id/export-data",
