@@ -8,6 +8,7 @@ import { pool } from "./db/pool.js";
 import { config } from "./config.js";
 import {
   canExportPatientData,
+  canModifyDoctorAssignment,
   canReadAttachment,
   canReadPatient,
   canWritePatient,
@@ -153,6 +154,70 @@ export function buildApp() {
       "INSERT INTO audit_events(user_id,action,entity_type,entity_id,details) VALUES($1,$2,$3,$4,$5)",
       [userId, action, entityType, entityId ?? null, details],
     );
+
+  const auditDenial = async (
+    userId: string,
+    action: string,
+    entityType: string,
+    entityId?: string,
+  ) => {
+    try {
+      await pool.query(
+        "INSERT INTO audit_events(user_id,action,entity_type,entity_id,details) VALUES($1,$2,$3,$4,$5)",
+        [userId, action, entityType, entityId ?? null, { denied: true }],
+      );
+    } catch (_) {
+      // Auditoria da negativa não pode quebrar ou transformar erro em 500
+    }
+  };
+
+  const loadAndAuthorizePatient = async (
+    request: FastifyRequest,
+    reply: any,
+    patientId: string,
+    action: "read" | "write" | "export" | "attachment",
+  ) => {
+    const res = await pool.query<{
+      id: string;
+      responsible_doctor_id: string | null;
+      assigned_user_id: string | null;
+      archived_at: Date | null;
+      anonymized_at: Date | null;
+    }>(
+      "SELECT id, responsible_doctor_id, assigned_user_id, archived_at, anonymized_at FROM patients WHERE id=$1",
+      [patientId],
+    );
+    if (!res.rowCount) {
+      reply.code(404).type("application/problem+json").send({
+        title: "Paciente não encontrado",
+        status: 404,
+      });
+      return null;
+    }
+    const patient = res.rows[0];
+    const user = request.currentUser!;
+    const target = {
+      id: patient.id,
+      responsible_doctor_id: patient.responsible_doctor_id,
+      assigned_user_id: patient.assigned_user_id,
+    };
+
+    let allowed = false;
+    if (action === "read") allowed = canReadPatient(user, target);
+    else if (action === "write") allowed = canWritePatient(user, target);
+    else if (action === "export") allowed = canExportPatientData(user, target);
+    else if (action === "attachment") allowed = canReadAttachment(user, target);
+
+    if (!allowed) {
+      await auditDenial(user.id, `${action}_access_denied`, "patient", patientId);
+      reply.code(404).type("application/problem+json").send({
+        title: "Paciente não encontrado",
+        status: 404,
+      });
+      return null;
+    }
+    return patient;
+  };
 
   app.get("/api/health", async () => {
     await pool.query("SELECT 1");
@@ -790,6 +855,10 @@ export function buildApp() {
     const terms: string[] = [];
     const values: unknown[] = [];
     if (archived !== "true") terms.push("p.archived_at IS NULL");
+    if (request.currentUser!.role === "doctor") {
+      values.push(request.currentUser!.id);
+      terms.push(`(p.responsible_doctor_id = $${values.length} OR p.assigned_user_id = $${values.length})`);
+    }
     if (status) {
       values.push(status);
       terms.push(`p.journey_status=$${values.length}`);
@@ -848,6 +917,15 @@ export function buildApp() {
           title: "Informe nome, telefone válido, origem e status",
           status: 400,
         });
+
+    if (body.responsibleDoctorId && !canModifyDoctorAssignment(request.currentUser!) && body.responsibleDoctorId !== request.currentUser!.id) {
+      await auditDenial(request.currentUser!.id, "modify_doctor_assignment_denied", "patient");
+      return reply
+        .code(403)
+        .type("application/problem+json")
+        .send({ title: "Apenas perfis autorizados podem atribuir médico responsável", status: 403 });
+    }
+
     const assigned = body.assignedUserId ?? request.currentUser!.id;
     const duplicate = await pool.query(
       "SELECT id,name FROM patients WHERE phone=$1 AND archived_at IS NULL LIMIT 1",
@@ -885,15 +963,12 @@ export function buildApp() {
     "/api/patients/:id",
     { preHandler: authenticated },
     async (request, reply) => {
+      const authorized = await loadAndAuthorizePatient(request, reply, request.params.id, "read");
+      if (!authorized) return;
       const patient = await pool.query(
         `SELECT p.*,doc.name responsible_doctor_name,next_task.due_on next_contact_on,u.name assigned_user_name FROM patients p JOIN users u ON u.id=p.assigned_user_id LEFT JOIN users doc ON doc.id=p.responsible_doctor_id LEFT JOIN LATERAL (SELECT due_on FROM follow_up_tasks WHERE patient_id=p.id AND completed_at IS NULL AND cancelled_at IS NULL ORDER BY due_on LIMIT 1) next_task ON true WHERE p.id=$1`,
         [request.params.id],
       );
-      if (!patient.rowCount)
-        return reply
-          .code(404)
-          .type("application/problem+json")
-          .send({ title: "Paciente não encontrado", status: 404 });
       return { patient: patient.rows[0] };
     },
   );
@@ -918,6 +993,8 @@ export function buildApp() {
     "/api/patients/:id",
     { preHandler: authenticated },
     async (request, reply) => {
+      const authorized = await loadAndAuthorizePatient(request, reply, request.params.id, "write");
+      if (!authorized) return;
       const body = request.body ?? {};
       const phone = normalizePhone(body.phone);
       if (
@@ -931,6 +1008,20 @@ export function buildApp() {
           .code(400)
           .type("application/problem+json")
           .send({ title: "Confira os dados do paciente", status: 400 });
+
+      if (
+        body.responsibleDoctorId !== undefined &&
+        body.responsibleDoctorId !== authorized.responsible_doctor_id &&
+        !canModifyDoctorAssignment(request.currentUser!) &&
+        body.responsibleDoctorId !== request.currentUser!.id
+      ) {
+        await auditDenial(request.currentUser!.id, "modify_doctor_assignment_denied", "patient", request.params.id);
+        return reply
+          .code(403)
+          .type("application/problem+json")
+          .send({ title: "Apenas perfis autorizados podem alterar médico responsável", status: 403 });
+      }
+
       const result = await pool.query(
         `WITH updated AS (UPDATE patients SET name=$1,phone=$2,birth_date=$3,guardian_name=$4,contact_source=$5,journey_status=$6,notes=$7,care_alert=$8,assigned_user_id=COALESCE($9,assigned_user_id),responsible_doctor_id=$10,version=version+1,updated_at=now() WHERE id=$11 AND version=$12 AND archived_at IS NULL RETURNING id,version), audited AS (INSERT INTO audit_events(user_id,action,entity_type,entity_id,details) SELECT $13,'update','patient',id,jsonb_build_object('version',version) FROM updated) SELECT version FROM updated`,
         [
@@ -966,10 +1057,13 @@ export function buildApp() {
       return { version: result.rows[0].version };
     },
   );
+
   app.post<{ Params: { id: string }; Body: { version?: number } }>(
     "/api/patients/:id/archive",
     { preHandler: authenticated },
     async (request, reply) => {
+      const authorized = await loadAndAuthorizePatient(request, reply, request.params.id, "write");
+      if (!authorized) return;
       if (!Number.isInteger(request.body?.version))
         return reply
           .code(400)
@@ -996,6 +1090,7 @@ export function buildApp() {
       return reply.code(204).send();
     },
   );
+
   app.post<{
     Params: { id: string };
     Body: { eventType?: string; description?: string; occurredAt?: string };
@@ -1003,6 +1098,8 @@ export function buildApp() {
     "/api/patients/:id/events",
     { preHandler: authenticated },
     async (request, reply) => {
+      const authorized = await loadAndAuthorizePatient(request, reply, request.params.id, "write");
+      if (!authorized) return;
       const { eventType, description, occurredAt } = request.body ?? {};
       if (
         !isOneOf(eventType, PATIENT_EVENT_TYPES) ||
@@ -1043,6 +1140,8 @@ export function buildApp() {
     "/api/patients/:id/whatsapp-click",
     { preHandler: authenticated },
     async (request, reply) => {
+      const authorized = await loadAndAuthorizePatient(request, reply, request.params.id, "write");
+      if (!authorized) return;
       const { messageText } = request.body ?? {};
       const description = messageText?.trim()
         ? `Contato iniciado via WhatsApp: "${messageText.trim().slice(0, 100)}..."`
@@ -1071,18 +1170,19 @@ export function buildApp() {
   app.get<{ Params: { id: string } }>(
     "/api/patients/:id/attachments",
     { preHandler: authenticated },
-    async (request) => ({
-      attachments: (
-        await pool.query(
-          `SELECT a.id,a.original_name,a.mime_type,a.size_bytes,a.file_hash,a.created_at,u.name created_by_name
-           FROM patient_attachments a
-           JOIN users u ON u.id=a.created_by
-           WHERE a.patient_id=$1 AND a.archived_at IS NULL
-           ORDER BY a.created_at DESC`,
-          [request.params.id]
-        )
-      ).rows,
-    })
+    async (request, reply) => {
+      const authorized = await loadAndAuthorizePatient(request, reply, request.params.id, "attachment");
+      if (!authorized) return;
+      const attachments = await pool.query(
+        `SELECT a.id,a.original_name,a.mime_type,a.size_bytes,a.file_hash,a.created_at,u.name created_by_name
+         FROM patient_attachments a
+         JOIN users u ON u.id=a.created_by
+         WHERE a.patient_id=$1 AND a.archived_at IS NULL
+         ORDER BY a.created_at DESC`,
+        [request.params.id]
+      );
+      return { attachments: attachments.rows };
+    }
   );
 
   app.post<{
@@ -1092,6 +1192,8 @@ export function buildApp() {
     "/api/patients/:id/attachments",
     { preHandler: authenticated },
     async (request, reply) => {
+      const authorized = await loadAndAuthorizePatient(request, reply, request.params.id, "write");
+      if (!authorized) return;
       const { fileName, mimeType, contentBase64 } = request.body ?? {};
       if (!fileName || !mimeType || !contentBase64)
         return reply
@@ -1183,12 +1285,8 @@ export function buildApp() {
         return reply.code(404).type("application/problem+json").send({ title: "Anexo não encontrado", status: 404 });
 
       const file = att.rows[0];
-      const patientRes = await pool.query("SELECT id, responsible_doctor_id FROM patients WHERE id=$1", [file.patient_id]);
-      const patient = patientRes.rows[0];
-      if (!patient || !canReadAttachment(request.currentUser!, patient)) {
-        await audit(request.currentUser!.id, "attachment_access_denied", "patient_attachment", request.params.id);
-        return reply.code(403).type("application/problem+json").send({ title: "Acesso negado a este anexo", status: 403 });
-      }
+      const authorized = await loadAndAuthorizePatient(request, reply, file.patient_id, "attachment");
+      if (!authorized) return;
 
       const fullPath = resolve("storage/attachments", file.file_name);
       if (!existsSync(fullPath))
@@ -1208,16 +1306,24 @@ export function buildApp() {
     "/api/attachments/:id/archive",
     { preHandler: authenticated },
     async (request, reply) => {
-      const result = await pool.query(
-        "UPDATE patient_attachments SET archived_at=now() WHERE id=$1 AND archived_at IS NULL RETURNING patient_id, original_name",
+      const att = await pool.query(
+        "SELECT patient_id, original_name FROM patient_attachments WHERE id=$1 AND archived_at IS NULL",
         [request.params.id]
       );
-      if (!result.rowCount)
+      if (!att.rowCount)
         return reply.code(404).type("application/problem+json").send({ title: "Anexo não encontrado ou já arquivado", status: 404 });
 
+      const authorized = await loadAndAuthorizePatient(request, reply, att.rows[0].patient_id, "write");
+      if (!authorized) return;
+
+      await pool.query(
+        "UPDATE patient_attachments SET archived_at=now() WHERE id=$1",
+        [request.params.id]
+      );
+
       await audit(request.currentUser!.id, "archive", "patient_attachment", request.params.id, {
-        patientId: result.rows[0].patient_id,
-        originalName: result.rows[0].original_name,
+        patientId: att.rows[0].patient_id,
+        originalName: att.rows[0].original_name,
       });
 
       return reply.code(204).send();
@@ -1228,23 +1334,22 @@ export function buildApp() {
     "/api/patients/:id/export-data",
     { preHandler: authenticated },
     async (request, reply) => {
+      const authorized = await loadAndAuthorizePatient(request, reply, request.params.id, "export");
+      if (!authorized) return;
+
       const patientRes = await pool.query(
         "SELECT * FROM patients WHERE id=$1 AND archived_at IS NULL",
         [request.params.id]
       );
-      if (!patientRes.rowCount)
-        return reply.code(404).type("application/problem+json").send({ title: "Paciente não encontrado", status: 404 });
-
       const patient = patientRes.rows[0];
-      if (!canExportPatientData(request.currentUser!, patient)) {
-        await audit(request.currentUser!.id, "export_lgpd_access_denied", "patient", request.params.id);
-        return reply.code(403).type("application/problem+json").send({ title: "Acesso negado aos dados deste paciente", status: 403 });
-      }
 
       const [timeline, sales, financial, attachments] = await Promise.all([
         pool.query(
-          "SELECT id,event_type,description,occurred_at,created_at FROM patient_events WHERE patient_id=$1 ORDER BY occurred_at DESC",
-          [request.params.id]
+          `SELECT e.id,e.event_type,
+                  CASE WHEN EXISTS(SELECT 1 FROM patient_redactions pr WHERE pr.patient_id=e.patient_id) OR $2::timestamptz IS NOT NULL THEN '${ANONYMIZED_TEXT_PLACEHOLDER}' ELSE e.description END AS description,
+                  e.occurred_at,e.created_at
+           FROM patient_events e WHERE e.patient_id=$1 ORDER BY e.occurred_at DESC`,
+          [request.params.id, patient.anonymized_at]
         ),
         pool.query(
           "SELECT id,product,quantity,total_amount_cents,sold_on,delivery_status,created_at FROM sales WHERE patient_id=$1 ORDER BY sold_on DESC",
@@ -1281,14 +1386,31 @@ export function buildApp() {
 
   app.post<{
     Params: { id: string };
-    Body: { version?: number };
+    Body: { version?: number; reason?: string; confirm?: boolean; password?: string };
   }>(
     "/api/admin/patients/:id/anonymize",
     { preHandler: admin },
     async (request, reply) => {
-      const { version } = request.body ?? {};
+      const { version, reason, confirm, password } = request.body ?? {};
       if (typeof version !== "number")
         return reply.code(400).type("application/problem+json").send({ title: "Versão do paciente é obrigatória para optimistic lock", status: 400 });
+
+      if (!reason || typeof reason !== "string" || reason.trim().length < 3)
+        return reply.code(400).type("application/problem+json").send({ title: "Justificativa obrigatória para anonimização LGPD", status: 400 });
+
+      if (confirm !== true)
+        return reply.code(400).type("application/problem+json").send({ title: "Confirmação explícita obrigatória", status: 400 });
+
+      if (!password)
+        return reply.code(401).type("application/problem+json").send({ title: "Confirme sua senha de administrador para prosseguir com a anonimização", status: 401 });
+
+      const adminUser = await pool.query<{ password_hash: string }>(
+        "SELECT password_hash FROM users WHERE id=$1",
+        [request.currentUser!.id]
+      );
+      if (!adminUser.rowCount || !(await verifyPassword(password, adminUser.rows[0].password_hash))) {
+        return reply.code(401).type("application/problem+json").send({ title: "Senha do administrador incorreta", status: 401 });
+      }
 
       const client = await pool.connect();
       try {
@@ -1332,15 +1454,14 @@ export function buildApp() {
 
         // Registra a redação LGPD sem violar o trigger imutável de patient_events
         await client.query(
-          "INSERT INTO patient_redactions(patient_id, reason, requested_by) VALUES($1, 'LGPD_ANONYMIZATION', $2)",
-          [request.params.id, request.currentUser!.id]
+          "INSERT INTO patient_redactions(patient_id, reason, requested_by) VALUES($1, $2, $3)",
+          [request.params.id, reason.trim(), request.currentUser!.id]
         );
 
-
-        // Registra evento crítico de audit_events com log de alta segurança
+        // Registra evento de auditoria sem PII
         await client.query(
           "INSERT INTO audit_events(user_id,action,entity_type,entity_id,details) VALUES($1,'anonymize_lgpd','patient',$2,$3)",
-          [request.currentUser!.id, request.params.id, { anonymizedName, timestamp: new Date().toISOString() }]
+          [request.currentUser!.id, request.params.id, { reason: reason.trim() }]
         );
 
         await client.query("COMMIT");
@@ -1354,19 +1475,46 @@ export function buildApp() {
     }
   );
 
-
-
   app.get<{ Params: { id: string } }>(
     "/api/patients/:id/timeline",
     { preHandler: authenticated },
-    async (request) => ({
-      items: (
-        await pool.query(
-          `SELECT e.id::text,'event' kind,e.event_type type,e.description,e.occurred_at occurred_at,u.name author FROM patient_events e JOIN users u ON u.id=e.created_by WHERE e.patient_id=$1 UNION ALL SELECT t.id::text,'follow_up','follow_up_scheduled',t.title||' — '||to_char(t.due_on,'DD/MM/YYYY'),t.created_at,u.name FROM follow_up_tasks t JOIN users u ON u.id=t.created_by WHERE t.patient_id=$1 UNION ALL SELECT t.id::text||'-closed','follow_up',CASE WHEN t.completed_at IS NOT NULL THEN 'follow_up_completed' ELSE 'follow_up_cancelled' END,t.title,COALESCE(t.completed_at,t.cancelled_at),u.name FROM follow_up_tasks t JOIN users u ON u.id=t.closed_by WHERE t.patient_id=$1 AND t.closed_by IS NOT NULL UNION ALL SELECT s.id::text,'sale',CASE WHEN s.cancelled_at IS NULL THEN 'sale' ELSE 'sale_cancelled' END,s.product||' · '||s.quantity||' un. · R$ '||to_char(s.total_amount_cents/100.0,'FM999G999G990D00'),COALESCE(s.cancelled_at,s.created_at),u.name FROM sales s JOIN users u ON u.id=COALESCE(s.cancelled_by,s.created_by) WHERE s.patient_id=$1 UNION ALL SELECT p.id::text,'patient_created','patient_created','Paciente cadastrado',p.created_at,u.name FROM patients p JOIN users u ON u.id=p.created_by WHERE p.id=$1 ORDER BY occurred_at DESC`,
-          [request.params.id],
-        )
-      ).rows,
-    }),
+    async (request, reply) => {
+      const authorized = await loadAndAuthorizePatient(request, reply, request.params.id, "read");
+      if (!authorized) return;
+
+      const items = await pool.query(
+        `SELECT e.id::text,'event' kind,e.event_type type,
+                CASE WHEN EXISTS(SELECT 1 FROM patient_redactions pr WHERE pr.patient_id=e.patient_id) OR p.anonymized_at IS NOT NULL THEN '${ANONYMIZED_TEXT_PLACEHOLDER}' ELSE e.description END description,
+                e.occurred_at occurred_at,u.name author
+         FROM patient_events e
+         JOIN patients p ON p.id=e.patient_id
+         JOIN users u ON u.id=e.created_by
+         WHERE e.patient_id=$1
+         UNION ALL
+         SELECT t.id::text,'follow_up','follow_up_scheduled',t.title||' — '||to_char(t.due_on,'DD/MM/YYYY'),t.created_at,u.name
+         FROM follow_up_tasks t
+         JOIN users u ON u.id=t.created_by
+         WHERE t.patient_id=$1
+         UNION ALL
+         SELECT t.id::text||'-closed','follow_up',CASE WHEN t.completed_at IS NOT NULL THEN 'follow_up_completed' ELSE 'follow_up_cancelled' END,t.title,COALESCE(t.completed_at,t.cancelled_at),u.name
+         FROM follow_up_tasks t
+         JOIN users u ON u.id=t.closed_by
+         WHERE t.patient_id=$1 AND t.closed_by IS NOT NULL
+         UNION ALL
+         SELECT s.id::text,'sale',CASE WHEN s.cancelled_at IS NULL THEN 'sale' ELSE 'sale_cancelled' END,s.product||' · '||s.quantity||' un. · R$ '||to_char(s.total_amount_cents/100.0,'FM999G999G990D00'),COALESCE(s.cancelled_at,s.created_at),u.name
+         FROM sales s
+         JOIN users u ON u.id=COALESCE(s.cancelled_by,s.created_by)
+         WHERE s.patient_id=$1
+         UNION ALL
+         SELECT p.id::text,'patient_created','patient_created','Paciente cadastrado',p.created_at,u.name
+         FROM patients p
+         JOIN users u ON u.id=p.created_by
+         WHERE p.id=$1
+         ORDER BY occurred_at DESC`,
+        [request.params.id]
+      );
+      return { items: items.rows };
+    }
   );
 
   app.get<{ Querystring: { filter?: string } }>(
@@ -1387,6 +1535,12 @@ export function buildApp() {
         adaptation: "p.journey_status = 'adaptation'",
         "no-contact": `(COALESCE(last_event.occurred_on,p.created_at) AT TIME ZONE 'America/Sao_Paulo')::date <= ${today} - 90`,
       };
+      const values: unknown[] = [];
+      let docFilter = "";
+      if (request.currentUser!.role === "doctor") {
+        values.push(request.currentUser!.id);
+        docFilter = `AND (p.responsible_doctor_id = $${values.length} OR p.assigned_user_id = $${values.length})`;
+      }
       const tasks =
         await pool.query(`SELECT p.id patient_id,p.name patient_name,p.phone,p.journey_status,t.id task_id,t.title,t.due_on,
       CASE WHEN t.due_on < ${today} THEN 'overdue' WHEN t.due_on = ${today} THEN 'today' ELSE 'upcoming' END timing,
@@ -1394,11 +1548,12 @@ export function buildApp() {
       FROM patients p
       LEFT JOIN LATERAL (SELECT id,title,due_on FROM follow_up_tasks WHERE patient_id=p.id AND completed_at IS NULL AND cancelled_at IS NULL ORDER BY due_on LIMIT 1) t ON true
       LEFT JOIN LATERAL (SELECT max(occurred_at) occurred_on FROM patient_events WHERE patient_id=p.id) last_event ON true
-      WHERE p.archived_at IS NULL AND ${conditions[filter]} AND (${filter === "adaptation" || filter === "no-contact" ? "true" : "t.id IS NOT NULL"})
-      ORDER BY t.due_on NULLS FIRST,p.name LIMIT 200`);
+      WHERE p.archived_at IS NULL ${docFilter} AND ${conditions[filter]} AND (${filter === "adaptation" || filter === "no-contact" ? "true" : "t.id IS NOT NULL"})
+      ORDER BY t.due_on NULLS FIRST,p.name LIMIT 200`, values);
       return { items: tasks.rows };
     },
   );
+
   app.post<{
     Body: {
       patientId?: string;
@@ -1421,6 +1576,10 @@ export function buildApp() {
           .code(400)
           .type("application/problem+json")
           .send({ title: "Informe paciente, tarefa e data", status: 400 });
+
+      const authorized = await loadAndAuthorizePatient(request, reply, patientId, "write");
+      if (!authorized) return;
+
       const id = randomUUID();
       const created = await pool.query(
         `WITH task AS (INSERT INTO follow_up_tasks(id,patient_id,title,due_on,notes,created_by) SELECT $1,p.id,$3,$4::date,$5,$6 FROM patients p WHERE p.id=$2 AND p.archived_at IS NULL RETURNING id), audited AS (INSERT INTO audit_events(user_id,action,entity_type,entity_id,details) SELECT $6,'create','follow_up_task',id,jsonb_build_object('patientId',$2::text,'dueOn',$4::text) FROM task) SELECT id FROM task`,
@@ -1441,11 +1600,25 @@ export function buildApp() {
       return reply.code(201).send({ id });
     },
   );
+
   async function closeFollowUp(
     request: FastifyRequest<{ Params: { id: string } }>,
     reply: any,
     action: "complete" | "cancel",
   ) {
+    const taskRes = await pool.query<{ patient_id: string }>(
+      "SELECT patient_id FROM follow_up_tasks WHERE id=$1 AND completed_at IS NULL AND cancelled_at IS NULL",
+      [request.params.id]
+    );
+    if (!taskRes.rowCount)
+      return reply
+        .code(409)
+        .type("application/problem+json")
+        .send({ title: "Tarefa não encontrada ou já encerrada", status: 409 });
+
+    const authorized = await loadAndAuthorizePatient(request, reply, taskRes.rows[0].patient_id, "write");
+    if (!authorized) return;
+
     const column = action === "complete" ? "completed_at" : "cancelled_at";
     const result = await pool.query(
       `WITH closed AS (UPDATE follow_up_tasks SET ${column}=now(),closed_by=$2 WHERE id=$1 AND completed_at IS NULL AND cancelled_at IS NULL RETURNING id,patient_id), audited AS (INSERT INTO audit_events(user_id,action,entity_type,entity_id,details) SELECT $2,$3,'follow_up_task',id,jsonb_build_object('patientId',patient_id::text) FROM closed) SELECT id FROM closed`,
@@ -1458,6 +1631,7 @@ export function buildApp() {
         .send({ title: "Tarefa não encontrada ou já encerrada", status: 409 });
     return reply.code(204).send();
   }
+
   app.post<{ Params: { id: string } }>(
     "/api/follow-ups/:id/complete",
     { preHandler: authenticated },
@@ -1468,6 +1642,7 @@ export function buildApp() {
     { preHandler: authenticated },
     (request, reply) => closeFollowUp(request, reply, "cancel"),
   );
+
   app.patch<{
     Params: { id: string };
     Body: {
@@ -1552,6 +1727,7 @@ export function buildApp() {
       client.release();
     }
   });
+
   app.get("/api/company-accounts", { preHandler: authenticated }, async () => ({
     accounts: (
       await pool.query(
@@ -1622,6 +1798,10 @@ export function buildApp() {
             title: "Confira produto, valor, data, caixa e pagamentos",
             status: 400,
           });
+
+      const authorized = await loadAndAuthorizePatient(request, reply, body.patientId, "write");
+      if (!authorized) return;
+
       const client = await pool.connect();
       try {
         await client.query("BEGIN");
@@ -1821,6 +2001,10 @@ export function buildApp() {
           .code(404)
           .type("application/problem+json")
           .send({ title: "Venda não encontrada", status: 404 });
+
+      const authorized = await loadAndAuthorizePatient(request, reply, sale.rows[0].patient_id, "read");
+      if (!authorized) return;
+
       const installments = await pool.query(
         `SELECT r.*,f.occurred_on received_on,rev.id IS NOT NULL reversed FROM receivable_installments r LEFT JOIN financial_entries f ON f.receivable_installment_id=r.id AND f.reversal_of_id IS NULL LEFT JOIN financial_entries rev ON rev.reversal_of_id=f.id WHERE r.sale_id=$1 ORDER BY r.due_on,r.id`,
         [request.params.id],
@@ -2045,8 +2229,8 @@ export function buildApp() {
       const year = Number(request.query.year ?? new Date().getFullYear());
       const month = Number(request.query.month ?? new Date().getMonth() + 1);
       const doctorId = request.currentUser!.id;
-      const isAdmin = request.currentUser!.role === "admin";
-      
+      const isAdminOrOperator = ["admin", "operator"].includes(request.currentUser!.role);
+
       const startDate = `${year}-${String(month).padStart(2, "0")}-01`;
       const endDate = `${year}-${String(month).padStart(2, "0")}-31`;
 
@@ -2059,21 +2243,23 @@ export function buildApp() {
          JOIN patients p ON p.id = t.patient_id
          WHERE t.cancelled_at IS NULL AND p.archived_at IS NULL
            AND t.due_on >= $1 AND t.due_on <= $2
-           ${isAdmin ? "" : "AND (t.doctor_id = $3 OR p.assigned_user_id = $3)"}
+           ${isAdminOrOperator ? "" : "AND (p.responsible_doctor_id = $3 OR p.assigned_user_id = $3)"}
          ORDER BY t.due_on, p.name`,
-        isAdmin ? [startDate, endDate] : [startDate, endDate, doctorId],
+        isAdminOrOperator ? [startDate, endDate] : [startDate, endDate, doctorId],
       );
 
       const events = await pool.query(
-        `SELECT e.id event_id, e.patient_id, p.name patient_name, p.phone, e.event_type, e.description, e.created_at
+        `SELECT e.id event_id, e.patient_id, p.name patient_name, p.phone, e.event_type,
+                CASE WHEN EXISTS(SELECT 1 FROM patient_redactions pr WHERE pr.patient_id=e.patient_id) OR p.anonymized_at IS NOT NULL THEN '${ANONYMIZED_TEXT_PLACEHOLDER}' ELSE e.description END description,
+                e.created_at
          FROM patient_events e
          JOIN patients p ON p.id = e.patient_id
          WHERE p.archived_at IS NULL
            AND (e.created_at AT TIME ZONE 'America/Sao_Paulo')::date >= $1
            AND (e.created_at AT TIME ZONE 'America/Sao_Paulo')::date <= $2
-           ${isAdmin ? "" : "AND (e.doctor_id = $3 OR e.user_id = $3)"}
+           ${isAdminOrOperator ? "" : "AND (p.responsible_doctor_id = $3 OR p.assigned_user_id = $3)"}
          ORDER BY e.created_at DESC`,
-        isAdmin ? [startDate, endDate] : [startDate, endDate, doctorId],
+        isAdminOrOperator ? [startDate, endDate] : [startDate, endDate, doctorId],
       );
 
       return { year, month, tasks: tasks.rows, events: events.rows };
@@ -2082,16 +2268,14 @@ export function buildApp() {
 
   app.get("/api/doctor/patients", { preHandler: authenticated }, async (request) => {
     const doctorId = request.currentUser!.id;
-    const isAdmin = request.currentUser!.role === "admin";
+    const isAdminOrOperator = ["admin", "operator"].includes(request.currentUser!.role);
     const result = await pool.query(
       `SELECT DISTINCT p.id, p.name, p.phone, p.journey_status, p.next_contact_on, p.care_alert, p.notes, p.updated_at
        FROM patients p
-       LEFT JOIN patient_events e ON e.patient_id = p.id
-       LEFT JOIN follow_up_tasks t ON t.patient_id = p.id
        WHERE p.archived_at IS NULL
-         ${isAdmin ? "" : "AND (p.assigned_user_id = $1 OR e.doctor_id = $1 OR e.user_id = $1 OR t.doctor_id = $1)"}
+         ${isAdminOrOperator ? "" : "AND (p.responsible_doctor_id = $1 OR p.assigned_user_id = $1)"}
        ORDER BY p.name LIMIT 200`,
-      isAdmin ? [] : [doctorId],
+      isAdminOrOperator ? [] : [doctorId],
     );
     return { patients: result.rows };
   });
@@ -2104,6 +2288,10 @@ export function buildApp() {
       if (!patientId || !description || description.trim().length < 3) {
         return reply.code(400).type("application/problem+json").send({ title: "Informe o paciente e a observação clínica", status: 400 });
       }
+
+      const authorized = await loadAndAuthorizePatient(request, reply, patientId, "write");
+      if (!authorized) return;
+
       const client = await pool.connect();
       try {
         await client.query("BEGIN");

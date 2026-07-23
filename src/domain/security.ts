@@ -37,13 +37,17 @@ export type UserSubject = {
 export type PatientTarget = {
   id: string;
   responsible_doctor_id?: string | null;
+  assigned_user_id?: string | null;
 };
 
 export function canReadPatient(user: UserSubject, patient: PatientTarget): boolean {
   if (!user || !patient) return false;
   if (user.role === 'admin' || user.role === 'operator') return true;
   if (user.role === 'doctor') {
-    return Boolean(patient.responsible_doctor_id && patient.responsible_doctor_id === user.id);
+    return Boolean(
+      (patient.responsible_doctor_id && patient.responsible_doctor_id === user.id) ||
+      (patient.assigned_user_id && patient.assigned_user_id === user.id)
+    );
   }
   return false;
 }
@@ -56,7 +60,10 @@ export function canExportPatientData(user: UserSubject, patient: PatientTarget):
   if (!user || !patient) return false;
   if (user.role === 'admin') return true;
   if (user.role === 'doctor') {
-    return Boolean(patient.responsible_doctor_id && patient.responsible_doctor_id === user.id);
+    return Boolean(
+      (patient.responsible_doctor_id && patient.responsible_doctor_id === user.id) ||
+      (patient.assigned_user_id && patient.assigned_user_id === user.id)
+    );
   }
   return false;
 }
@@ -64,4 +71,10 @@ export function canExportPatientData(user: UserSubject, patient: PatientTarget):
 export function canReadAttachment(user: UserSubject, patient: PatientTarget): boolean {
   return canReadPatient(user, patient);
 }
+
+export function canModifyDoctorAssignment(user: UserSubject): boolean {
+  if (!user) return false;
+  return user.role === 'admin' || user.role === 'operator';
+}
+
 
