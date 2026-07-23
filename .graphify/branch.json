@@ -1,16 +1,16 @@
 {
   "schemaVersion": 1,
-  "branchName": "codex/pr-01-security-object-lgpd",
+  "branchName": "codex/pr-02-secure-attachments",
   "worktreePath": "C:\\Users\\milla\\Documents\\Projetos\\Git\\Fonolife",
   "upstream": null,
   "mergeBase": null,
-  "firstSeenHead": "cbaee24106a956b67a20e79e71b0d137ffd1bfa2",
-  "lastSeenHead": "cbaee24106a956b67a20e79e71b0d137ffd1bfa2",
-  "lastAnalyzedHead": "cbaee24106a956b67a20e79e71b0d137ffd1bfa2",
+  "firstSeenHead": "dbdb5db8afbff87aa8880faf631b12dbad70b965",
+  "lastSeenHead": "dbdb5db8afbff87aa8880faf631b12dbad70b965",
+  "lastAnalyzedHead": "dbdb5db8afbff87aa8880faf631b12dbad70b965",
   "stale": false,
   "staleReason": null,
   "staleSince": null,
   "lifecycleEvent": null,
-  "createdAt": "2026-07-23T22:49:49.117Z",
-  "updatedAt": "2026-07-23T22:49:49.117Z"
+  "createdAt": "2026-07-23T23:03:42.917Z",
+  "updatedAt": "2026-07-23T23:03:42.917Z"
 }
