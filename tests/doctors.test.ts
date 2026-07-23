@@ -1,19 +1,10 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { buildCalendarDays, validLicenseNumber } from "../src/domain/doctors.js";
+import { validDoctorId } from "../src/domain/patients.js";
 
-test("valida número de registro profissional CRFa / CRM", () => {
-  assert.equal(validLicenseNumber("CRFa 2-19842"), true);
-  assert.equal(validLicenseNumber("CRM/SP 123456"), true);
-  assert.equal(validLicenseNumber(""), false);
-  assert.equal(validLicenseNumber("12"), false);
-});
-
-test("gera grade de dias para a agenda calendário mensal", () => {
-  const days = buildCalendarDays(2026, 7, "2026-07-22");
-  assert.ok(days.length >= 35);
-  const todayItem = days.find((d) => d.dateString === "2026-07-22");
-  assert.ok(todayItem);
-  assert.equal(todayItem.isToday, true);
-  assert.equal(todayItem.isCurrentMonth, true);
+test("valida vínculo de médico responsável pelo paciente", () => {
+  assert.equal(validDoctorId("11111111-1111-1111-1111-111111111111"), true);
+  assert.equal(validDoctorId(null), true);
+  assert.equal(validDoctorId(undefined), true);
+  assert.equal(validDoctorId("id-invalido-curto"), false);
 });

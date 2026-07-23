@@ -10,4 +10,4 @@ export const isOneOf = <T extends string>(value: unknown, values: readonly T[]):
 export const normalizePhone = (value: unknown) => typeof value === 'string' ? value.replace(/\D/g, '') : '';
 export const validPatientName = (value: unknown) => typeof value === 'string' && value.trim().length >= 2;
 export const validPatientPhone = (value: unknown) => normalizePhone(value).length >= 10 && normalizePhone(value).length <= 13;
-
+export const validDoctorId = (value: unknown) => value === null || value === undefined || (typeof value === 'string' && /^[0-9a-f-]{36}$/i.test(value));
