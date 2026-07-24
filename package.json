@@ -4,7 +4,7 @@
   "private": true,
   "type": "module",
   "engines": {
-    "node": ">=24"
+    "node": ">=20"
   },
   "scripts": {
     "dev": "concurrently -k \"tsx watch src/server.ts\" \"vite\"",
@@ -16,7 +16,8 @@
     "bootstrap-admin": "tsx src/scripts/bootstrap-admin.ts",
     "typecheck": "tsc -p tsconfig.server.json --noEmit && tsc -p web/tsconfig.json --noEmit",
     "test": "node --import tsx --test tests/**/*.test.ts",
-    "test:e2e": "playwright test"
+    "test:e2e": "playwright test",
+    "ci:check": "bash scripts/ci-check.sh"
   },
   "dependencies": {
     "@fastify/cookie": "^11.0.2",
