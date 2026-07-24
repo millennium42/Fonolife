@@ -24,12 +24,12 @@
     "hash": "49e29a5b075a7f3143f077cb0f89dc9c"
   },
   "C:/Users/milla/Documents/Projetos/Git/Fonolife/src/app.ts": {
-    "mtime": 1784852297315.5117,
+    "mtime": 1784852483448.1726,
     "hash": "5ea67618ad463336a4777ea0a78bb433"
   },
   "C:/Users/milla/Documents/Projetos/Git/Fonolife/src/config.ts": {
-    "mtime": 1784852200560.6804,
-    "hash": "de81598ef8499abcf561fc34f835ff3b"
+    "mtime": 1784852483448.1726,
+    "hash": "e52c4c0a60aa5b440ad7b909910af6d5"
   },
   "C:/Users/milla/Documents/Projetos/Git/Fonolife/src/db/create-admin.ts": {
     "mtime": 1784747865828.1047,
@@ -164,8 +164,8 @@
     "hash": "06096ceea1d50a6be31f5f98392d8448"
   },
   "C:/Users/milla/Documents/Projetos/Git/Fonolife/.github/workflows/ci.yml": {
-    "mtime": 1784849753935.044,
-    "hash": "136d9ca9c6225d0edb310cffbab1bf4e"
+    "mtime": 1784925839001.2903,
+    "hash": "702f0642a7d92dda89cdb1ed591b2180"
   },
   "C:/Users/milla/Documents/Projetos/Git/Fonolife/AGENTS.md": {
     "mtime": 1784849753935.044,
@@ -232,8 +232,8 @@
     "hash": "ed4dfcfe35cf345f6cdc130908860d41"
   },
   "C:/Users/milla/Documents/Projetos/Git/Fonolife/.graphify/GRAPH_REPORT.md": {
-    "mtime": 1784852108096.2493,
-    "hash": "6374b7d8f07b69312d1d9a2400835357"
+    "mtime": 1784852483402.71,
+    "hash": "830e31038559c05f2a15a9470ae8b644"
   },
   "C:/Users/milla/Documents/Projetos/Git/Fonolife/.graphify/description-instructions/batch-000.md": {
     "mtime": 1784852108096.2493,
@@ -280,8 +280,8 @@
     "hash": "a3025dab2d0501c0241ce0d5cadf85f8"
   },
   "C:/Users/milla/Documents/Projetos/Git/Fonolife/src/domain/attachments.ts": {
-    "mtime": 1784852215058.17,
-    "hash": "39c7cc6bd3f060f888fc375e3975d06c"
+    "mtime": 1784852483448.1726,
+    "hash": "894f3249f0516e2526e2f58234953377"
   },
   "C:/Users/milla/Documents/Projetos/Git/Fonolife/src/domain/whatsapp.ts": {
     "mtime": 1784751121977.3672,
@@ -468,15 +468,27 @@
     "hash": "8dde2428d38f407a3160f80b85eacabe"
   },
   "C:/Users/milla/Documents/Projetos/Git/Fonolife/tests/attachment-environment-boundary.test.ts": {
-    "mtime": 1784852170024.2925,
-    "hash": "8ecaa9888c096cae9816804d7420a569"
+    "mtime": 1784852483448.1726,
+    "hash": "8256971fbed964911edfa2a144b90df0"
   },
   "C:/Users/milla/Documents/Projetos/Git/Fonolife/.graphify/description-instructions/batch-010.md": {
     "mtime": 1784852108112.919,
     "hash": "bc3d5a1e668c17c1c849fc1bcb8eb9dc"
   },
   "C:/Users/milla/Documents/Projetos/Git/Fonolife/docs/attachments-environment-boundary.md": {
-    "mtime": 1784852363780.5515,
-    "hash": "4e6e6b7e3ed8a03ed4c364a71ea8d718"
+    "mtime": 1784852483431.5112,
+    "hash": "fc37d508ba1b37633361853d333eacc9"
+  },
+  "C:/Users/milla/Documents/Projetos/Git/Fonolife/tests/e2e/accessibility.spec.ts": {
+    "mtime": 1784925852730.2485,
+    "hash": "3c35912fe2877d5d66cc37fc00669835"
+  },
+  "C:/Users/milla/Documents/Projetos/Git/Fonolife/docs/5w2h-pr07-ci-graphify-hygiene.md": {
+    "mtime": 1784925864297,
+    "hash": "726d6665ecaaceea30ba472b595a6455"
+  },
+  "C:/Users/milla/Documents/Projetos/Git/Fonolife/docs/ci-protection.md": {
+    "mtime": 1784925871167.2898,
+    "hash": "09428caa9406ab58d07985171948aa1d"
   }
 }
