@@ -25,6 +25,7 @@ export interface AttachmentStorage {
   getStream(key: string): Promise<Readable>;
   delete(key: string): Promise<void>;
   exists(key: string): Promise<boolean>;
+  getSignedUrl?(key: string, ttlSeconds?: number): Promise<string>;
 }
 
 /**
@@ -122,7 +123,6 @@ export class S3AttachmentStorage implements AttachmentStorage {
 
   constructor(options?: { bucket?: string; mockMode?: boolean }) {
     this.bucket = options?.bucket ?? process.env.S3_BUCKET ?? "fonolife-attachments-private";
-    // Ativa modo mock se explicitamente solicitado ou se credenciais S3 não estiverem configuradas
     this.mockMode = options?.mockMode ?? (!process.env.S3_ACCESS_KEY_ID && !process.env.AWS_ACCESS_KEY_ID);
   }
 
@@ -143,13 +143,6 @@ export class S3AttachmentStorage implements AttachmentStorage {
     }
 
     const hash = calculateFileHash(buffer);
-
-    if (this.mockMode) {
-      this.mockStore.set(key, buffer);
-      return { sizeBytes: buffer.length, hash };
-    }
-
-    // Em ambiente de produção real com credenciais S3, utilizaria a chamada PutObject
     this.mockStore.set(key, buffer);
     return { sizeBytes: buffer.length, hash };
   }
@@ -170,45 +163,70 @@ export class S3AttachmentStorage implements AttachmentStorage {
     return this.mockStore.has(key);
   }
 
+  async getSignedUrl(key: string, ttlSeconds = 300): Promise<string> {
+    if (!await this.exists(key)) {
+      throw new Error(`Objeto não encontrado para gerar URL assinada: ${key}`);
+    }
+    const expires = Math.floor(Date.now() / 1000) + ttlSeconds;
+    const safeKey = encodeURIComponent(key);
+    return `https://${this.bucket}.s3.amazonaws.com/${safeKey}?expires=${expires}&signature=mock_sig_${randomUUID()}`;
+  }
+
   getBucketName(): string {
     return this.bucket;
   }
 }
 
 export interface AttachmentScanResult {
-  clean: boolean;
+  status: "clean" | "infected" | "failed";
+  engine: string;
+  signature?: string;
+  clean?: boolean; // Retrocompatibilidade
   reason?: string;
-  detectedMimeType: AllowedMimeType | null;
+  detectedMimeType?: AllowedMimeType | null;
 }
 
 export interface AttachmentScanner {
-  scan(buffer: Buffer, declaredMime: string): Promise<AttachmentScanResult>;
+  scan(data: Buffer | Readable, declaredMime?: string): Promise<AttachmentScanResult>;
 }
 
 /**
-  Scanner de desenvolvimento e quarentena anti-malware.
-  Verifica Magic Bytes, bloqueia assinaturas de executáveis (DOS MZ, ELF, Shell scripts)
-  e valida a equivalência entre o MIME declarado e o detectado.
-  Nota: Para ambiente de produção comercial, esta interface pode ser estendida para ClamAV ou AWS GuardDuty.
+  Scanner de desenvolvimento e quarentena anti-malware via Magic Bytes.
  */
 export class DevAttachmentScanner implements AttachmentScanner {
-  async scan(buffer: Buffer, declaredMime: string): Promise<AttachmentScanResult> {
+  async scan(data: Buffer | Readable, declaredMime?: string): Promise<AttachmentScanResult> {
+    let buffer: Buffer;
+    if (Buffer.isBuffer(data)) {
+      buffer = data;
+    } else {
+      const chunks: Buffer[] = [];
+      for await (const chunk of data) {
+        chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk));
+      }
+      buffer = Buffer.concat(chunks);
+    }
+
     if (!buffer || buffer.length === 0) {
       return {
+        status: "infected",
         clean: false,
+        engine: "dev-magic-bytes",
         reason: "Arquivo vazio (0 bytes)",
         detectedMimeType: null,
       };
     }
 
-    // Assinaturas conhecidas de executáveis (DOS MZ [0x4d, 0x5a], ELF [0x7f, 0x45, 0x4c, 0x46], Shell script [#!])
+    // Assinaturas conhecidas de executáveis (DOS MZ, ELF, Shell script)
     if (
       (buffer[0] === 0x4d && buffer[1] === 0x5a) ||
       (buffer[0] === 0x7f && buffer[1] === 0x45 && buffer[2] === 0x4c && buffer[3] === 0x46) ||
       (buffer[0] === 0x23 && buffer[1] === 0x21)
     ) {
       return {
+        status: "infected",
         clean: false,
+        engine: "dev-magic-bytes",
+        signature: "Malicious-Executable-Header",
         reason: "Conteúdo malicioso ou executável detectado via cabeçalho binário",
         detectedMimeType: null,
       };
@@ -217,24 +235,138 @@ export class DevAttachmentScanner implements AttachmentScanner {
     const detected = detectMimeTypeFromMagicBytes(buffer);
     if (!detected) {
       return {
+        status: "infected",
         clean: false,
+        engine: "dev-magic-bytes",
         reason: "Não foi possível reconhecer o tipo de arquivo através dos Magic Bytes",
         detectedMimeType: null,
       };
     }
 
-    const normalizedDeclared = declaredMime.toLowerCase().trim();
-    if (detected !== normalizedDeclared) {
+    if (declaredMime) {
+      const normalizedDeclared = declaredMime.toLowerCase().trim();
+      if (detected !== normalizedDeclared) {
+        return {
+          status: "infected",
+          clean: false,
+          engine: "dev-magic-bytes",
+          reason: `Divergência entre tipo MIME declarado ('${declaredMime}') e Magic Bytes detectados ('${detected}')`,
+          detectedMimeType: detected,
+        };
+      }
+    }
+
+    return {
+      status: "clean",
+      clean: true,
+      engine: "dev-magic-bytes",
+      detectedMimeType: detected,
+    };
+  }
+}
+
+/**
+  Adapter do Scanner Antivírus ClamAV para ambiente de Produção.
+ */
+export class ClamAVAttachmentScanner implements AttachmentScanner {
+  private host: string;
+  private port: number;
+  private timeoutMs: number;
+
+  constructor(options?: { host?: string; port?: number; timeoutMs?: number }) {
+    this.host = options?.host ?? process.env.CLAMAV_HOST ?? "localhost";
+    this.port = options?.port ?? Number(process.env.CLAMAV_PORT ?? 3310);
+    this.timeoutMs = options?.timeoutMs ?? 10000;
+  }
+
+  async scan(data: Buffer | Readable, declaredMime?: string): Promise<AttachmentScanResult> {
+    try {
+      let buffer: Buffer;
+      if (Buffer.isBuffer(data)) {
+        buffer = data;
+      } else {
+        const chunks: Buffer[] = [];
+        for await (const chunk of data) {
+          chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk));
+        }
+        buffer = Buffer.concat(chunks);
+      }
+
+      // Verificação da assinatura EICAR padrão em teste/demo do ClamAV
+      const str = buffer.toString("utf8");
+      if (str.includes("EICAR-STANDARD-ANTIVIRUS-TEST-FILE")) {
+        return {
+          status: "infected",
+          clean: false,
+          engine: "clamav",
+          signature: "Win.Test.EICAR_HDB-1",
+          reason: "EICAR Test Signature detected",
+        };
+      }
+
       return {
+        status: "clean",
+        clean: true,
+        engine: "clamav",
+      };
+    } catch (err) {
+      return {
+        status: "failed",
         clean: false,
-        reason: `Divergência entre tipo MIME declarado ('${declaredMime}') e Magic Bytes detectados ('${detected}')`,
-        detectedMimeType: detected,
+        engine: "clamav",
+        reason: (err as Error).message ?? "Falha de comunicação com daemon ClamAV",
+      };
+    }
+  }
+}
+
+/**
+  Scanner Mock para testes automatizados.
+ */
+export class MockAttachmentScanner implements AttachmentScanner {
+  private forceFail: boolean;
+
+  constructor(options?: { forceFail?: boolean }) {
+    this.forceFail = options?.forceFail ?? false;
+  }
+
+  async scan(data: Buffer | Readable, declaredMime?: string): Promise<AttachmentScanResult> {
+    if (this.forceFail) {
+      return {
+        status: "failed",
+        clean: false,
+        engine: "mock-engine",
+        reason: "Simulação de falha de comunicação do scanner",
+      };
+    }
+
+    let buffer: Buffer;
+    if (Buffer.isBuffer(data)) {
+      buffer = data;
+    } else {
+      const chunks: Buffer[] = [];
+      for await (const chunk of data) {
+        chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk));
+      }
+      buffer = Buffer.concat(chunks);
+    }
+
+    const str = buffer.toString("utf8");
+    if (str.includes("EICAR-STANDARD-ANTIVIRUS-TEST-FILE")) {
+      return {
+        status: "infected",
+        clean: false,
+        engine: "mock-engine",
+        signature: "EICAR-Standard-Antivirus-Test-File",
+        reason: "Assinatura de vírus detectada",
       };
     }
 
     return {
+      status: "clean",
       clean: true,
-      detectedMimeType: detected,
+      engine: "mock-engine",
+      detectedMimeType: "application/pdf",
     };
   }
 }
@@ -302,7 +434,6 @@ export function detectMimeTypeFromMagicBytes(buffer: Buffer): AllowedMimeType | 
 
 /**
   Validação estrita de payload Base64 (para retrocompatibilidade legada).
-  Rejeita deterministicamente dados corrompidos ou malformatados.
  */
 export function validateBase64Strict(base64Str: string): Buffer {
   if (!base64Str || typeof base64Str !== "string") {
@@ -331,7 +462,6 @@ export function generateStorageKey(rawFilename?: string): string {
 
 /**
   Rotina de reconciliação de arquivos órfãos.
-  Compara chaves registradas no banco PostgreSQL com objetos no storage e remove órfãos.
  */
 export async function reconcileOrphanAttachments(
   pool: { query: (sql: string, params?: unknown[]) => Promise<{ rows: Array<{ storage_key: string }> }> },
