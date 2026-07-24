@@ -170,3 +170,21 @@ tr:hover td { background: #f8fafc; }
   .shell nav button { padding: 0.4rem; font-size: 0.75rem; justify-content: center; }
   .pos-grid { grid-template-columns: 1fr; }
 }
+
+@media print {
+  body { background: white !important; color: black !important; font-size: 12pt; }
+  .shell header, .shell nav, .actions, .sub-tabs, button, .no-print { display: none !important; }
+  .modal-overlay { position: static !important; background: transparent !important; backdrop-filter: none !important; padding: 0 !important; }
+  .modal-content { box-shadow: none !important; border: none !important; padding: 0 !important; width: 100% !important; max-width: 100% !important; }
+  body * { visibility: hidden; }
+  #printable-medical-report, #printable-medical-report * { visibility: visible; }
+  #printable-medical-report {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+    margin: 0;
+    padding: 2rem;
+    background: white !important;
+  }
+}

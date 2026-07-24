@@ -220,7 +220,7 @@ function monthly(total: number, count: number, first: string) {
   });
 }
 
-function GlobalPatientModal({ patientId, onClose }: { patientId: string | null; onClose: () => void }) {
+function GlobalPatientModal({ user, patientId, onClose }: { user: User; patientId: string | null; onClose: () => void }) {
   if (!patientId) return null;
   return (
     <div className="modal-overlay" onClick={onClose}>
@@ -229,7 +229,7 @@ function GlobalPatientModal({ patientId, onClose }: { patientId: string | null; 
           <h2 style={{ margin: 0 }}>📋 Prontuário do Paciente</h2>
           <button className="secondary" onClick={onClose}>✕ Fechar Prontuário</button>
         </div>
-        <PatientRecord id={patientId} onBack={onClose} />
+        <PatientRecord id={patientId} user={user} onBack={onClose} />
       </div>
     </div>
   );
@@ -1124,7 +1124,7 @@ function Finance({ user, openGlobalPatient }: { user: User; openGlobalPatient: (
   );
 }
 
-function Patients({ initialPatientId, openGlobalPatient }: { initialPatientId?: string | null; openGlobalPatient: (id: string) => void }) {
+function Patients({ initialPatientId, user, openGlobalPatient }: { initialPatientId?: string | null; user: User; openGlobalPatient: (id: string) => void }) {
   const [patients, setPatients] = useState<Patient[]>([]);
   const [selectedId, setSelectedId] = useState<string | null>(initialPatientId || null);
   const [search, setSearch] = useState("");
@@ -1141,7 +1141,7 @@ function Patients({ initialPatientId, openGlobalPatient }: { initialPatientId?: 
   return (
     <div>
       {selectedId ? (
-        <PatientRecord id={selectedId} onBack={() => setSelectedId(null)} />
+        <PatientRecord id={selectedId} user={user} onBack={() => setSelectedId(null)} />
       ) : (
         <section className="card">
           <div className="section-title">
@@ -1363,6 +1363,219 @@ function PatientAttachments({ patientId }: { patientId: string }) {
   );
 }
 
+function PatientMedicalReports({ patientId, user }: { patientId: string; user: User }) {
+  const [reports, setReports] = useState<any[]>([]);
+  const [showNewModal, setShowNewModal] = useState(false);
+  const [viewReport, setViewReport] = useState<any | null>(null);
+  const [error, setError] = useState("");
+
+  const load = () => {
+    api(`/api/patients/${patientId}/medical-reports`)
+      .then((d) => setReports(d?.reports || []))
+      .catch(() => {});
+  };
+
+  useEffect(() => {
+    load();
+  }, [patientId]);
+
+  const handlePrint = async (reportId: string) => {
+    try {
+      await api(`/api/medical-reports/${reportId}/print-audit`, { method: "POST" });
+    } catch {}
+    window.print();
+  };
+
+  return (
+    <div style={{ marginTop: "1.5rem", padding: "1rem", border: "1px solid var(--border)", borderRadius: "6px" }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+        <h4>🩺 Laudos Médicos & Avaliações Fonoaudiológicas</h4>
+        <button type="button" onClick={() => setShowNewModal(true)}>+ Emitir Novo Laudo</button>
+      </div>
+
+      {error && <p className="error" role="alert">{error}</p>}
+
+      {reports.length === 0 ? (
+        <p style={{ fontSize: "0.85rem", color: "#64748b", marginTop: "0.5rem" }}>Nenhum laudo médico/fonoaudiológico emitido para este paciente.</p>
+      ) : (
+        <ul style={{ listStyle: "none", padding: 0, margin: "0.75rem 0 0 0" }}>
+          {reports.map((r) => (
+            <li key={r.id} style={{ padding: "0.75rem 0", borderBottom: "1px solid var(--border)", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+              <div>
+                <strong>{r.title}</strong>
+                <div style={{ fontSize: "0.85rem", color: "#475569" }}>
+                  Emitido em: {date(r.issued_at)} por <strong>{r.professional_name} ({r.professional_license})</strong>
+                </div>
+                <div style={{ fontSize: "0.85rem", color: "#64748b" }}>
+                  Diagnóstico: <em>{r.diagnosis}</em>
+                </div>
+              </div>
+              <div style={{ display: "flex", gap: "0.5rem" }}>
+                <button type="button" className="secondary" style={{ padding: "0.2rem 0.5rem", fontSize: "0.8rem", minHeight: "auto" }} onClick={() => setViewReport(r)}>
+                  👁️ Visualizar Laudo Timbrado
+                </button>
+              </div>
+            </li>
+          ))}
+        </ul>
+      )}
+
+      {/* Modal de Emissão de Laudo */}
+      {showNewModal && (
+        <NewMedicalReportModal
+          patientId={patientId}
+          user={user}
+          onClose={() => setShowNewModal(false)}
+          onCreated={() => { setShowNewModal(false); load(); }}
+        />
+      )}
+
+      {/* Modal de Visualização & Impressão do Laudo Timbrado */}
+      {viewReport && (
+        <div className="modal-overlay" onClick={() => setViewReport(null)}>
+          <div className="modal-content" onClick={(e) => e.stopPropagation()} style={{ width: "min(100%, 850px)", padding: "2rem" }}>
+            <div className="no-print" style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1.5rem", borderBottom: "1px solid #e2e8f0", paddingBottom: "0.75rem" }}>
+              <h3>👁️ Pré-visualização do Laudo Oficial Timbrado</h3>
+              <div style={{ display: "flex", gap: "0.5rem" }}>
+                <button type="button" onClick={() => handlePrint(viewReport.id)}>🖨️ Imprimir / Gerar PDF</button>
+                <button type="button" className="secondary" onClick={() => setViewReport(null)}>Fechar</button>
+              </div>
+            </div>
+
+            {/* Folha Oficial Timbrada */}
+            <div id="printable-medical-report" style={{ background: "white", padding: "2rem", border: "1px solid #cbd5e1", borderRadius: "8px", fontFamily: "Georgia, serif", color: "#0f172a", lineHeight: 1.6 }}>
+              {/* Cabeçalho da Clínica */}
+              <div style={{ textAlign: "center", borderBottom: "2px solid #0284c7", paddingBottom: "1rem", marginBottom: "1.5rem" }}>
+                <h2 style={{ color: "#0284c7", margin: 0, fontSize: "1.5rem", fontFamily: "sans-serif" }}>FONOLIFE</h2>
+                <h3 style={{ margin: "0.2rem 0", fontSize: "1.1rem", fontWeight: "normal", color: "#334155" }}>Clínica Integrada de Fonoaudiologia & Saúde Auditiva</h3>
+                <small style={{ color: "#64748b" }}>CNPJ: 12.345.678/0001-90 | Responsabilidade Técnica Fonoaudiológica</small>
+              </div>
+
+              <div style={{ background: "#f8fafc", padding: "1rem", borderRadius: "6px", marginBottom: "1.5rem", border: "1px solid #e2e8f0", fontSize: "0.95rem" }}>
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.5rem" }}>
+                  <div><strong>Paciente:</strong> {viewReport.patient_name || "Paciente Cadastrado"}</div>
+                  <div><strong>Data de Emissão:</strong> {date(viewReport.issued_at)}</div>
+                  <div><strong>Profissional Emissor:</strong> {viewReport.professional_name}</div>
+                  <div><strong>Registro Profissional:</strong> {viewReport.professional_license}</div>
+                </div>
+              </div>
+
+              <h2 style={{ textAlign: "center", fontSize: "1.3rem", margin: "1.5rem 0", color: "#0f172a", textTransform: "uppercase" }}>{viewReport.title}</h2>
+
+              <div style={{ marginBottom: "1.25rem" }}>
+                <h4 style={{ color: "#0284c7", marginBottom: "0.4rem" }}>1. Diagnóstico Clínico e Hipótese:</h4>
+                <p style={{ margin: 0, textIndent: "1rem" }}>{viewReport.diagnosis}</p>
+              </div>
+
+              {viewReport.audiometric_findings && (
+                <div style={{ marginBottom: "1.25rem" }}>
+                  <h4 style={{ color: "#0284c7", marginBottom: "0.4rem" }}>2. Achados Audiométricos & Limiares Tonais:</h4>
+                  <p style={{ margin: 0, textIndent: "1rem" }}>{viewReport.audiometric_findings}</p>
+                </div>
+              )}
+
+              <div style={{ marginBottom: "1.25rem" }}>
+                <h4 style={{ color: "#0284c7", marginBottom: "0.4rem" }}>3. Conduta Recomendada & Reabilitação:</h4>
+                <p style={{ margin: 0, textIndent: "1rem" }}>{viewReport.recommendation}</p>
+              </div>
+
+              {viewReport.conclusion && (
+                <div style={{ marginBottom: "1.5rem" }}>
+                  <h4 style={{ color: "#0284c7", marginBottom: "0.4rem" }}>4. Parecer Final & Aprazamento:</h4>
+                  <p style={{ margin: 0, textIndent: "1rem" }}>{viewReport.conclusion}</p>
+                </div>
+              )}
+
+              <div style={{ marginTop: "3.5rem", textAlign: "center" }}>
+                <div style={{ width: "300px", margin: "0 auto", borderTop: "1px solid #0f172a", paddingTop: "0.5rem" }}>
+                  <strong>{viewReport.professional_name}</strong>
+                  <div style={{ fontSize: "0.9rem", color: "#475569" }}>{viewReport.professional_license}</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function NewMedicalReportModal({ patientId, user, onClose, onCreated }: { patientId: string; user: User; onClose: () => void; onCreated: () => void }) {
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState("");
+
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    setSubmitting(true);
+    setError("");
+    const form = e.currentTarget, v = Object.fromEntries(new FormData(form));
+
+    try {
+      await api(`/api/patients/${patientId}/medical-reports`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          title: String(v.title),
+          diagnosis: String(v.diagnosis),
+          audiometricFindings: String(v.audiometricFindings || ""),
+          recommendation: String(v.recommendation),
+          conclusion: String(v.conclusion || ""),
+        }),
+      });
+      onCreated();
+    } catch (err: any) {
+      setError(err.message);
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  return (
+    <div className="modal-overlay" onClick={onClose}>
+      <div className="modal-content" onClick={(e) => e.stopPropagation()} style={{ width: "min(100%, 700px)" }}>
+        <h3>🩺 Emissão Formal de Laudo Clínico / Audiométrico</h3>
+        <p style={{ fontSize: "0.85rem", color: "#64748b" }}>
+          Emissor: <strong>{user.name}</strong> ({user.license_number || "Sem registro cadastrado"})
+        </p>
+
+        {error && <p className="error" role="alert">{error}</p>}
+
+        <form onSubmit={handleSubmit} className="form" style={{ marginTop: "1rem" }}>
+          <label>
+            Título do Laudo / Documento
+            <input name="title" required defaultValue="Laudo Audiométrico e Avaliação de Adaptação de Prótese Auditiva" placeholder="Ex: Avaliação Audiológica e Parecer de Reabilitação" />
+          </label>
+
+          <label>
+            Diagnóstico Clínico / Fonoaudiológico
+            <textarea name="diagnosis" rows={2} required placeholder="Ex: Perda auditiva neurossensorial bilateral de grau moderado a severo" />
+          </label>
+
+          <label>
+            Achados Audiométricos (Limiares, Vocal, Imitanciometria)
+            <textarea name="audiometricFindings" rows={3} placeholder="Ex: Rebaixamento em frequências agudas (3kHz-8kHz), SRT em 45dB, logoaudiometria com índice de percepção da fala em 88%" />
+          </label>
+
+          <label>
+            Conduta Recomendada & Reabilitação
+            <textarea name="recommendation" rows={2} required placeholder="Ex: Indicada adaptação de prótese auditiva digital com molde de silicone e acompanhamento mensal" />
+          </label>
+
+          <label>
+            Parecer Final & Aprazamento
+            <textarea name="conclusion" rows={2} placeholder="Ex: Paciente apto para uso contínuo do aparelho. Retorno em 30 dias para regulagem e verificação da resposta." />
+          </label>
+
+          <div style={{ display: "flex", justifyContent: "flex-end", gap: "0.5rem", marginTop: "1.5rem" }}>
+            <button type="button" className="secondary" onClick={onClose}>Cancelar</button>
+            <button type="submit" disabled={submitting}>{submitting ? "Gerando Laudo..." : "Emitir Laudo Oficial"}</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+}
+
 function PatientForm({ patient, onCancel, onDone }: { patient?: Patient; onCancel: () => void; onDone: (id: string, msg?: string) => void }) {
   const [doctors, setDoctors] = useState<any[]>([]);
   const [saving, setSaving] = useState(false);
@@ -1461,7 +1674,7 @@ function PatientForm({ patient, onCancel, onDone }: { patient?: Patient; onCance
   );
 }
 
-function PatientRecord({ id, onBack }: { id: string; onBack: () => void }) {
+function PatientRecord({ id, user, onBack }: { id: string; user: User; onBack: () => void }) {
   const [patient, setPatient] = useState<Patient | null>(null);
   const [timeline, setTimeline] = useState<TimelineItem[]>([]);
   const [editing, setEditing] = useState(false);
@@ -1559,6 +1772,7 @@ function PatientRecord({ id, onBack }: { id: string; onBack: () => void }) {
         {patient.notes && <p><strong>Observações Clínicas:</strong> {patient.notes}</p>}
 
         <PatientAttachments patientId={id} />
+        <PatientMedicalReports patientId={id} user={user} />
       </section>
 
       <div className="record-grid" style={{ marginTop: "1.5rem" }}>
@@ -2497,7 +2711,7 @@ function App() {
         {page === "Caixa (PDV)" ? (
           <PosCheckout user={user} openGlobalPatient={setGlobalPatientId} />
         ) : page === "Pacientes" ? (
-          <Patients initialPatientId={patientId} openGlobalPatient={setGlobalPatientId} />
+          <Patients user={user} initialPatientId={patientId} openGlobalPatient={setGlobalPatientId} />
         ) : page === "Acompanhamento" ? (
           <FollowUps openGlobalPatient={setGlobalPatientId} />
         ) : page === "Financeiro" ? (
@@ -2511,7 +2725,7 @@ function App() {
         )}
       </main>
 
-      <GlobalPatientModal patientId={globalPatientId} onClose={() => setGlobalPatientId(null)} />
+      <GlobalPatientModal user={user} patientId={globalPatientId} onClose={() => setGlobalPatientId(null)} />
     </div>
   );
 }
