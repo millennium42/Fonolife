@@ -24,6 +24,7 @@ import { attachmentRoutes } from "./modules/attachments/routes.js";
 import { catalogRoutes } from "./modules/catalog/routes.js";
 import { financeRoutes } from "./modules/finance/routes.js";
 import { doctorRoutes } from "./modules/doctors/routes.js";
+import { reportRoutes } from "./modules/reports/routes.js";
 import { privacyRoutes } from "./modules/privacy/routes.js";
 import { adminRoutes } from "./modules/admin/routes.js";
 
@@ -149,6 +150,7 @@ export function buildApp(customStorage?: AttachmentStorage, customScanner?: Atta
   app.register(catalogRoutes);
   app.register(financeRoutes);
   app.register(doctorRoutes);
+  app.register(reportRoutes);
   app.register(privacyRoutes);
   app.register(adminRoutes);
 
