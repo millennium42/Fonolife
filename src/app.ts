@@ -55,7 +55,10 @@ import {
   LocalAttachmentStorage,
   S3AttachmentStorage,
   DevAttachmentScanner,
+  ClamAVAttachmentScanner,
+  MockAttachmentScanner,
   type AttachmentStorage,
+  type AttachmentScanner,
 } from "./domain/attachments.js";
 import {
   ANONYMIZED_PHONE,
@@ -83,7 +86,7 @@ declare module "fastify" {
   }
 }
 
-export function buildApp(customStorage?: AttachmentStorage) {
+export function buildApp(customStorage?: AttachmentStorage, customScanner?: AttachmentScanner) {
   const app = Fastify({ logger: true, trustProxy: true });
   app.register(authRoutes);
   app.register(importRoutes);
@@ -91,9 +94,17 @@ export function buildApp(customStorage?: AttachmentStorage) {
   const attachmentStorage: AttachmentStorage = customStorage ?? (
     config.storageProvider === "s3"
       ? new S3AttachmentStorage({ bucket: config.s3Bucket })
+      : config.storageProvider === "demo"
+      ? new S3AttachmentStorage({ bucket: config.s3Bucket, mockMode: true })
       : new LocalAttachmentStorage()
   );
-  const attachmentScanner = new DevAttachmentScanner();
+  const attachmentScanner: AttachmentScanner = customScanner ?? (
+    config.scannerProvider === "clamav"
+      ? new ClamAVAttachmentScanner()
+      : config.scannerProvider === "mock"
+      ? new MockAttachmentScanner()
+      : new DevAttachmentScanner()
+  );
   app.register(cookie);
   app.addHook("onSend", async (_request, reply, payload) => {
     reply.header("x-content-type-options", "nosniff");
@@ -259,14 +270,42 @@ export function buildApp(customStorage?: AttachmentStorage) {
   };
 
   app.get("/api/health", async () => {
-    await pool.query("SELECT 1");
+    let dbStatus = "ok";
+    try {
+      await pool.query("SELECT 1");
+    } catch {
+      dbStatus = "down";
+    }
+
     let storageStatus = "ok";
     try {
       await attachmentStorage.exists("__health_check__");
     } catch {
       storageStatus = "degraded";
     }
-    return { status: "ok", storage: storageStatus, storageProvider: config.storageProvider };
+
+    let scannerStatus = "ok";
+    try {
+      await attachmentScanner.scan(Buffer.from("%PDF-1.4\n%%EOF"), "application/pdf");
+    } catch {
+      scannerStatus = "degraded";
+    }
+
+    let overallStatus: "healthy" | "degraded" | "unavailable" = "healthy";
+    if (dbStatus === "down") {
+      overallStatus = "unavailable";
+    } else if (storageStatus === "degraded" || scannerStatus === "degraded") {
+      overallStatus = "degraded";
+    }
+
+    return {
+      status: overallStatus,
+      database: dbStatus,
+      storage: storageStatus,
+      scanner: scannerStatus,
+      storageProvider: config.storageProvider,
+      scannerProvider: config.scannerProvider,
+    };
   });
   app.get("/api/config", async () => {
     return { demoMode: config.demo };
