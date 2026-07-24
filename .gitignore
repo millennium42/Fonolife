@@ -6,3 +6,11 @@ test-results/
 graphify-out/
 .graphify/cache/
 .graphify/.graphify_describe_pending
+.graphify/.graphify_detect.json
+.graphify/.graphify_labels.json
+.graphify/branch.json
+.graphify/description-instructions/
+.graphify/label-instructions/
+.graphify/scope.json
+.graphify/worktree.json
+

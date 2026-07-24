@@ -1,25 +1,25 @@
 # Graph Report - .  (2026-07-24)
 
 ## Corpus Check
-- 120 files · ~68.795 words
+- 111 files · ~60.355 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
-- 421 nodes · 1670 edges · 19 communities detected
+- 428 nodes · 1766 edges · 19 communities detected
 - Extraction: 100% EXTRACTED · 0% INFERRED · 0% AMBIGUOUS
 - Token cost: 0 input · 0 output
-- Edge kinds: ON_BRANCH: 811 · contains: 241 · imports: 187 · MODIFIES: 152 · PARENT_OF: 84 · imports_from: 73 · calls: 40 · references: 27 · reads_from: 20 · method: 19 · triggers: 11 · implements: 5
+- Edge kinds: ON_BRANCH: 901 · contains: 241 · imports: 187 · MODIFIES: 153 · PARENT_OF: 89 · imports_from: 73 · calls: 40 · references: 27 · reads_from: 20 · method: 19 · triggers: 11 · implements: 5
 
 
 ## Input Scope
 - Requested: auto
 - Resolved: committed (source: default-auto)
-- Included files: 120 · Candidates: 285
-- Excluded: 0 untracked · 6428 ignored · 0 sensitive · 0 missing committed
+- Included files: 111 · Candidates: 124
+- Excluded: 24 untracked · 6452 ignored · 0 sensitive · 0 missing committed
 - Recommendation: Use --scope all or graphify.yaml inputs.corpus for a knowledge-base folder.
 
 ## Graph Freshness
-- Built from Git commit: `e79f008`
+- Built from Git commit: `0acd48c`
 - Compare this hash to `git rev-parse HEAD` before trusting freshness-sensitive graph output.
 ## God Nodes (most connected - your core abstractions)
 1. `LocalAttachmentStorage` - 12 edges
@@ -44,8 +44,8 @@
 ## Communities
 
 ### Community 0 - "Community 0"
-Cohesion: 0.13
-Nodes (70): codex/01-servicos-catalogo-estoque, codex/02-medico-responsavel-prontuario-global, codex/03-caixa-pdv-relatorio-financeiro, codex/04-design-system-seed-demo, codex/fix-seed-fk-constraint, codex/p0-correcoes-criticas, codex/p1-refatoracao-tecnica, codex/p2-melhorias-operacionais (+62 more)
+Cohesion: 0.14
+Nodes (72): codex/01-servicos-catalogo-estoque, codex/02-medico-responsavel-prontuario-global, codex/03-caixa-pdv-relatorio-financeiro, codex/04-design-system-seed-demo, codex/fix-seed-fk-constraint, codex/p0-correcoes-criticas, codex/p1-refatoracao-tecnica, codex/p2-melhorias-operacionais (+64 more)
 
 ### Community 1 - "Community 1"
 Cohesion: 0.08
@@ -53,11 +53,11 @@ Nodes (42): calculateCsvHash(), calculateVersionedCsvHash(), CsvFinancialRow, Cs
 
 ### Community 2 - "Community 2"
 Cohesion: 0.10
-Nodes (34): cleanupExpiredSessions(), clearLoginFailures(), getRateLimitKey(), isLoginRateLimited(), memoryRateLimit, memorySessions, recordLoginFailure(), revokeUserSessions() (+26 more)
+Nodes (35): cleanupExpiredSessions(), clearLoginFailures(), getRateLimitKey(), isLoginRateLimited(), memoryRateLimit, memorySessions, recordLoginFailure(), revokeUserSessions() (+27 more)
 
 ### Community 3 - "Community 3"
-Cohesion: 0.17
-Nodes (43): codex/pr-04-csv-validation, codex/pr-05-auth-csrf-hardening, codex/pr-06-attachments-production-boundary, main, 0b8c651 fix(csrf): endurecer validacao de origem, 1091aa4 feat(core): implementa melhorias operacionais e de qualidade P2, 1524f7f test(auth): cobrir limite distribuído e revogação de sessões, 1af0f9a docs(auth): documentar origem, falhas e recuperação (+35 more)
+Cohesion: 0.16
+Nodes (46): codex/pr-05-auth-csrf-hardening, codex/pr-06-attachments-production-boundary, codex/pr-07-ci-graphify-hygiene, main, 0b8c651 fix(csrf): endurecer validacao de origem, 1091aa4 feat(core): implementa melhorias operacionais e de qualidade P2, 1524f7f test(auth): cobrir limite distribuído e revogação de sessões, 1af0f9a docs(auth): documentar origem, falhas e recuperação (+38 more)
 
 ### Community 4 - "Community 4"
 Cohesion: 0.08
@@ -129,14 +129,14 @@ _Questions this graph is uniquely positioned to answer:_
 - **Why does `S3AttachmentStorage` connect `Community 4` to `Community 1`?**
   _High betweenness centrality (0.031) - this node is a cross-community bridge._
 - **Why does `LocalAttachmentStorage` connect `Community 4` to `Community 1`?**
-  _High betweenness centrality (0.029) - this node is a cross-community bridge._
+  _High betweenness centrality (0.028) - this node is a cross-community bridge._
 - **Why does `ClamAVAttachmentScanner` connect `Community 4` to `Community 1`?**
-  _High betweenness centrality (0.010) - this node is a cross-community bridge._
+  _High betweenness centrality (0.009) - this node is a cross-community bridge._
 - **What connects `company_accounts`, `login_rate_limits`, `User` to the rest of the system?**
   _52 weakly-connected nodes found - possible documentation gaps or missing edges._
 - **Should `Community 0` be split into smaller, more focused modules?**
-  _Cohesion score 0.1297335203366059 - nodes in this community are weakly interconnected._
+  _Cohesion score 0.13527435610302352 - nodes in this community are weakly interconnected._
 - **Should `Community 1` be split into smaller, more focused modules?**
   _Cohesion score 0.07948568088836938 - nodes in this community are weakly interconnected._
 - **Should `Community 2` be split into smaller, more focused modules?**
-  _Cohesion score 0.10448979591836735 - nodes in this community are weakly interconnected._
+  _Cohesion score 0.10352941176470588 - nodes in this community are weakly interconnected._
