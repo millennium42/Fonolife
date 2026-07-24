@@ -843,6 +843,37 @@ function Finance({ user, openGlobalPatient }: { user: User; openGlobalPatient: (
     }
   }
 
+  const [settleReceivable, setSettleReceivable] = useState<Receivable | null>(null);
+
+  async function handleConfirmSettle(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    if (!settleReceivable) return;
+    setError("");
+    setMessage("");
+    const formData = new FormData(e.currentTarget);
+    const receivedOn = String(formData.get("receivedOn"));
+    const companyAccountId = String(formData.get("companyAccountId"));
+    const paymentMethod = String(formData.get("paymentMethod"));
+
+    try {
+      await api(`/api/finance/receivables/${settleReceivable.id}/settle`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          clientRequestId: crypto.randomUUID(),
+          receivedOn,
+          companyAccountId,
+          paymentMethod,
+        }),
+      });
+      setSettleReceivable(null);
+      setMessage(`Baixa de parcela confirmada para ${settleReceivable.patient_name}.`);
+      await load();
+    } catch (err: any) {
+      setError(err.message);
+    }
+  }
+
   return (
     <section className="card">
       <div className="section-title">
@@ -969,10 +1000,11 @@ function Finance({ user, openGlobalPatient }: { user: User; openGlobalPatient: (
               <th>Paciente</th>
               <th>Vencimento</th>
               <th>Produto / Serviço</th>
-              <th>Caixa</th>
+              <th>Caixa Emissor</th>
               <th>Forma</th>
               <th>Valor</th>
               <th>Status</th>
+              <th>Ações</th>
             </tr>
           </thead>
           <tbody>
@@ -989,10 +1021,59 @@ function Finance({ user, openGlobalPatient }: { user: User; openGlobalPatient: (
                     {r.status === "received" ? "Recebido" : r.status === "expected" ? "Previsto" : "Cancelado"}
                   </span>
                 </td>
+                <td>
+                  {r.status === "expected" && (
+                    <button type="button" style={{ padding: "0.2rem 0.5rem", fontSize: "0.8rem", minHeight: "auto" }} onClick={() => setSettleReceivable(r)}>
+                      💳 Baixar Parcela
+                    </button>
+                  )}
+                </td>
               </tr>
             ))}
           </tbody>
         </table>
+      )}
+
+      {/* Modal de Baixa de Parcela */}
+      {settleReceivable && (
+        <div className="modal-overlay" onClick={() => setSettleReceivable(null)}>
+          <div className="modal-content" onClick={(e) => e.stopPropagation()} style={{ width: "min(100%, 550px)" }}>
+            <h2>💳 Baixar Parcela — {settleReceivable.patient_name}</h2>
+            <p style={{ color: "#64748b", fontSize: "0.9rem" }}>
+              Item: <strong>{settleReceivable.product}</strong> | Valor: <strong>{money(settleReceivable.amount_cents)}</strong>
+            </p>
+
+            <form onSubmit={handleConfirmSettle} className="form" style={{ marginTop: "1rem" }}>
+              <label>
+                Data do Recebimento Real
+                <input name="receivedOn" type="date" defaultValue={today()} required />
+              </label>
+
+              <label>
+                Caixa / Conta Receptora
+                <select name="companyAccountId" defaultValue={accounts.find((a) => a.short_label === settleReceivable.company_account_label)?.id || accounts[0]?.id || ""} required>
+                  {accounts.map((a) => (
+                    <option key={a.id} value={a.id}>{a.short_label} — {a.trade_name}</option>
+                  ))}
+                </select>
+              </label>
+
+              <label>
+                Meio de Pagamento
+                <select name="paymentMethod" defaultValue={settleReceivable.payment_method}>
+                  {Object.entries(paymentLabels).map(([k, v]) => (
+                    <option key={k} value={k}>{v}</option>
+                  ))}
+                </select>
+              </label>
+
+              <div style={{ display: "flex", justifyContent: "flex-end", gap: "0.5rem", marginTop: "1.5rem" }}>
+                <button type="button" className="secondary" onClick={() => setSettleReceivable(null)}>Cancelar</button>
+                <button type="submit">Confirmar Recebimento</button>
+              </div>
+            </form>
+          </div>
+        </div>
       )}
 
       {showForm && (
@@ -1030,7 +1111,7 @@ function Finance({ user, openGlobalPatient }: { user: User; openGlobalPatient: (
             </div>
             <label>
               Justificativa do Estorno (Mínimo 3 caracteres)
-              <input value={reversalReason} onChange={(e) => setReversalReason(e.target.value)} placeholder="Ex: Lançamento duplicado pelo operador" required />
+              <input value={reversalReason} onChange={(e) => setReversalReason(e.target.value)} placeholder="Ex: Lançamento duplicado pelo operador" required minLength={3} />
             </label>
             <div className="actions" style={{ marginTop: "1rem" }}>
               <button type="button" className="danger" onClick={handleConfirmReversal}>Confirmar Estorno Auditado</button>

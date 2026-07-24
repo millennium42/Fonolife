@@ -1,6 +1,7 @@
 import { test, describe } from "node:test";
 import assert from "node:assert/strict";
-import { validFinancialEntry, validCents } from "../src/domain/finance.js";
+import { validFinancialEntry } from "../src/domain/finance.js";
+import { validCents } from "../src/domain/sales.js";
 
 describe("Suíte de Validação de Financeiro, Ledger e PDV (PR-10)", () => {
   test("valida centavos inteiros e rejeita valores zerados ou negativos", () => {
