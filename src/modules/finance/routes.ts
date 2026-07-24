@@ -444,8 +444,8 @@ export async function financeRoutes(app: FastifyInstance) {
     return { receivables: result.rows.map(row => ({ ...row, amount_cents: Number(row.amount_cents) })) };
   });
 
-  app.post<{ Params: { id: string }; Body: { clientRequestId?: string; receivedOn?: string } }>("/api/finance/receivables/:id/settle", { preHandler: authenticated }, async (request, reply) => {
-    const { clientRequestId, receivedOn } = request.body ?? {};
+  app.post<{ Params: { id: string }; Body: { clientRequestId?: string; receivedOn?: string; companyAccountId?: string; paymentMethod?: string } }>("/api/finance/receivables/:id/settle", { preHandler: authenticated }, async (request, reply) => {
+    const { clientRequestId, receivedOn, companyAccountId, paymentMethod } = request.body ?? {};
     if (!/^[0-9a-f-]{36}$/i.test(clientRequestId ?? "") || !/^\d{4}-\d{2}-\d{2}$/.test(receivedOn ?? "")) return reply.code(400).type("application/problem+json").send({ title: "Informe a data do recebimento", status: 400 });
     const client = await pool.connect();
     try {
@@ -457,8 +457,10 @@ export async function financeRoutes(app: FastifyInstance) {
       const retryAfterLock = await client.query("SELECT id FROM financial_entries WHERE client_request_id=$1", [clientRequestId]);
       if (retryAfterLock.rowCount) { await client.query("COMMIT"); return { id: retryAfterLock.rows[0].id, idempotent: true }; }
       const row = installment.rows[0], id = randomUUID();
-      await client.query(`INSERT INTO financial_entries(id,client_request_id,entry_type,category,description,amount_cents,competence_on,occurred_on,payment_method,company_account_id,patient_id,sale_id,receivable_installment_id,created_by) VALUES($1,$2,'income','hearing_aid_sale',$3,$4,$5,$6,$7,$8,$9,$10,$11,$12)`, [id,clientRequestId,`Venda: ${row.product}`,row.amount_cents,row.sold_on,receivedOn,row.payment_method,row.company_account_id,row.patient_id,row.sale_id,row.id,request.currentUser!.id]);
-      await client.query("INSERT INTO audit_events(user_id,action,entity_type,entity_id,details) VALUES($1,'settle','receivable_installment',$2,$3)", [request.currentUser!.id,row.id,{ financialEntryId:id, receivedOn }]);
+      const targetAccountId = companyAccountId || row.company_account_id;
+      const targetPaymentMethod = paymentMethod || row.payment_method;
+      await client.query(`INSERT INTO financial_entries(id,client_request_id,entry_type,category,description,amount_cents,competence_on,occurred_on,payment_method,company_account_id,patient_id,sale_id,receivable_installment_id,created_by) VALUES($1,$2,'income','hearing_aid_sale',$3,$4,$5,$6,$7,$8,$9,$10,$11,$12)`, [id,clientRequestId,`Venda: ${row.product}`,row.amount_cents,row.sold_on,receivedOn,targetPaymentMethod,targetAccountId,row.patient_id,row.sale_id,row.id,request.currentUser!.id]);
+      await client.query("INSERT INTO audit_events(user_id,action,entity_type,entity_id,details) VALUES($1,'settle','receivable_installment',$2,$3)", [request.currentUser!.id,row.id,{ financialEntryId:id, receivedOn, companyAccountId: targetAccountId }]);
       await client.query("COMMIT");
       return reply.code(201).send({ id });
     } catch (error: any) { await client.query("ROLLBACK"); const retry = await pool.query("SELECT id FROM financial_entries WHERE client_request_id=$1", [clientRequestId]); if (retry.rowCount) return { id: retry.rows[0].id, idempotent: true }; throw error; } finally { client.release(); }
