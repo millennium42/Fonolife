@@ -85,6 +85,7 @@ type ServiceItem = {
   cmv_cents: number;
   execution_time_minutes: number;
   active: boolean;
+  version?: number;
   products: { productId: string; quantity: number; productName: string; unitPriceCents: number }[];
 };
 type ProductItem = {
@@ -92,10 +93,13 @@ type ProductItem = {
   name: string;
   brand: string;
   model: string;
+  sku?: string | null;
   price_cents: number;
   cost_cents: number;
+  min_stock?: number;
   stock_balance: number;
   active: boolean;
+  version?: number;
 };
 type FinanceSummary = {
   consolidated: {
@@ -746,333 +750,7 @@ function PosCheckout({ user, openGlobalPatient }: { user: User; openGlobalPatien
   );
 }
 
-function Inventory({ user, openGlobalPatient }: { user: User; openGlobalPatient: (id: string) => void }) {
-  const [activeTab, setActiveTab] = useState<"products" | "services" | "movements">("products");
-  const [products, setProducts] = useState<ProductItem[]>([]);
-  const [services, setServices] = useState<ServiceItem[]>([]);
-  const [movements, setMovements] = useState<any[]>([]);
-  const [error, setError] = useState("");
-  const [loading, setLoading] = useState(false);
-  const [showAddProduct, setShowAddProduct] = useState(false);
-  const [showAddService, setShowAddService] = useState(false);
-  const [showAddMovement, setShowAddMovement] = useState(false);
-  const [selectedProductForAdjustment, setSelectedProductForAdjustment] = useState<ProductItem | null>(null);
 
-  const loadData = () => {
-    api("/api/products").then((d) => setProducts(d?.products || [])).catch((e) => setError(e.message));
-    api("/api/services").then((d) => setServices(d?.services || [])).catch(() => {});
-    api("/api/inventory/movements").then((d) => setMovements(d?.movements || [])).catch(() => {});
-  };
-
-  useEffect(() => {
-    loadData();
-  }, []);
-
-  async function handleAddProduct(e: React.FormEvent<HTMLFormElement>) {
-    e.preventDefault();
-    setLoading(true);
-    setError("");
-    const form = e.currentTarget,
-      v = Object.fromEntries(new FormData(form));
-    try {
-      await api("/api/admin/products", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          name: String(v.name),
-          brand: String(v.brand),
-          model: String(v.model),
-          priceCents: cents(String(v.price)),
-          costCents: cents(String(v.cost || "0")),
-        }),
-      });
-      setShowAddProduct(false);
-      loadData();
-    } catch (err: any) {
-      setError(err.message);
-    } finally {
-      setLoading(false);
-    }
-  }
-
-  async function handleAddService(e: React.FormEvent<HTMLFormElement>) {
-    e.preventDefault();
-    setLoading(true);
-    setError("");
-    const form = e.currentTarget,
-      v = Object.fromEntries(new FormData(form));
-    try {
-      await api("/api/services", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          name: String(v.name),
-          description: String(v.description),
-          priceCents: cents(String(v.price)),
-          cmvCents: cents(String(v.cmv || "0")),
-          executionTimeMinutes: Number(v.executionTimeMinutes || 30),
-        }),
-      });
-      setShowAddService(false);
-      loadData();
-    } catch (err: any) {
-      setError(err.message);
-    } finally {
-      setLoading(false);
-    }
-  }
-
-  async function handleAddMovement(e: React.FormEvent<HTMLFormElement>) {
-    e.preventDefault();
-    setLoading(true);
-    setError("");
-    const form = e.currentTarget,
-      v = Object.fromEntries(new FormData(form));
-    try {
-      await api("/api/inventory/movements", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          productId: String(v.productId),
-          movementType: String(v.movementType),
-          quantity: Number(v.quantity),
-          notes: String(v.notes),
-        }),
-      });
-      setShowAddMovement(false);
-      setSelectedProductForAdjustment(null);
-      loadData();
-    } catch (err: any) {
-      setError(err.message);
-    } finally {
-      setLoading(false);
-    }
-  }
-
-  return (
-    <section className="card">
-      <div className="section-title">
-        <div>
-          <h2>📦 Catálogo de Produtos, Serviços & Estoque</h2>
-          <p>Gerencie aparelhos auditivos, exames fonoaudiológicos, insumos e movimentações auditadas.</p>
-        </div>
-        <div className="actions">
-          {user.role === "admin" && (
-            <>
-              <button className="secondary" onClick={() => setShowAddProduct(!showAddProduct)}>+ Produto</button>
-              <button className="secondary" onClick={() => setShowAddService(!showAddService)}>+ Serviço</button>
-              <button onClick={() => setShowAddMovement(!showAddMovement)}>+ Ajuste Estoque</button>
-            </>
-          )}
-        </div>
-      </div>
-
-      <div className="sub-tabs">
-        <button className={activeTab === "products" ? "active" : ""} onClick={() => setActiveTab("products")}>
-          Aparelhos & Produtos ({products.length})
-        </button>
-        <button className={activeTab === "services" ? "active" : ""} onClick={() => setActiveTab("services")}>
-          Serviços Fonoaudiológicos ({services.length})
-        </button>
-        <button className={activeTab === "movements" ? "active" : ""} onClick={() => setActiveTab("movements")}>
-          Histórico de Estoque ({movements.length})
-        </button>
-      </div>
-
-      {error && <p className="error" role="alert">{error}</p>}
-
-      {showAddProduct && (
-        <form className="panel form" onSubmit={handleAddProduct} style={{ marginBottom: "1.5rem" }}>
-          <h3>Cadastrar Produto / Aparelho Auditivo</h3>
-          <div className="fields">
-            <label>Nome <input name="name" required placeholder="Ex: Aparelho Charge&Go 7AX" /></label>
-            <label>Marca <input name="brand" required placeholder="Ex: Audibel" /></label>
-            <label>Modelo <input name="model" required placeholder="Ex: 7AX" /></label>
-            <label>Preço de Venda (R$) <input name="price" required placeholder="Ex: 4500,00" /></label>
-            <label>CMV / Custo da Mercadoria (R$) <input name="cost" placeholder="Ex: 1800,00" /></label>
-          </div>
-          <button disabled={loading}>{loading ? "Salvando..." : "Salvar Produto no Catálogo"}</button>
-        </form>
-      )}
-
-      {showAddService && (
-        <form className="panel form" onSubmit={handleAddService} style={{ marginBottom: "1.5rem" }}>
-          <h3>Cadastrar Serviço Fonoaudiológico</h3>
-          <div className="fields">
-            <label>Nome do Serviço <input name="name" required placeholder="Ex: Audiometria Tonal e Vocal Completa" /></label>
-            <label>Preço Sugerido (R$) <input name="price" required placeholder="Ex: 250,00" /></label>
-            <label>CMV / Custo Estimado (R$) <input name="cmv" placeholder="Ex: 45,00" /></label>
-            <label>Tempo de Execução (minutos) <input name="executionTimeMinutes" type="number" defaultValue={45} required /></label>
-          </div>
-          <label className="wide">Descrição do Atendimento <textarea name="description" rows={2} placeholder="Descreva os procedimentos fonoaudiológicos aplicados..." /></label>
-          <button disabled={loading}>{loading ? "Salvando..." : "Salvar Serviço no Catálogo"}</button>
-        </form>
-      )}
-
-      {(showAddMovement || selectedProductForAdjustment) && (
-        <div className="modal-overlay" onClick={() => { setShowAddMovement(false); setSelectedProductForAdjustment(null); }}>
-          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
-            <form onSubmit={handleAddMovement} className="form">
-              <h3>📦 Popup Modal de Ajuste de Estoque Auditado</h3>
-              <label>
-                Produto / Aparelho
-                <select name="productId" defaultValue={selectedProductForAdjustment?.id || ""} required>
-                  <option value="">-- Selecione o produto --</option>
-                  {products.map((p) => (
-                    <option key={p.id} value={p.id}>{p.name} ({p.brand} {p.model}) [Atual: {p.stock_balance} un.]</option>
-                  ))}
-                </select>
-              </label>
-              <label>
-                Tipo de Ajuste
-                <select name="movementType" required>
-                  <option value="entry">Entrada (Adicionar Estoque)</option>
-                  <option value="adjustment">Ajuste / Contagem / Perda Auditada</option>
-                </select>
-              </label>
-              <label>
-                Quantidade (Positivo para entrada, negativo para perda/baixa)
-                <input name="quantity" type="number" required placeholder="Ex: 10 ou -2" />
-              </label>
-              <label>
-                Justificativa / Observação do Ajuste
-                <input name="notes" required placeholder="Ex: Nota fiscal 1234 ou contagem física de estoque" />
-              </label>
-              <div className="actions" style={{ marginTop: "1rem" }}>
-                <button disabled={loading}>{loading ? "Registrando..." : "Confirmar Ajuste de Estoque"}</button>
-                <button type="button" className="secondary" onClick={() => { setShowAddMovement(false); setSelectedProductForAdjustment(null); }}>Cancelar</button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
-
-      {activeTab === "products" && (
-        <div>
-          <table>
-            <thead>
-              <tr>
-                <th>Nome</th>
-                <th>Marca / Modelo</th>
-                <th>Preço Venda</th>
-                <th>CMV (Custo)</th>
-                <th>Margem Bruta</th>
-                <th>Estoque Atual</th>
-                <th>Ações</th>
-              </tr>
-            </thead>
-            <tbody>
-              {products.map((p) => {
-                const marginCents = p.price_cents - (p.cost_cents || 0);
-                return (
-                  <tr key={p.id}>
-                    <td><strong>{p.name}</strong></td>
-                    <td>{p.brand} {p.model}</td>
-                    <td>{money(p.price_cents)}</td>
-                    <td>{money(p.cost_cents || 0)}</td>
-                    <td style={{ color: marginCents > 0 ? "#16a34a" : "#dc2626", fontWeight: "bold" }}>
-                      {money(marginCents)}
-                    </td>
-                    <td>
-                      <span className={`badge ${p.stock_balance > 0 ? "success" : "danger"}`}>
-                        {p.stock_balance} un.
-                      </span>
-                    </td>
-                    <td>
-                      <button
-                        type="button"
-                        className="secondary"
-                        style={{ padding: "0.2rem 0.5rem", fontSize: "0.8rem", minHeight: "auto" }}
-                        onClick={() => setSelectedProductForAdjustment(p)}
-                      >
-                        ⚡ Ajustar Estoque (Modal)
-                      </button>
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
-      )}
-
-      {activeTab === "services" && (
-        <div>
-          <table>
-            <thead>
-              <tr>
-                <th>Serviço Fonoaudiológico</th>
-                <th>Preço</th>
-                <th>CMV</th>
-                <th>Duração</th>
-                <th>Insumos / Produtos Consumidos</th>
-              </tr>
-            </thead>
-            <tbody>
-              {services.map((s) => (
-                <tr key={s.id}>
-                  <td>
-                    <strong>{s.name}</strong>
-                    {s.description && <small style={{ display: "block", color: "#64748b" }}>{s.description}</small>}
-                  </td>
-                  <td>{money(s.price_cents)}</td>
-                  <td>{money(s.cmv_cents)}</td>
-                  <td>⏱️ {s.execution_time_minutes} min</td>
-                  <td>
-                    {s.products && s.products.length > 0 ? (
-                      s.products.map((p) => (
-                        <span key={p.productId} className="badge info" style={{ marginRight: "0.3rem" }}>
-                          {p.quantity}x {p.productName}
-                        </span>
-                      ))
-                    ) : (
-                      <span style={{ color: "#94a3b8", fontSize: "0.85rem" }}>Nenhum insumo direto</span>
-                    )}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      )}
-
-      {activeTab === "movements" && (
-        <div>
-          <table>
-            <thead>
-              <tr>
-                <th>Data / Hora</th>
-                <th>Produto</th>
-                <th>Tipo de Movimentação</th>
-                <th>Qtd. Alterada</th>
-                <th>Justificativa / Nota</th>
-                <th>Operador Responsável</th>
-              </tr>
-            </thead>
-            <tbody>
-              {movements.map((m) => (
-                <tr key={m.id}>
-                  <td>{date(m.created_at)}</td>
-                  <td><strong>{m.product_name}</strong></td>
-                  <td>
-                    <span className={`badge ${m.movement_type === "entry" ? "success" : m.movement_type === "sale_deduction" ? "info" : "warning"}`}>
-                      {m.movement_type === "entry" ? "Entrada" : m.movement_type === "sale_deduction" ? "Baixa por Venda" : "Ajuste Auditado"}
-                    </span>
-                  </td>
-                  <td style={{ fontWeight: "bold", color: m.quantity > 0 ? "#16a34a" : "#dc2626" }}>
-                    {m.quantity > 0 ? `+${m.quantity}` : m.quantity}
-                  </td>
-                  <td>{m.notes}</td>
-                  <td>{m.created_by_name}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      )}
-    </section>
-  );
-}
 
 function Finance({ user, openGlobalPatient }: { user: User; openGlobalPatient: (id: string) => void }) {
   const [tab, setTab] = useState<"entries" | "receivables">("entries");
@@ -1864,6 +1542,578 @@ function WhatsAppButton({ patientId, phone, patientName, defaultMessage }: { pat
     <button type="button" className="secondary" onClick={(e) => { e.stopPropagation(); handleOpen(); }} style={{ padding: "0.2rem 0.5rem", fontSize: "0.85rem", minHeight: "auto" }}>
       💬 WhatsApp
     </button>
+  );
+}
+
+type InventoryMovementItem = {
+  id: string;
+  product_id: string;
+  product_name: string;
+  product_sku?: string | null;
+  movement_type: "entry" | "sale_deduction" | "adjustment";
+  quantity: number;
+  notes: string;
+  created_by_name: string;
+  created_at: string;
+};
+
+function Inventory({ user }: { user: User; openGlobalPatient?: (id: string) => void }) {
+  const [products, setProducts] = useState<ProductItem[]>([]);
+  const [services, setServices] = useState<ServiceItem[]>([]);
+  const [movements, setMovements] = useState<InventoryMovementItem[]>([]);
+  const [subTab, setSubTab] = useState<"products" | "services" | "low_stock" | "movements">("products");
+  const [search, setSearch] = useState("");
+  const [error, setError] = useState("");
+  const [message, setMessage] = useState("");
+
+  // Controladores de Modais
+  const [adjustProduct, setAdjustProduct] = useState<ProductItem | null>(null);
+  const [editProduct, setEditProduct] = useState<ProductItem | null | "new">(null);
+  const [editService, setEditService] = useState<ServiceItem | null | "new">(null);
+
+  const loadData = () => {
+    setError("");
+    api("/api/products")
+      .then((data) => setProducts(data.products || []))
+      .catch((err) => setError(err.message));
+    api("/api/services")
+      .then((data) => setServices(data.services || []))
+      .catch((err) => setError(err.message));
+    api("/api/inventory/movements")
+      .then((data) => setMovements(data.movements || []))
+      .catch(() => {});
+  };
+
+  useEffect(() => {
+    loadData();
+  }, []);
+
+  const lowStockProducts = products.filter((p) => p.stock_balance <= (p.min_stock ?? 0));
+  const totalStockValue = products.reduce((acc, p) => acc + p.stock_balance * (p.cost_cents || 0), 0);
+
+  const filteredProducts = products.filter((p) => {
+    if (!search.trim()) return true;
+    const term = search.toLowerCase();
+    return (
+      p.name.toLowerCase().includes(term) ||
+      p.brand.toLowerCase().includes(term) ||
+      p.model.toLowerCase().includes(term) ||
+      (p.sku && p.sku.toLowerCase().includes(term))
+    );
+  });
+
+  const filteredServices = services.filter((s) => {
+    if (!search.trim()) return true;
+    const term = search.toLowerCase();
+    return s.name.toLowerCase().includes(term) || s.description.toLowerCase().includes(term);
+  });
+
+  // Ações dos Modais
+  const handleSaveProduct = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    setError("");
+    setMessage("");
+    const formData = new FormData(e.currentTarget);
+    const data = {
+      name: String(formData.get("name")),
+      brand: String(formData.get("brand")),
+      model: String(formData.get("model")),
+      sku: String(formData.get("sku") || ""),
+      priceCents: cents(String(formData.get("price"))),
+      costCents: cents(String(formData.get("cost") || "0")),
+      minStock: Number(formData.get("minStock") || 0),
+    };
+
+    try {
+      if (editProduct === "new") {
+        await api("/api/admin/products", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(data),
+        });
+        setMessage("Produto criado com sucesso!");
+      } else if (editProduct) {
+        await api(`/api/admin/products/${editProduct.id}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ ...data, version: editProduct.version }),
+        });
+        setMessage("Produto atualizado com sucesso!");
+      }
+      setEditProduct(null);
+      loadData();
+    } catch (err: any) {
+      setError(err.message);
+    }
+  };
+
+  const handleSaveService = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    setError("");
+    setMessage("");
+    const formData = new FormData(e.currentTarget);
+    const data = {
+      name: String(formData.get("name")),
+      description: String(formData.get("description")),
+      priceCents: cents(String(formData.get("price"))),
+      cmvCents: cents(String(formData.get("cmv") || "0")),
+      executionTimeMinutes: Number(formData.get("executionTimeMinutes") || 0),
+    };
+
+    try {
+      if (editService === "new") {
+        await api("/api/services", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(data),
+        });
+        setMessage("Serviço criado com sucesso!");
+      } else if (editService) {
+        await api(`/api/services/${editService.id}`, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ ...data, version: editService.version }),
+        });
+        setMessage("Serviço atualizado com sucesso!");
+      }
+      setEditService(null);
+      loadData();
+    } catch (err: any) {
+      setError(err.message);
+    }
+  };
+
+  const handleAdjustStock = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    if (!adjustProduct) return;
+    setError("");
+    setMessage("");
+    const formData = new FormData(e.currentTarget);
+    const movementType = String(formData.get("movementType"));
+    let qty = Number(formData.get("quantity") || 0);
+    const notes = String(formData.get("notes") || "").trim();
+
+    if (!notes || notes.length < 2) {
+      setError("Justificativa é obrigatória para qualquer ajuste de estoque.");
+      return;
+    }
+
+    if (movementType === "sale_deduction") {
+      qty = -Math.abs(qty);
+    } else if (movementType === "adjustment") {
+      const isNegative = formData.get("adjustmentDirection") === "decrease";
+      qty = isNegative ? -Math.abs(qty) : Math.abs(qty);
+    }
+
+    try {
+      const endpoint = user.role === "admin" ? "/api/admin/inventory/movements" : "/api/inventory/movements";
+      await api(endpoint, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          productId: adjustProduct.id,
+          movementType,
+          quantity: qty,
+          notes,
+          clientRequestId: crypto.randomUUID(),
+        }),
+      });
+      setMessage(`Movimentação de estoque registrada para ${adjustProduct.name}.`);
+      setAdjustProduct(null);
+      loadData();
+    } catch (err: any) {
+      setError(err.message);
+    }
+  };
+
+  return (
+    <div>
+      {error && <p className="error" role="alert">{error}</p>}
+      {message && <p className="success" role="status">{message}</p>}
+
+      {/* Resumo de Indicadores em Cards */}
+      <div className="cards" style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: "1rem", marginBottom: "1.5rem" }}>
+        <div className="card">
+          <h3>📦 Total de Produtos</h3>
+          <p style={{ fontSize: "1.75rem", fontWeight: "bold", margin: "0.25rem 0" }}>{products.length}</p>
+          <small style={{ color: "#64748b" }}>Cadastrados no catálogo</small>
+        </div>
+        <div className="card">
+          <h3>💰 Custo do Estoque</h3>
+          <p style={{ fontSize: "1.75rem", fontWeight: "bold", margin: "0.25rem 0", color: "var(--primary)" }}>{money(totalStockValue)}</p>
+          <small style={{ color: "#64748b" }}>Valor acumulado em saldo</small>
+        </div>
+        <div className="card" style={{ borderColor: lowStockProducts.length > 0 ? "#ef4444" : undefined }}>
+          <h3 style={{ color: lowStockProducts.length > 0 ? "#dc2626" : undefined }}>⚠️ Baixo Estoque</h3>
+          <p style={{ fontSize: "1.75rem", fontWeight: "bold", margin: "0.25rem 0", color: lowStockProducts.length > 0 ? "#dc2626" : "inherit" }}>
+            {lowStockProducts.length}
+          </p>
+          <small style={{ color: "#64748b" }}>Itens no limite ou abaixo</small>
+        </div>
+        <div className="card">
+          <h3>🩺 Serviços Ativos</h3>
+          <p style={{ fontSize: "1.75rem", fontWeight: "bold", margin: "0.25rem 0" }}>{services.filter((s) => s.active).length}</p>
+          <small style={{ color: "#64748b" }}>Atendimentos e procedimentos</small>
+        </div>
+      </div>
+
+      {/* Barra de Ações e Filtros */}
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "1rem", marginBottom: "1rem" }}>
+        <div className="tabs">
+          <button className={subTab === "products" ? "active" : ""} onClick={() => setSubTab("products")}>
+            📦 Produtos ({filteredProducts.length})
+          </button>
+          <button className={subTab === "services" ? "active" : ""} onClick={() => setSubTab("services")}>
+            🩺 Serviços ({filteredServices.length})
+          </button>
+          <button className={subTab === "low_stock" ? "active" : ""} onClick={() => setSubTab("low_stock")}>
+            ⚠️ Baixo Estoque ({lowStockProducts.length})
+          </button>
+          <button className={subTab === "movements" ? "active" : ""} onClick={() => setSubTab("movements")}>
+            📜 Histórico ({movements.length})
+          </button>
+        </div>
+
+        <div style={{ display: "flex", gap: "0.5rem", alignItems: "center" }}>
+          <input
+            type="search"
+            placeholder="Buscar por nome, marca, SKU..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            style={{ width: "240px" }}
+          />
+          {user.role === "admin" && (
+            <>
+              <button type="button" onClick={() => setEditProduct("new")}>+ Novo Produto</button>
+              <button type="button" className="secondary" onClick={() => setEditService("new")}>+ Novo Serviço</button>
+            </>
+          )}
+        </div>
+      </div>
+
+      {/* Conteúdo das Sub-abas */}
+      {subTab === "products" && (
+        <div className="panel">
+          <table className="table">
+            <thead>
+              <tr>
+                <th>SKU</th>
+                <th>Nome / Produto</th>
+                <th>Marca / Modelo</th>
+                <th>Estoque Atual</th>
+                <th>Estoque Mín.</th>
+                <th>Preço Venda</th>
+                <th>Custo (CMV)</th>
+                <th>Ações</th>
+              </tr>
+            </thead>
+            <tbody>
+              {filteredProducts.length === 0 ? (
+                <tr><td colSpan={8} style={{ textAlign: "center", color: "#64748b", padding: "2rem" }}>Nenhum produto encontrado.</td></tr>
+              ) : (
+                filteredProducts.map((p) => (
+                  <tr key={p.id} style={{ backgroundColor: p.stock_balance <= (p.min_stock ?? 0) ? "#fef2f2" : undefined }}>
+                    <td><code>{p.sku || "—"}</code></td>
+                    <td><strong>{p.name}</strong></td>
+                    <td>{p.brand} {p.model}</td>
+                    <td>
+                      <span className={`badge ${p.stock_balance <= (p.min_stock ?? 0) ? "error" : "success"}`}>
+                        {p.stock_balance} un.
+                      </span>
+                    </td>
+                    <td>{p.min_stock ?? 0} un.</td>
+                    <td><strong>{money(p.price_cents)}</strong></td>
+                    <td>{money(p.cost_cents)}</td>
+                    <td>
+                      <div style={{ display: "flex", gap: "0.4rem" }}>
+                        <button type="button" className="secondary" style={{ padding: "0.2rem 0.5rem", fontSize: "0.85rem" }} onClick={() => setAdjustProduct(p)}>
+                          ⚖️ Ajustar Estoque
+                        </button>
+                        {user.role === "admin" && (
+                          <button type="button" className="secondary" style={{ padding: "0.2rem 0.5rem", fontSize: "0.85rem" }} onClick={() => setEditProduct(p)}>
+                            ✏️ Editar
+                          </button>
+                        )}
+                      </div>
+                    </td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
+      )}
+
+      {subTab === "services" && (
+        <div className="panel">
+          <table className="table">
+            <thead>
+              <tr>
+                <th>Serviço / Atendimento</th>
+                <th>Descrição</th>
+                <th>Duração</th>
+                <th>Preço Venda</th>
+                <th>CMV Derivado</th>
+                <th>Margem Estimada</th>
+                <th>Insumos Consumidos</th>
+                <th>Ações</th>
+              </tr>
+            </thead>
+            <tbody>
+              {filteredServices.length === 0 ? (
+                <tr><td colSpan={8} style={{ textAlign: "center", color: "#64748b", padding: "2rem" }}>Nenhum serviço cadastrado.</td></tr>
+              ) : (
+                filteredServices.map((s) => {
+                  const cmv = s.cmv_cents || 0;
+                  const margin = s.price_cents - cmv;
+                  const marginPct = s.price_cents > 0 ? Math.round((margin / s.price_cents) * 100) : 0;
+                  return (
+                    <tr key={s.id}>
+                      <td><strong>{s.name}</strong></td>
+                      <td>{s.description || "—"}</td>
+                      <td>⏱️ {s.execution_time_minutes} min</td>
+                      <td><strong>{money(s.price_cents)}</strong></td>
+                      <td>{money(cmv)}</td>
+                      <td>
+                        <span className={`badge ${marginPct >= 50 ? "success" : marginPct > 0 ? "warning" : "error"}`}>
+                          {money(margin)} ({marginPct}%)
+                        </span>
+                      </td>
+                      <td>
+                        {s.products && s.products.length > 0 ? (
+                          <small>{s.products.map((sp) => `${sp.productName} (${sp.quantity}x)`).join(", ")}</small>
+                        ) : (
+                          <span style={{ color: "#94a3b8" }}>Nenhum insumo</span>
+                        )}
+                      </td>
+                      <td>
+                        {user.role === "admin" && (
+                          <button type="button" className="secondary" style={{ padding: "0.2rem 0.5rem", fontSize: "0.85rem" }} onClick={() => setEditService(s)}>
+                            ✏️ Editar
+                          </button>
+                        )}
+                      </td>
+                    </tr>
+                  );
+                })
+              )}
+            </tbody>
+          </table>
+        </div>
+      )}
+
+      {subTab === "low_stock" && (
+        <div className="panel">
+          <h3>⚠️ Produtos em Baixo Estoque (Estoque Atual ≤ Estoque Mínimo)</h3>
+          <table className="table">
+            <thead>
+              <tr>
+                <th>SKU</th>
+                <th>Produto</th>
+                <th>Marca / Modelo</th>
+                <th>Estoque Atual</th>
+                <th>Estoque Mínimo</th>
+                <th>Necessidade</th>
+                <th>Ações</th>
+              </tr>
+            </thead>
+            <tbody>
+              {lowStockProducts.length === 0 ? (
+                <tr><td colSpan={7} style={{ textAlign: "center", color: "#16a34a", padding: "2rem" }}>✅ Nenhum produto em baixo estoque! Todos os itens estão com estoque adequado.</td></tr>
+              ) : (
+                lowStockProducts.map((p) => (
+                  <tr key={p.id} style={{ backgroundColor: "#fef2f2" }}>
+                    <td><code>{p.sku || "—"}</code></td>
+                    <td><strong>{p.name}</strong></td>
+                    <td>{p.brand} {p.model}</td>
+                    <td><span className="badge error">{p.stock_balance} un.</span></td>
+                    <td>{p.min_stock ?? 0} un.</td>
+                    <td><strong>+{Math.max(0, (p.min_stock ?? 0) - p.stock_balance)} un.</strong></td>
+                    <td>
+                      <button type="button" onClick={() => setAdjustProduct(p)}>⚖️ Registrar Entrada</button>
+                    </td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
+      )}
+
+      {subTab === "movements" && (
+        <div className="panel">
+          <h3>📜 Histórico Imutável de Movimentações de Estoque (Append-only)</h3>
+          <table className="table">
+            <thead>
+              <tr>
+                <th>Data / Hora</th>
+                <th>Produto</th>
+                <th>Tipo de Movimento</th>
+                <th>Qtd.</th>
+                <th>Justificativa / Observação</th>
+                <th>Operador</th>
+              </tr>
+            </thead>
+            <tbody>
+              {movements.length === 0 ? (
+                <tr><td colSpan={6} style={{ textAlign: "center", color: "#64748b", padding: "2rem" }}>Nenhuma movimentação registrada.</td></tr>
+              ) : (
+                movements.map((m) => (
+                  <tr key={m.id}>
+                    <td>{date(m.created_at)}</td>
+                    <td><strong>{m.product_name}</strong> {m.product_sku ? `(${m.product_sku})` : ""}</td>
+                    <td>
+                      <span className={`badge ${m.movement_type === "entry" ? "success" : m.movement_type === "sale_deduction" ? "warning" : "info"}`}>
+                        {m.movement_type === "entry" ? "📥 Entrada" : m.movement_type === "sale_deduction" ? "📤 Baixa Venda/Consumo" : "⚖️ Ajuste Manual"}
+                      </span>
+                    </td>
+                    <td>
+                      <strong style={{ color: m.quantity > 0 ? "#16a34a" : "#dc2626" }}>
+                        {m.quantity > 0 ? `+${m.quantity}` : m.quantity} un.
+                      </strong>
+                    </td>
+                    <td>{m.notes || "—"}</td>
+                    <td>{m.created_by_name}</td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
+      )}
+
+      {/* Modal de Ajuste de Estoque */}
+      {adjustProduct && (
+        <div className="modal-overlay" onClick={() => setAdjustProduct(null)}>
+          <div className="modal-content" onClick={(e) => e.stopPropagation()} style={{ width: "min(100%, 550px)" }}>
+            <h2>⚖️ Ajustar Estoque — {adjustProduct.name}</h2>
+            <p style={{ color: "#64748b", fontSize: "0.9rem" }}>
+              Estoque atual: <strong>{adjustProduct.stock_balance} un.</strong> | Estoque mínimo: <strong>{adjustProduct.min_stock ?? 0} un.</strong>
+            </p>
+
+            <form onSubmit={handleAdjustStock} className="form" style={{ marginTop: "1rem" }}>
+              <label>
+                Tipo de Movimentação
+                <select name="movementType" defaultValue="entry">
+                  <option value="entry">📥 Entrada (Compra / Reposição de Estoque)</option>
+                  <option value="sale_deduction">📤 Baixa / Consumo Manual</option>
+                  <option value="adjustment">⚖️ Ajuste de Inventário</option>
+                </select>
+              </label>
+
+              <label>
+                Direção do Ajuste (apenas se Tipo = Ajuste)
+                <select name="adjustmentDirection" defaultValue="increase">
+                  <option value="increase">➕ Aumentar Estoque</option>
+                  <option value="decrease">➖ Reduzir Estoque</option>
+                </select>
+              </label>
+
+              <label>
+                Quantidade (unidades)
+                <input name="quantity" type="number" min={1} defaultValue={1} required />
+              </label>
+
+              <label>
+                Justificativa Obrigatória (Auditoria)
+                <input name="notes" required placeholder="Ex: Nota Fiscal 12345, Contagem física de inventário, etc." minLength={2} />
+              </label>
+
+              <div style={{ display: "flex", justifyContent: "flex-end", gap: "0.5rem", marginTop: "1.5rem" }}>
+                <button type="button" className="secondary" onClick={() => setAdjustProduct(null)}>Cancelar</button>
+                <button type="submit">Confirmar Ajuste</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Modal de Cadastro / Edição de Produto */}
+      {editProduct && (
+        <div className="modal-overlay" onClick={() => setEditProduct(null)}>
+          <div className="modal-content" onClick={(e) => e.stopPropagation()} style={{ width: "min(100%, 600px)" }}>
+            <h2>{editProduct === "new" ? "📦 Novo Produto" : `✏️ Editar Produto — ${editProduct.name}`}</h2>
+
+            <form onSubmit={handleSaveProduct} className="form" style={{ marginTop: "1rem" }}>
+              <div className="fields">
+                <label className="wide">
+                  Nome do Produto / Aparelho Auditivo
+                  <input name="name" defaultValue={editProduct !== "new" ? editProduct.name : ""} required placeholder="Ex: Pure Charge&Go 7AX" />
+                </label>
+                <label>
+                  Marca / Fabricante
+                  <input name="brand" defaultValue={editProduct !== "new" ? editProduct.brand : ""} required placeholder="Ex: Signia" />
+                </label>
+                <label>
+                  Modelo / Código
+                  <input name="model" defaultValue={editProduct !== "new" ? editProduct.model : ""} required placeholder="Ex: 7AX RIC" />
+                </label>
+                <label>
+                  Código SKU
+                  <input name="sku" defaultValue={editProduct !== "new" ? editProduct.sku || "" : ""} placeholder="Ex: SIG-P7AX-001" />
+                </label>
+                <label>
+                  Preço de Venda (R$)
+                  <input name="price" defaultValue={editProduct !== "new" ? (editProduct.price_cents / 100).toFixed(2) : ""} required placeholder="Ex: 4500,00" />
+                </label>
+                <label>
+                  Custo Unitário / CMV (R$)
+                  <input name="cost" defaultValue={editProduct !== "new" ? (editProduct.cost_cents / 100).toFixed(2) : "0.00"} placeholder="Ex: 2100,00" />
+                </label>
+                <label>
+                  Estoque Mínimo Alerta (un.)
+                  <input name="minStock" type="number" min={0} defaultValue={editProduct !== "new" ? editProduct.min_stock ?? 0 : 2} required />
+                </label>
+              </div>
+
+              <div style={{ display: "flex", justifyContent: "flex-end", gap: "0.5rem", marginTop: "1.5rem" }}>
+                <button type="button" className="secondary" onClick={() => setEditProduct(null)}>Cancelar</button>
+                <button type="submit">Salvar Produto</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Modal de Cadastro / Edição de Serviço */}
+      {editService && (
+        <div className="modal-overlay" onClick={() => setEditService(null)}>
+          <div className="modal-content" onClick={(e) => e.stopPropagation()} style={{ width: "min(100%, 650px)" }}>
+            <h2>{editService === "new" ? "🩺 Novo Serviço Fonoaudiológico" : `✏️ Editar Serviço — ${editService.name}`}</h2>
+
+            <form onSubmit={handleSaveService} className="form" style={{ marginTop: "1rem" }}>
+              <div className="fields">
+                <label className="wide">
+                  Nome do Serviço / Procedimento
+                  <input name="name" defaultValue={editService !== "new" ? editService.name : ""} required placeholder="Ex: Seleção e Adaptação de Aparelho Auditivo" />
+                </label>
+                <label className="wide">
+                  Descrição / Protocolo Clínico
+                  <input name="description" defaultValue={editService !== "new" ? editService.description : ""} placeholder="Ex: Consulta para molde auricular, testes e calibração de ganho" />
+                </label>
+                <label>
+                  Preço do Serviço (R$)
+                  <input name="price" defaultValue={editService !== "new" ? (editService.price_cents / 100).toFixed(2) : ""} required placeholder="Ex: 350,00" />
+                </label>
+                <label>
+                  CMV Base (R$)
+                  <input name="cmv" defaultValue={editService !== "new" ? (editService.cmv_cents / 100).toFixed(2) : "0.00"} placeholder="Ex: 50,00" />
+                </label>
+                <label>
+                  Duração Estimada (minutos)
+                  <input name="executionTimeMinutes" type="number" min={0} defaultValue={editService !== "new" ? editService.execution_time_minutes : 60} required />
+                </label>
+              </div>
+
+              <div style={{ display: "flex", justifyContent: "flex-end", gap: "0.5rem", marginTop: "1.5rem" }}>
+                <button type="button" className="secondary" onClick={() => setEditService(null)}>Cancelar</button>
+                <button type="submit">Salvar Serviço</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+    </div>
   );
 }
 
