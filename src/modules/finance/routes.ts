@@ -466,13 +466,33 @@ export async function financeRoutes(app: FastifyInstance) {
     } catch (error: any) { await client.query("ROLLBACK"); const retry = await pool.query("SELECT id FROM financial_entries WHERE client_request_id=$1", [clientRequestId]); if (retry.rowCount) return { id: retry.rows[0].id, idempotent: true }; throw error; } finally { client.release(); }
   });
 
-  app.post<{ Params: { id: string }; Body: { clientRequestId?: string; reason?: string; occurredOn?: string } }>("/api/finance/entries/:id/reverse", { preHandler: admin }, async (request, reply) => {
-    const { clientRequestId, reason, occurredOn } = request.body ?? {};
-    if (!/^[0-9a-f-]{36}$/i.test(clientRequestId ?? "") || !reason?.trim() || reason.trim().length < 3 || !/^\d{4}-\d{2}-\d{2}$/.test(occurredOn ?? "")) return reply.code(400).type("application/problem+json").send({ title: "Informe data e motivo do estorno", status: 400 });
-    const result = await pool.query(`WITH reversed AS (INSERT INTO financial_entries(id,client_request_id,entry_type,category,description,amount_cents,competence_on,occurred_on,payment_method,company_account_id,patient_id,sale_id,reversal_of_id,reversal_reason,notes,created_by) SELECT $1,$2,CASE entry_type WHEN 'income' THEN 'expense' ELSE 'income' END,category,'Estorno: '||description,amount_cents,competence_on,$3,payment_method,company_account_id,patient_id,sale_id,id,$4,notes,$5 FROM financial_entries original WHERE id=$6 AND reversal_of_id IS NULL AND NOT EXISTS(SELECT 1 FROM financial_entries r WHERE r.reversal_of_id=original.id) RETURNING id),audited AS (INSERT INTO audit_events(user_id,action,entity_type,entity_id,details) SELECT $5,'reverse','financial_entry',id,jsonb_build_object('reversalOfId',$6::text,'reason',$4::text) FROM reversed) SELECT id FROM reversed`, [randomUUID(),clientRequestId,occurredOn,reason.trim(),request.currentUser!.id,request.params.id]);
+  const handleReverseEntry = async (request: FastifyRequest<{ Params: { id: string }; Body: { clientRequestId?: string; reason?: string; reversalReason?: string; occurredOn?: string } }>, reply: any) => {
+    const { clientRequestId, reason, reversalReason, occurredOn } = request.body ?? {};
+    const finalReason = (reason || reversalReason)?.trim();
+    const finalClientRequestId = clientRequestId || randomUUID();
+    const finalOccurredOn = occurredOn || new Intl.DateTimeFormat("en-CA", { timeZone: "America/Sao_Paulo" }).format(new Date());
+
+    if (!finalReason || finalReason.length < 3) return reply.code(400).type("application/problem+json").send({ title: "Informe a justificativa do estorno (mínimo 3 caracteres)", status: 400 });
+    const result = await pool.query(
+      `WITH reversed AS (
+         INSERT INTO financial_entries(id,client_request_id,entry_type,category,description,amount_cents,competence_on,occurred_on,payment_method,company_account_id,patient_id,sale_id,reversal_of_id,reversal_reason,notes,created_by)
+         SELECT $1,$2,CASE entry_type WHEN 'income' THEN 'expense' ELSE 'income' END,category,'Estorno: '||description,amount_cents,competence_on,$3,payment_method,company_account_id,patient_id,sale_id,id,$4,notes,$5
+         FROM financial_entries original WHERE id=$6 AND reversal_of_id IS NULL AND NOT EXISTS(SELECT 1 FROM financial_entries r WHERE r.reversal_of_id=original.id)
+         RETURNING id
+       ),
+       audited AS (
+         INSERT INTO audit_events(user_id,action,entity_type,entity_id,details)
+         SELECT $5,'reverse','financial_entry',id,jsonb_build_object('reversalOfId',$6::text,'reason',$4::text) FROM reversed
+       )
+       SELECT id FROM reversed`,
+      [randomUUID(), finalClientRequestId, finalOccurredOn, finalReason, request.currentUser!.id, request.params.id]
+    );
     if (!result.rowCount) return reply.code(409).type("application/problem+json").send({ title: "Lançamento não encontrado ou já estornado", status: 409 });
     return reply.code(201).send({ id: result.rows[0].id });
-  });
+  };
+
+  app.post("/api/finance/entries/:id/reverse", { preHandler: admin }, handleReverseEntry as any);
+  app.post("/api/admin/finance/entries/:id/reverse", { preHandler: admin }, handleReverseEntry as any);
 
   app.get<{ Querystring: FinanceFilters }>("/api/finance/summary", { preHandler: admin }, async (request) => {
     const where = financeWhere(request.query, "f.occurred_on");
