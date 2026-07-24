@@ -1,16 +1,16 @@
 {
   "schemaVersion": 1,
-  "branchName": "codex/pr-05-auth-csrf-hardening",
+  "branchName": "codex/pr-06-attachments-production-boundary",
   "worktreePath": "C:\\Users\\milla\\Documents\\Projetos\\Git\\Fonolife",
   "upstream": null,
   "mergeBase": null,
-  "firstSeenHead": "1af0f9af46c2666fd071f893322764157d3a2549",
-  "lastSeenHead": "1af0f9af46c2666fd071f893322764157d3a2549",
-  "lastAnalyzedHead": "1af0f9af46c2666fd071f893322764157d3a2549",
+  "firstSeenHead": "e79f008f73f4a9b71f50058bc40afbe405cb0b61",
+  "lastSeenHead": "e79f008f73f4a9b71f50058bc40afbe405cb0b61",
+  "lastAnalyzedHead": "e79f008f73f4a9b71f50058bc40afbe405cb0b61",
   "stale": false,
   "staleReason": null,
   "staleSince": null,
   "lifecycleEvent": null,
-  "createdAt": "2026-07-24T00:01:02.960Z",
-  "updatedAt": "2026-07-24T00:01:02.960Z"
+  "createdAt": "2026-07-24T00:19:57.014Z",
+  "updatedAt": "2026-07-24T00:19:57.014Z"
 }
