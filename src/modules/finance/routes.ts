@@ -382,6 +382,12 @@ export async function financeRoutes(app: FastifyInstance) {
           [request.params.id, request.currentUser!.id],
         );
         await client.query(
+          `INSERT INTO inventory_movements(id, product_id, movement_type, quantity, notes, created_by)
+           SELECT gen_random_uuid(), product_id, 'adjustment', ABS(quantity), 'Estorno por cancelamento da Venda ' || $1 || ': ' || $3, $2
+           FROM inventory_movements WHERE notes LIKE '%' || $1 || '%' AND movement_type = 'sale_deduction'`,
+          [request.params.id, request.currentUser!.id, reason],
+        );
+        await client.query(
           "INSERT INTO audit_events(user_id,action,entity_type,entity_id,details) VALUES($1,$2,$3,$4,$5)",
           [
             request.currentUser!.id,
