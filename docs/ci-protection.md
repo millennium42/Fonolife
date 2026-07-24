@@ -35,6 +35,23 @@ Cada execução do workflow de CI (`.github/workflows/ci.yml`) valida automatica
 
 ---
 
+## 3. Scripts de Validação Local (Pre-Commit / Pre-Push)
+
+Para evitar falhas na esteira remota do GitHub Actions, o desenvolvedor pode executar os mesmos 6 gates de qualidade localmente:
+
+- **Linux / macOS / Git Bash**:
+  ```bash
+  npm run ci:check
+  # ou diretamente:
+  bash scripts/ci-check.sh
+  ```
+- **Windows PowerShell**:
+  ```powershell
+  powershell -ExecutionPolicy Bypass -File scripts/ci-check.ps1
+  ```
+
+---
+
 ## 3. Matriz de Severidade de Achados
 
 Antes do merge de qualquer PR, a revisão de código e testes deve classificar todos os problemas encontrados conforme a seguinte matriz:
