@@ -78,8 +78,12 @@ test("suíte de autorização por objeto e LGPD (PR-01)", async (t) => {
     assert.equal(resWrongOrigin.statusCode, 403);
   });
 
-  await t.test("Inspeção de rotas em app.ts: autorização centralizada por paciente e redação LGPD", async () => {
-    const source = await readFile(new URL("../src/app.ts", import.meta.url), "utf8");
+  await t.test("Inspeção de rotas em app.ts e módulos: autorização centralizada por paciente e redação LGPD", async () => {
+    const appSource = await readFile(new URL("../src/app.ts", import.meta.url), "utf8");
+    const patientRoutesSource = await readFile(new URL("../src/modules/patients/routes.ts", import.meta.url), "utf8");
+    const privacyRoutesSource = await readFile(new URL("../src/modules/privacy/routes.ts", import.meta.url), "utf8");
+    const doctorRoutesSource = await readFile(new URL("../src/modules/doctors/routes.ts", import.meta.url), "utf8");
+    const source = appSource + "\n" + patientRoutesSource + "\n" + privacyRoutesSource + "\n" + doctorRoutesSource;
 
     // Valida se todas as rotas por paciente chamam loadAndAuthorizePatient
     assert.match(source, /loadAndAuthorizePatient/);
