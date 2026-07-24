@@ -9,8 +9,10 @@ export type Product = {
   name: string;
   brand: string;
   model: string;
+  sku?: string | null;
   priceCents: number;
   costCents: number;
+  minStock?: number;
   active: boolean;
 };
 
@@ -20,6 +22,7 @@ export type InventoryMovement = {
   movementType: MovementType;
   quantity: number;
   notes?: string;
+  clientRequestId?: string;
   createdBy: string;
   createdAt: string;
 };
@@ -46,13 +49,16 @@ export function validProduct(product: {
   model?: string;
   priceCents?: number;
   costCents?: number;
+  sku?: string;
+  minStock?: number;
 }): boolean {
   return (
     validProductName(product.name) &&
     validProductBrand(product.brand) &&
     validProductModel(product.model) &&
     validCents(product.priceCents) &&
-    (product.costCents === undefined || validNonNegativeCents(product.costCents))
+    (product.costCents === undefined || validNonNegativeCents(product.costCents)) &&
+    (product.minStock === undefined || (typeof product.minStock === "number" && Number.isInteger(product.minStock) && product.minStock >= 0))
   );
 }
 
@@ -60,10 +66,13 @@ export function validInventoryMovement(movement: {
   productId?: string;
   movementType?: string;
   quantity?: number;
+  notes?: string;
 }): boolean {
   if (!movement.productId || !/^[0-9a-f-]{36}$/i.test(movement.productId)) return false;
   if (!isOneOf(movement.movementType, MOVEMENT_TYPES)) return false;
   if (typeof movement.quantity !== "number" || !Number.isInteger(movement.quantity) || movement.quantity === 0) return false;
   if (movement.movementType === "sale_deduction" && movement.quantity > 0) return false;
+  if (movement.notes !== undefined && (typeof movement.notes !== "string" || movement.notes.trim().length < 2)) return false;
   return true;
 }
+
