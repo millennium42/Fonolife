@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import type { FastifyInstance } from "fastify";
+import type { FastifyInstance, FastifyRequest } from "fastify";
 import { pool } from "../../db/pool.js";
 import { validCnpj } from "../../domain/security.js";
 import {
