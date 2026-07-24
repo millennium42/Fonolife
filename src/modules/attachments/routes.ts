@@ -9,6 +9,7 @@ import {
   generateStorageKey,
   validateBase64Strict,
   reconcileOrphanAttachments,
+  ATTACHMENT_CATEGORIES,
   type AttachmentStorage,
   type AttachmentScanner,
 } from "../../domain/attachments.js";
@@ -28,7 +29,7 @@ export async function attachmentRoutes(
       const authorized = await loadAndAuthorizePatient(request, reply, request.params.id, "attachment");
       if (!authorized) return;
       const attachments = await pool.query(
-        `SELECT a.id,a.original_name,a.mime_type,a.size_bytes,a.file_hash,a.status,a.created_at,u.name created_by_name
+        `SELECT a.id,a.original_name,a.mime_type,a.size_bytes,a.file_hash,a.status,a.category,a.clinical_notes,a.created_at,u.name created_by_name
          FROM patient_attachments a
          JOIN users u ON u.id=a.created_by
          WHERE a.patient_id=$1 AND a.archived_at IS NULL AND a.status != 'failed'
@@ -41,14 +42,14 @@ export async function attachmentRoutes(
 
   app.post<{
     Params: { id: string };
-    Body: { fileName?: string; mimeType?: string; contentBase64?: string };
+    Body: { fileName?: string; mimeType?: string; contentBase64?: string; category?: string; clinicalNotes?: string };
   }>(
     "/api/patients/:id/attachments",
     { preHandler: authenticated },
     async (request, reply) => {
       const authorized = await loadAndAuthorizePatient(request, reply, request.params.id, "write");
       if (!authorized) return;
-      const { fileName, mimeType, contentBase64 } = request.body ?? {};
+      const { fileName, mimeType, contentBase64, category, clinicalNotes } = request.body ?? {};
       if (!fileName || !mimeType || !contentBase64)
         return reply
           .code(400)
@@ -60,6 +61,8 @@ export async function attachmentRoutes(
           .code(400)
           .type("application/problem+json")
           .send({ title: "Tipo de arquivo não permitido (Aceitos: PDF, JPEG, PNG, WEBP)", status: 400 });
+
+      const finalCategory = ATTACHMENT_CATEGORIES.includes(category as any) ? category : "other";
 
       let buffer: Buffer;
       try {
@@ -111,8 +114,8 @@ export async function attachmentRoutes(
         }
 
         await client.query(
-          `INSERT INTO patient_attachments(id,patient_id,file_name,original_name,mime_type,size_bytes,file_hash,storage_provider,storage_key,status,detected_mime_type,scanned_at,created_by)
-           VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,now(),$12)`,
+          `INSERT INTO patient_attachments(id,patient_id,file_name,original_name,mime_type,size_bytes,file_hash,storage_provider,storage_key,status,category,clinical_notes,detected_mime_type,scanned_at,created_by)
+           VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,now(),$14)`,
           [
             attachmentId,
             request.params.id,
@@ -124,6 +127,8 @@ export async function attachmentRoutes(
             providerName,
             storageKey,
             "ready",
+            finalCategory,
+            clinicalNotes?.trim() || "",
             scanResult.detectedMimeType ?? mimeType,
             request.currentUser!.id,
           ]
@@ -131,16 +136,16 @@ export async function attachmentRoutes(
 
         await client.query(
           "INSERT INTO patient_events(id,patient_id,event_type,description,created_by) VALUES($1,$2,'clinical_note',$3,$4)",
-          [randomUUID(), request.params.id, `Laudo/Anexo adicionado: ${sanitizedOriginal}`, request.currentUser!.id]
+          [randomUUID(), request.params.id, `Anexo Clínico [${finalCategory}]: ${sanitizedOriginal}`, request.currentUser!.id]
         );
 
         await client.query(
           "INSERT INTO audit_events(user_id,action,entity_type,entity_id,details) VALUES($1,'create','patient_attachment',$2,$3)",
-          [request.currentUser!.id, attachmentId, { patientId: request.params.id, originalName: sanitizedOriginal, mimeType, fileHash: saveRes.hash, storageKey }]
+          [request.currentUser!.id, attachmentId, { patientId: request.params.id, originalName: sanitizedOriginal, mimeType, category: finalCategory, fileHash: saveRes.hash, storageKey }]
         );
 
         await client.query("COMMIT");
-        return reply.code(201).send({ id: attachmentId, status: "ready" });
+        return reply.code(201).send({ id: attachmentId, status: "ready", category: finalCategory });
       } catch (err) {
         await client.query("ROLLBACK");
         await attachmentStorage.delete(storageKey);
@@ -151,42 +156,41 @@ export async function attachmentRoutes(
     }
   );
 
-  app.get<{ Params: { id: string } }>(
-    "/api/attachments/:id/download",
-    { preHandler: authenticated },
-    async (request, reply) => {
-      const att = await pool.query(
-        "SELECT * FROM patient_attachments WHERE id=$1 AND archived_at IS NULL",
-        [request.params.id]
-      );
-      if (!att.rowCount)
-        return reply.code(404).type("application/problem+json").send({ title: "Anexo não encontrado", status: 404 });
+  const serveAttachmentContent = async (request: any, reply: any, disposition: "inline" | "attachment") => {
+    const att = await pool.query(
+      "SELECT * FROM patient_attachments WHERE id=$1 AND archived_at IS NULL",
+      [request.params.id]
+    );
+    if (!att.rowCount)
+      return reply.code(404).type("application/problem+json").send({ title: "Anexo não encontrado", status: 404 });
 
-      const file = att.rows[0];
-      if (file.status !== "ready") {
-        return reply
-          .code(403)
-          .type("application/problem+json")
-          .send({ title: `Anexo não disponível para download (situação: ${file.status})`, status: 403 });
-      }
-
-      const authorized = await loadAndAuthorizePatient(request, reply, file.patient_id, "attachment");
-      if (!authorized) return;
-
-      const key = file.storage_key || file.file_name;
-      try {
-        const stream = await attachmentStorage.getStream(key);
-        reply
-          .header("Content-Type", file.detected_mime_type || file.mime_type)
-          .header("Content-Disposition", `inline; filename="${file.original_name}"`)
-          .header("X-Content-Type-Options", "nosniff")
-          .header("Content-Security-Policy", "default-src 'none'");
-        return reply.send(stream);
-      } catch {
-        return reply.code(404).type("application/problem+json").send({ title: "Arquivo físico não encontrado", status: 404 });
-      }
+    const file = att.rows[0];
+    if (file.status !== "ready") {
+      return reply
+        .code(403)
+        .type("application/problem+json")
+        .send({ title: `Anexo não disponível (situação: ${file.status})`, status: 403 });
     }
-  );
+
+    const authorized = await loadAndAuthorizePatient(request, reply, file.patient_id, "attachment");
+    if (!authorized) return;
+
+    const key = file.storage_key || file.file_name;
+    try {
+      const stream = await attachmentStorage.getStream(key);
+      reply
+        .header("Content-Type", file.detected_mime_type || file.mime_type)
+        .header("Content-Disposition", `${disposition}; filename="${file.original_name}"`)
+        .header("X-Content-Type-Options", "nosniff")
+        .header("Content-Security-Policy", "default-src 'self' data:; frame-ancestors 'self'");
+      return reply.send(stream);
+    } catch {
+      return reply.code(404).type("application/problem+json").send({ title: "Arquivo físico não encontrado", status: 404 });
+    }
+  };
+
+  app.get<{ Params: { id: string } }>("/api/attachments/:id/download", { preHandler: authenticated }, (req, rep) => serveAttachmentContent(req, rep, "attachment"));
+  app.get<{ Params: { id: string } }>("/api/attachments/:id/preview", { preHandler: authenticated }, (req, rep) => serveAttachmentContent(req, rep, "inline"));
 
   app.post<{ Params: { id: string } }>(
     "/api/attachments/:id/archive",

@@ -15,6 +15,9 @@ export const MAX_FILE_SIZE_BYTES = 10 * 1024 * 1024; // 10 Megabytes
 
 export type AttachmentStatus = "pending" | "ready" | "quarantined" | "failed" | "archived";
 
+export const ATTACHMENT_CATEGORIES = ["audiometry", "exam_report", "medical_request", "other"] as const;
+export type AttachmentCategory = (typeof ATTACHMENT_CATEGORIES)[number];
+
 export interface SaveResult {
   sizeBytes: number;
   hash: string;
