@@ -1202,8 +1202,18 @@ function Patients({ initialPatientId, openGlobalPatient }: { initialPatientId?: 
 
 function PatientAttachments({ patientId }: { patientId: string }) {
   const [attachments, setAttachments] = useState<any[]>([]);
+  const [category, setCategory] = useState("audiometry");
+  const [clinicalNotes, setClinicalNotes] = useState("");
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState("");
+  const [previewAttachment, setPreviewAttachment] = useState<any | null>(null);
+
+  const categoryLabels: Record<string, string> = {
+    audiometry: "🎧 Audiometria",
+    exam_report: "📋 Laudo de Exame",
+    medical_request: "🩺 Solicitação Médica",
+    other: "📁 Outros Documentos",
+  };
 
   const load = () => {
     api(`/api/patients/${patientId}/attachments`)
@@ -1231,8 +1241,11 @@ function PatientAttachments({ patientId }: { patientId: string }) {
             fileName: file.name,
             mimeType: file.type || "application/pdf",
             contentBase64: base64,
+            category,
+            clinicalNotes,
           }),
         });
+        setClinicalNotes("");
         load();
       } catch (err: any) {
         setError(err.message);
@@ -1243,28 +1256,108 @@ function PatientAttachments({ patientId }: { patientId: string }) {
     reader.readAsDataURL(file);
   };
 
+  const handleArchive = async (id: string) => {
+    if (!confirm("Deseja realmente arquivar este anexo clínico?")) return;
+    try {
+      await api(`/api/attachments/${id}/archive`, { method: "POST" });
+      load();
+    } catch (err: any) {
+      setError(err.message);
+    }
+  };
+
   return (
     <div style={{ marginTop: "1.5rem", padding: "1rem", border: "1px solid var(--border)", borderRadius: "6px" }}>
       <h4>📄 Exames & Laudos Audiométricos</h4>
       {error && <p className="error" role="alert">{error}</p>}
-      <label style={{ display: "block", margin: "0.5rem 0" }}>
-        <span>+ Anexar Laudo (PDF / Imagem máx 10MB):</span>{" "}
-        <input type="file" accept=".pdf,.jpg,.jpeg,.png,.webp" onChange={handleUpload} disabled={uploading} />
-      </label>
-      {uploading && <p>Enviando laudo...</p>}
+
+      <div style={{ background: "#f8fafc", padding: "0.75rem", borderRadius: "6px", margin: "0.75rem 0", border: "1px solid #e2e8f0" }}>
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.5rem", marginBottom: "0.5rem" }}>
+          <label>
+            Categoria do Documento:
+            <select value={category} onChange={(e) => setCategory(e.target.value)}>
+              <option value="audiometry">🎧 Audiometria Tonal/Vocal</option>
+              <option value="exam_report">📋 Laudo de Exame</option>
+              <option value="medical_request">🩺 Solicitação Médica</option>
+              <option value="other">📁 Outros Documentos</option>
+            </select>
+          </label>
+          <label>
+            Observações Clínicas (Opcional):
+            <input value={clinicalNotes} onChange={(e) => setClinicalNotes(e.target.value)} placeholder="Ex: Audiograma com perda neurossensorial moderada" />
+          </label>
+        </div>
+        <label style={{ display: "block", margin: "0.5rem 0" }}>
+          <span>+ Anexar Laudo (PDF / Imagem máx 10MB):</span>{" "}
+          <input type="file" accept=".pdf,.jpg,.jpeg,.png,.webp" onChange={handleUpload} disabled={uploading} />
+        </label>
+        {uploading && <p style={{ fontSize: "0.85rem", color: "#0284c7" }}>Enviando laudo e verificando quarentena/scanner de vírus...</p>}
+      </div>
+
       {attachments.length === 0 ? (
         <p style={{ fontSize: "0.85rem", color: "#64748b" }}>Nenhum laudo anexado a este paciente.</p>
       ) : (
         <ul style={{ listStyle: "none", padding: 0, margin: 0 }}>
           {attachments.map((a) => (
-            <li key={a.id} style={{ padding: "0.5rem 0", borderBottom: "1px solid var(--border)", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-              <span>📄 <strong>{a.original_name}</strong> <small>({(a.size_bytes / 1024).toFixed(1)} KB)</small></span>
-              <a href={`/api/attachments/${a.id}/download`} target="_blank" rel="noopener noreferrer" style={{ fontWeight: "bold" }}>
-                📥 Baixar Laudo
-              </a>
+            <li key={a.id} style={{ padding: "0.75rem 0", borderBottom: "1px solid var(--border)" }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                <div>
+                  <strong>{a.original_name}</strong>{" "}
+                  <span className="badge info" style={{ fontSize: "0.75rem" }}>{categoryLabels[a.category] || a.category}</span>{" "}
+                  <small style={{ color: "#64748b" }}>({(a.size_bytes / 1024).toFixed(1)} KB)</small>
+                  {a.clinical_notes && (
+                    <div style={{ fontSize: "0.85rem", color: "#475569", marginTop: "0.25rem" }}>
+                      📝 <em>{a.clinical_notes}</em>
+                    </div>
+                  )}
+                </div>
+                <div style={{ display: "flex", gap: "0.5rem" }}>
+                  <button type="button" className="secondary" style={{ padding: "0.2rem 0.5rem", fontSize: "0.8rem", minHeight: "auto" }} onClick={() => setPreviewAttachment(a)}>
+                    👁️ Visualizar Exame
+                  </button>
+                  <a href={`/api/attachments/${a.id}/download`} target="_blank" rel="noopener noreferrer" style={{ padding: "0.2rem 0.5rem", fontSize: "0.8rem", background: "#f1f5f9", borderRadius: "4px", textDecoration: "none", color: "#0f172a", fontWeight: "bold" }}>
+                    📥 Baixar
+                  </a>
+                  <button type="button" className="danger" style={{ padding: "0.2rem 0.5rem", fontSize: "0.8rem", minHeight: "auto" }} onClick={() => handleArchive(a.id)}>
+                    🗑️ Arquivar
+                  </button>
+                </div>
+              </div>
             </li>
           ))}
         </ul>
+      )}
+
+      {/* Modal de Pré-visualização Segura */}
+      {previewAttachment && (
+        <div className="modal-overlay" onClick={() => setPreviewAttachment(null)}>
+          <div className="modal-content" onClick={(e) => e.stopPropagation()} style={{ width: "min(100%, 800px)" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1rem" }}>
+              <h3>👁️ Visualizador Seguro: {previewAttachment.original_name}</h3>
+              <button type="button" className="secondary" onClick={() => setPreviewAttachment(null)}>Fechar</button>
+            </div>
+
+            <div style={{ background: "#f8fafc", padding: "0.5rem", borderRadius: "6px", marginBottom: "1rem" }}>
+              <small>Categoria: <strong>{categoryLabels[previewAttachment.category] || previewAttachment.category}</strong> | Observações: <em>{previewAttachment.clinical_notes || "Nenhuma"}</em></small>
+            </div>
+
+            <div style={{ border: "1px solid #cbd5e1", borderRadius: "6px", overflow: "hidden", minHeight: "450px", display: "flex", justifyContent: "center", alignItems: "center", background: "#f1f5f9" }}>
+              {previewAttachment.mime_type.includes("pdf") ? (
+                <iframe
+                  src={`/api/attachments/${previewAttachment.id}/preview`}
+                  title={previewAttachment.original_name}
+                  style={{ width: "100%", height: "550px", border: "none" }}
+                />
+              ) : (
+                <img
+                  src={`/api/attachments/${previewAttachment.id}/preview`}
+                  alt={previewAttachment.original_name}
+                  style={{ maxWidth: "100%", maxHeight: "550px", objectFit: "contain" }}
+                />
+              )}
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );
