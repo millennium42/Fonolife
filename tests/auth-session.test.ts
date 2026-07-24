@@ -15,12 +15,14 @@ import { pool } from "../src/db/pool.js";
 test("Suíte de Autenticação Modular, Rate Limit Distribuído e Sessões (PR-03)", async (t) => {
   const app = buildApp();
 
-  await t.test("Geração de chave composta de Rate Limit por IP e E-mail", () => {
+  await t.test("Geração de chave composta anonimizada de Rate Limit por IP e E-mail", () => {
     const key1 = getRateLimitKey("192.168.1.100", "Admin@Demo.Local ");
-    assert.equal(key1, "rate_limit:192.168.1.100:admin@demo.local");
+    assert.ok(key1.startsWith("rate_limit:"));
+    assert.ok(!key1.includes("admin@demo.local"));
 
     const key2 = getRateLimitKey("", undefined);
-    assert.equal(key2, "rate_limit:127.0.0.1:unknown");
+    assert.ok(key2.startsWith("rate_limit:"));
+    assert.ok(!key2.includes("unknown"));
   });
 
   await t.test("Rate limit distribuído no PostgreSQL: bloqueia após 5 falhas e reseta no sucesso", async () => {

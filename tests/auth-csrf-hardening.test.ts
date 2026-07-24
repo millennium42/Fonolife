@@ -98,7 +98,7 @@ test("PROMPT 01 — Testes de Reprodução de Vulnerabilidades CSRF, Rate Limit 
 
     await assert.rejects(
       async () => {
-        await revokeUserSessions(fakePool, "usr-123");
+        await revokeUserSessions(fakePool, "usr-123", undefined, false);
       },
       /DB Connection Failed/,
       "Falha no banco durante revogação de sessões deve lançar exceção"
