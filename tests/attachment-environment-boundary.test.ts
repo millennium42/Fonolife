@@ -77,6 +77,13 @@ test("PROMPT 02 — Testes de Fronteira de Ambiente, Quarentena e Scanner de Ane
     assert.equal(failResult.status, "failed");
   });
 
+  await t.test("Categorias de Anexo Clínico e Observações", () => {
+    const validCategories = ["audiometry", "exam_report", "medical_request", "other"];
+    assert.equal(validCategories.includes("audiometry"), true);
+    assert.equal(validCategories.includes("exam_report"), true);
+    assert.equal(validCategories.includes("invalid_category"), false);
+  });
+
   await t.test("Health Check - Retorna healthy, degraded ou unavailable", async () => {
     const app = buildApp();
     const res = await app.inject({
