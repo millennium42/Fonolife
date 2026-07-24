@@ -1,4 +1,4 @@
-# Node Description Batch 8 of 10
+# Node Description Batch 8 of 11
 
 Graphify is running in assistant/skill mode (no API key). You are the host
 assistant (Claude Code / Codex / Gemini CLI). Read the prompt below and write
@@ -17,6 +17,14 @@ No marketing language.
 Respond ONLY with a JSON object mapping each node id (as a string) to its
 one-sentence description — no prose, no markdown fences.
 
+- "migrations_004_sales_old_patient_id": "OLD.patient_id" | kind=code-symbol | source=migrations/004_sales.sql:L73 | neighbors=[004_sales.sql, restrict_sale_update()]
+- "migrations_004_sales_old_product": "OLD.product" | kind=code-symbol | source=migrations/004_sales.sql:L73 | neighbors=[004_sales.sql, restrict_sale_update()]
+- "migrations_004_sales_old_quantity": "OLD.quantity" | kind=code-symbol | source=migrations/004_sales.sql:L73 | neighbors=[004_sales.sql, restrict_sale_update()]
+- "migrations_004_sales_old_sold_on": "OLD.sold_on" | kind=code-symbol | source=migrations/004_sales.sql:L73 | neighbors=[004_sales.sql, restrict_sale_update()]
+- "migrations_004_sales_old_total_amount_cents": "OLD.total_amount_cents" | kind=code-symbol | source=migrations/004_sales.sql:L73 | neighbors=[004_sales.sql, restrict_sale_update()]
+- "migrations_004_sales_receivable_installments_immutable": "receivable_installments_immutable" | kind=code-symbol | source=migrations/004_sales.sql:L82 | neighbors=[004_sales.sql, receivable_installments]
+- "migrations_004_sales_receivable_installments_total": "receivable_installments_total" | kind=code-symbol | source=migrations/004_sales.sql:L94 | neighbors=[004_sales.sql, receivable_installments]
+- "migrations_004_sales_reject_duplicate_active_receipt": "reject_duplicate_active_receipt()" | kind=code-symbol | source=migrations/004_sales.sql:L63 | neighbors=[004_sales.sql, financial_entries]
 - "migrations_004_sales_sales_restrict_update": "sales_restrict_update" | kind=code-symbol | source=migrations/004_sales.sql:L77 | neighbors=[004_sales.sql, sales]
 - "migrations_006_csv_imports_csv_import_errors": "csv_import_errors" | kind=code-symbol | source=migrations/006_csv_imports.sql:L14 | neighbors=[006_csv_imports.sql, csv_import_jobs]
 - "migrations_006_csv_imports_users": "users" | kind=code-symbol | source=migrations/006_csv_imports.sql:L9 | neighbors=[006_csv_imports.sql, csv_import_jobs]
@@ -39,8 +47,8 @@ one-sentence description — no prose, no markdown fences.
 - "src_main_patientrecord": "PatientRecord()" | kind=code-symbol | source=web/src/main.tsx:L604 | neighbors=[main.tsx, date()]
 - "src_main_saleform": "SaleForm()" | kind=code-symbol | source=web/src/main.tsx:L171 | neighbors=[main.tsx, today()]
 - "tests_devsec_smoke": "devsec-smoke.mjs" | kind=code-symbol | source=tests/devsec-smoke.mjs:L1 | neighbors=[0e1c4ad test: consolidar QA, acessibili…, login()]
-- "auth_middleware_memoryratelimit": "memoryRateLimit" | kind=code-symbol | source=src/modules/auth/middleware.ts:L9 | neighbors=[middleware.ts]
-- "auth_middleware_memorysessions": "memorySessions" | kind=code-symbol | source=src/modules/auth/middleware.ts:L10 | neighbors=[middleware.ts]
+- "auth_middleware_memoryratelimit": "memoryRateLimit" | kind=code-symbol | source=src/modules/auth/middleware.ts:L17 | neighbors=[middleware.ts]
+- "auth_middleware_memorysessions": "memorySessions" | kind=code-symbol | source=src/modules/auth/middleware.ts:L18 | neighbors=[middleware.ts]
 - "db_create_admin_email": "email" | kind=code-symbol | source=src/db/create-admin.ts:L6 | neighbors=[create-admin.ts]
 - "domain_attachments_allowed_mime_types": "ALLOWED_MIME_TYPES" | kind=code-symbol | source=src/domain/attachments.ts:L6 | neighbors=[attachments.ts]
 - "domain_attachments_allowedmimetype": "AllowedMimeType" | kind=code-symbol | source=src/domain/attachments.ts:L13 | neighbors=[attachments.ts]
@@ -49,14 +57,6 @@ one-sentence description — no prose, no markdown fences.
 - "domain_attachments_localattachmentstorage_constructor": ".constructor()" | kind=code-symbol | source=src/domain/attachments.ts:L37 | neighbors=[LocalAttachmentStorage]
 - "domain_attachments_s3attachmentstorage_constructor": ".constructor()" | kind=code-symbol | source=src/domain/attachments.ts:L123 | neighbors=[S3AttachmentStorage]
 - "domain_attachments_s3attachmentstorage_delete": ".delete()" | kind=code-symbol | source=src/domain/attachments.ts:L165 | neighbors=[S3AttachmentStorage]
-- "domain_attachments_s3attachmentstorage_exists": ".exists()" | kind=code-symbol | source=src/domain/attachments.ts:L169 | neighbors=[S3AttachmentStorage]
-- "domain_attachments_s3attachmentstorage_getbucketname": ".getBucketName()" | kind=code-symbol | source=src/domain/attachments.ts:L173 | neighbors=[S3AttachmentStorage]
-- "domain_attachments_s3attachmentstorage_getstream": ".getStream()" | kind=code-symbol | source=src/domain/attachments.ts:L157 | neighbors=[S3AttachmentStorage]
-- "domain_attachments_saveresult": "SaveResult" | kind=code-symbol | source=src/domain/attachments.ts:L18 | neighbors=[attachments.ts]
-- "domain_csv_import_csvfinancialrow": "CsvFinancialRow" | kind=code-symbol | source=src/domain/csv-import.ts:L27 | neighbors=[csv-import.ts]
-- "domain_csv_import_csvpatientrow": "CsvPatientRow" | kind=code-symbol | source=src/domain/csv-import.ts:L16 | neighbors=[csv-import.ts]
-- "domain_csv_import_parsedcsv": "ParsedCsv" | kind=code-symbol | source=src/domain/csv-import.ts:L38 | neighbors=[csv-import.ts]
-- "domain_doctors_calendarday": "CalendarDay" | kind=code-symbol | source=src/domain/doctors.ts:L7 | neighbors=[doctors.ts]
 
 ## Instructions
 

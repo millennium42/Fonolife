@@ -1,16 +1,16 @@
 {
   "schemaVersion": 1,
-  "branchName": "codex/pr-04-csv-validation",
+  "branchName": "codex/pr-05-auth-csrf-hardening",
   "worktreePath": "C:\\Users\\milla\\Documents\\Projetos\\Git\\Fonolife",
   "upstream": null,
   "mergeBase": null,
-  "firstSeenHead": "5c001158883c49947b61534f6a16cc6432768cf7",
-  "lastSeenHead": "5c001158883c49947b61534f6a16cc6432768cf7",
-  "lastAnalyzedHead": "5c001158883c49947b61534f6a16cc6432768cf7",
+  "firstSeenHead": "1af0f9af46c2666fd071f893322764157d3a2549",
+  "lastSeenHead": "1af0f9af46c2666fd071f893322764157d3a2549",
+  "lastAnalyzedHead": "1af0f9af46c2666fd071f893322764157d3a2549",
   "stale": false,
   "staleReason": null,
   "staleSince": null,
   "lifecycleEvent": null,
-  "createdAt": "2026-07-23T23:27:27.877Z",
-  "updatedAt": "2026-07-23T23:27:27.877Z"
+  "createdAt": "2026-07-24T00:01:02.960Z",
+  "updatedAt": "2026-07-24T00:01:02.960Z"
 }

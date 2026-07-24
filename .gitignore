@@ -4,3 +4,5 @@ dist/
 playwright-report/
 test-results/
 graphify-out/
+.graphify/cache/
+.graphify/.graphify_describe_pending

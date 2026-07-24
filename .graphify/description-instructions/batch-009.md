@@ -1,4 +1,4 @@
-# Node Description Batch 10 of 10
+# Node Description Batch 10 of 11
 
 Graphify is running in assistant/skill mode (no API key). You are the host
 assistant (Claude Code / Codex / Gemini CLI). Read the prompt below and write
@@ -17,6 +17,14 @@ No marketing language.
 Respond ONLY with a JSON object mapping each node id (as a string) to its
 one-sentence description — no prose, no markdown fences.
 
+- "src_main_async": "async()" | kind=code-symbol | source=web/src/main.tsx:L1656 | neighbors=[main.tsx]
+- "src_main_categorylabels": "categoryLabels" | kind=code-symbol | source=web/src/main.tsx:L1157 | neighbors=[main.tsx]
+- "src_main_cents": "cents()" | kind=code-symbol | source=web/src/main.tsx:L151 | neighbors=[main.tsx]
+- "src_main_companyaccount": "CompanyAccount" | kind=code-symbol | source=web/src/main.tsx:L51 | neighbors=[main.tsx]
+- "src_main_csvimport": "CsvImport()" | kind=code-symbol | source=web/src/main.tsx:L1852 | neighbors=[main.tsx]
+- "src_main_dashboarddata": "DashboardData" | kind=code-symbol | source=web/src/main.tsx:L114 | neighbors=[main.tsx]
+- "src_main_doctorconsultationform": "DoctorConsultationForm()" | kind=code-symbol | source=web/src/main.tsx:L2316 | neighbors=[main.tsx]
+- "src_main_doctorpatients": "DoctorPatients()" | kind=code-symbol | source=web/src/main.tsx:L2277 | neighbors=[main.tsx]
 - "src_main_eventtypes": "eventTypes" | kind=code-symbol | source=web/src/main.tsx:L122 | neighbors=[main.tsx]
 - "src_main_financesummary": "FinanceSummary" | kind=code-symbol | source=web/src/main.tsx:L100 | neighbors=[main.tsx]
 - "src_main_financialentry": "FinancialEntry" | kind=code-symbol | source=web/src/main.tsx:L57 | neighbors=[main.tsx]
@@ -49,9 +57,6 @@ one-sentence description — no prose, no markdown fences.
 - "tests_finance_smoke_clientrequestid": "clientRequestId" | kind=code-symbol | source=tests/finance-smoke.mjs:L11 | neighbors=[finance-smoke.mjs]
 - "tests_finance_smoke_login": "login()" | kind=code-symbol | source=tests/finance-smoke.mjs:L5 | neighbors=[finance-smoke.mjs]
 - "tests_finance_smoke_payload": "payload" | kind=code-symbol | source=tests/finance-smoke.mjs:L12 | neighbors=[finance-smoke.mjs]
-- "tests_finance_smoke_summary": "summary" | kind=code-symbol | source=tests/finance-smoke.mjs:L18 | neighbors=[finance-smoke.mjs]
-- "tests_migrate_test": "migrate.test.ts" | kind=code-symbol | source=tests/migrate.test.ts:L1 | neighbors=[3f9e6cc feat: estabelecer núcleo seguro…]
-- "vite_config": "vite.config.ts" | kind=code-symbol | source=vite.config.ts:L1 | neighbors=[3f9e6cc feat: estabelecer núcleo seguro…]
 
 ## Instructions
 

@@ -1,4 +1,4 @@
-# Node Description Batch 9 of 10
+# Node Description Batch 9 of 11
 
 Graphify is running in assistant/skill mode (no API key). You are the host
 assistant (Claude Code / Codex / Gemini CLI). Read the prompt below and write
@@ -17,6 +17,14 @@ No marketing language.
 Respond ONLY with a JSON object mapping each node id (as a string) to its
 one-sentence description — no prose, no markdown fences.
 
+- "domain_attachments_s3attachmentstorage_exists": ".exists()" | kind=code-symbol | source=src/domain/attachments.ts:L169 | neighbors=[S3AttachmentStorage]
+- "domain_attachments_s3attachmentstorage_getbucketname": ".getBucketName()" | kind=code-symbol | source=src/domain/attachments.ts:L173 | neighbors=[S3AttachmentStorage]
+- "domain_attachments_s3attachmentstorage_getstream": ".getStream()" | kind=code-symbol | source=src/domain/attachments.ts:L157 | neighbors=[S3AttachmentStorage]
+- "domain_attachments_saveresult": "SaveResult" | kind=code-symbol | source=src/domain/attachments.ts:L18 | neighbors=[attachments.ts]
+- "domain_csv_import_csvfinancialrow": "CsvFinancialRow" | kind=code-symbol | source=src/domain/csv-import.ts:L27 | neighbors=[csv-import.ts]
+- "domain_csv_import_csvpatientrow": "CsvPatientRow" | kind=code-symbol | source=src/domain/csv-import.ts:L16 | neighbors=[csv-import.ts]
+- "domain_csv_import_parsedcsv": "ParsedCsv" | kind=code-symbol | source=src/domain/csv-import.ts:L38 | neighbors=[csv-import.ts]
+- "domain_doctors_calendarday": "CalendarDay" | kind=code-symbol | source=src/domain/doctors.ts:L7 | neighbors=[doctors.ts]
 - "domain_inventory_inventorymovement": "InventoryMovement" | kind=code-symbol | source=src/domain/inventory.ts:L17 | neighbors=[inventory.ts]
 - "domain_inventory_movement_types": "MOVEMENT_TYPES" | kind=code-symbol | source=src/domain/inventory.ts:L4 | neighbors=[inventory.ts]
 - "domain_inventory_movementtype": "MovementType" | kind=code-symbol | source=src/domain/inventory.ts:L5 | neighbors=[inventory.ts]
@@ -49,14 +57,6 @@ one-sentence description — no prose, no markdown fences.
 - "src_app_fastifyrequest": "FastifyRequest" | kind=code-symbol | source=src/app.ts:L81 | neighbors=[app.ts]
 - "src_app_user": "User" | kind=code-symbol | source=src/app.ts:L71 | neighbors=[app.ts]
 - "src_main_app": "App()" | kind=code-symbol | source=web/src/main.tsx:L1974 | neighbors=[main.tsx]
-- "src_main_async": "async()" | kind=code-symbol | source=web/src/main.tsx:L1656 | neighbors=[main.tsx]
-- "src_main_categorylabels": "categoryLabels" | kind=code-symbol | source=web/src/main.tsx:L1157 | neighbors=[main.tsx]
-- "src_main_cents": "cents()" | kind=code-symbol | source=web/src/main.tsx:L151 | neighbors=[main.tsx]
-- "src_main_companyaccount": "CompanyAccount" | kind=code-symbol | source=web/src/main.tsx:L51 | neighbors=[main.tsx]
-- "src_main_csvimport": "CsvImport()" | kind=code-symbol | source=web/src/main.tsx:L1852 | neighbors=[main.tsx]
-- "src_main_dashboarddata": "DashboardData" | kind=code-symbol | source=web/src/main.tsx:L114 | neighbors=[main.tsx]
-- "src_main_doctorconsultationform": "DoctorConsultationForm()" | kind=code-symbol | source=web/src/main.tsx:L2316 | neighbors=[main.tsx]
-- "src_main_doctorpatients": "DoctorPatients()" | kind=code-symbol | source=web/src/main.tsx:L2277 | neighbors=[main.tsx]
 
 ## Instructions
 

@@ -1,4 +1,4 @@
-# Node Description Batch 6 of 10
+# Node Description Batch 6 of 11
 
 Graphify is running in assistant/skill mode (no API key). You are the host
 assistant (Claude Code / Codex / Gemini CLI). Read the prompt below and write
@@ -19,11 +19,19 @@ relations (neighbors) and the provided citations/evidence — e.g.
 Ground entity descriptions in the citations/evidence when present; do not
 speculate beyond the context, so a node with no supporting context may be
 left out of the reply.
-Write every description in English (en). Do not switch languages.
+Write every description in Portuguese (pt). Do not switch languages.
 No marketing language.
 Respond ONLY with a JSON object mapping each node id (as a string) to its
 one-sentence description — no prose, no markdown fences.
 
+- "domain_inventory_validproductmodel": "validProductModel()" | kind=code-symbol | source=src/domain/inventory.ts:L35 | neighbors=[inventory.ts, validProduct(), inventory.test.ts]
+- "domain_inventory_validproductname": "validProductName()" | kind=code-symbol | source=src/domain/inventory.ts:L27 | neighbors=[inventory.ts, validProduct(), inventory.test.ts]
+- "domain_patients_contact_sources": "CONTACT_SOURCES" | kind=code-symbol | source=src/domain/patients.ts:L2 | neighbors=[csv-import.ts, patients.ts, app.ts]
+- "domain_patients_patient_event_types": "PATIENT_EVENT_TYPES" | kind=code-symbol | source=src/domain/patients.ts:L3 | neighbors=[patients.ts, app.ts, patients.test.ts]
+- "domain_patients_validpatientname": "validPatientName()" | kind=code-symbol | source=src/domain/patients.ts:L11 | neighbors=[csv-import.ts, patients.ts, app.ts]
+- "domain_privacy_formatlgpdexportpackage": "formatLgpdExportPackage()" | kind=code-symbol | source=src/domain/privacy.ts:L22 | neighbors=[privacy.ts, app.ts, privacy.test.ts]
+- "domain_sales_payment_methods": "PAYMENT_METHODS" | kind=code-symbol | source=src/domain/sales.ts:L1 | neighbors=[csv-import.ts, finance.ts, sales.ts]
+- "domain_sales_splitmonthly": "splitMonthly()" | kind=code-symbol | source=src/domain/sales.ts:L17 | neighbors=[sales.ts, validCents(), sales.test.ts]
 - "domain_security_canmodifydoctorassignment": "canModifyDoctorAssignment()" | kind=code-symbol | source=src/domain/security.ts:L75 | neighbors=[security.ts, app.ts, security-object-lgpd.test.ts]
 - "domain_security_scrypt": "scrypt" | kind=code-symbol | source=src/domain/security.ts:L3 | neighbors=[security.ts, hashPassword(), verifyPassword()]
 - "domain_security_validcnpj": "validCnpj()" | kind=code-symbol | source=src/domain/security.ts:L20 | neighbors=[security.ts, app.ts, security.test.ts]
@@ -50,20 +58,12 @@ one-sentence description — no prose, no markdown fences.
 - "src_main_submit": "submit()" | kind=code-symbol | source=web/src/main.tsx:L293 | neighbors=[main.tsx, api(), monthly()]
 - "tests_dashboard_smoke": "dashboard-smoke.mjs" | kind=code-symbol | source=tests/dashboard-smoke.mjs:L1 | neighbors=[a56a353 feat: priorizar filas acionávei…, dashboard(), login()]
 - "tests_finance_test": "finance.test.ts" | kind=code-symbol | source=tests/finance.test.ts:L1 | neighbors=[2dd873d feat: consolidar financeiro úni…, finance.ts, validFinancialEntry()]
-- "auth_middleware_cleanupexpiredsessions": "cleanupExpiredSessions()" | kind=code-symbol | source=src/modules/auth/middleware.ts:L102 | neighbors=[middleware.ts, auth-session.test.ts]
+- "auth_middleware_cleanupexpiredsessions": "cleanupExpiredSessions()" | kind=code-symbol | source=src/modules/auth/middleware.ts:L145 | neighbors=[middleware.ts, auth-session.test.ts]
 - "auth_routes_authroutes": "authRoutes()" | kind=code-symbol | source=src/modules/auth/routes.ts:L13 | neighbors=[routes.ts, app.ts]
-- "commit:repo:github.com/millennium42/Fonolife@5c001158883c49947b61534f6a16cc6432768cf7": "5c00115 docs(import): documentar formato, erros e reprocessamento" | kind=Commit | source=git | neighbors=[5648d01 feat(validation): aplicar schem…, codex/pr-04-csv-validation]
+- "commit:repo:github.com/millennium42/Fonolife@1af0f9af46c2666fd071f893322764157d3a2549": "1af0f9a docs(auth): documentar origem, falhas e recuperação" | kind=Commit | source=git | neighbors=[codex/pr-05-auth-csrf-hardening, 438f52a fix(auth): tornar revogação de …]
 - "db_seed_seeddemo": "seedDemo()" | kind=code-symbol | source=src/db/seed.ts:L6 | neighbors=[seed.ts, server.ts]
 - "domain_attachments_attachmentscanner": "AttachmentScanner" | kind=code-symbol | source=src/domain/attachments.ts:L184 | neighbors=[attachments.ts, DevAttachmentScanner]
 - "domain_attachments_devattachmentscanner_scan": ".scan()" | kind=code-symbol | source=src/domain/attachments.ts:L195 | neighbors=[DevAttachmentScanner, detectMimeTypeFromMagicBytes()]
-- "domain_attachments_localattachmentstorage_delete": ".delete()" | kind=code-symbol | source=src/domain/attachments.ts:L84 | neighbors=[LocalAttachmentStorage, .getFilePath()]
-- "domain_attachments_localattachmentstorage_exists": ".exists()" | kind=code-symbol | source=src/domain/attachments.ts:L93 | neighbors=[LocalAttachmentStorage, .getFilePath()]
-- "domain_attachments_localattachmentstorage_getstream": ".getStream()" | kind=code-symbol | source=src/domain/attachments.ts:L74 | neighbors=[LocalAttachmentStorage, .getFilePath()]
-- "domain_attachments_localattachmentstorage_listkeys": ".listKeys()" | kind=code-symbol | source=src/domain/attachments.ts:L103 | neighbors=[LocalAttachmentStorage, reconcileOrphanAttachments()]
-- "domain_attachments_s3attachmentstorage_save": ".save()" | kind=code-symbol | source=src/domain/attachments.ts:L129 | neighbors=[S3AttachmentStorage, calculateFileHash()]
-- "domain_doctors_buildcalendardays": "buildCalendarDays()" | kind=code-symbol | source=src/domain/doctors.ts:L14 | neighbors=[doctors.ts, doctors.test.ts]
-- "domain_doctors_validlicensenumber": "validLicenseNumber()" | kind=code-symbol | source=src/domain/doctors.ts:L1 | neighbors=[doctors.ts, doctors.test.ts]
-- "domain_finance_entry_types": "ENTRY_TYPES" | kind=code-symbol | source=src/domain/finance.ts:L3 | neighbors=[csv-import.ts, finance.ts]
 
 ## Instructions
 
