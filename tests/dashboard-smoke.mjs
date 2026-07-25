@@ -1,8 +1,8 @@
 import assert from "node:assert/strict";
 
 const origin = "http://localhost:3000";
-async function login(email, password) {
-  const response = await fetch(`${origin}/api/auth/login`, { method: "POST", headers: { origin, "content-type": "application/json" }, body: JSON.stringify({ email, password }) });
+async function login(role) {
+  const response = await fetch(`${origin}/api/demo/session`, { method: "POST", headers: { origin, "content-type": "application/json" }, body: JSON.stringify({ role }) });
   assert.equal(response.status, 200);
   return response.headers.getSetCookie()[0].split(";")[0];
 }
@@ -12,12 +12,12 @@ async function dashboard(cookie) {
   return response.json();
 }
 
-const operator = await dashboard(await login("operador@fonolife.com.br", "operador123"));
+const operator = await dashboard(await login("operator"));
 assert.equal("financial" in operator, false);
 for (const field of ["overdue", "today", "open_tasks", "adaptation", "month_sales"]) assert.equal(typeof operator[field], "number");
 assert.ok(Array.isArray(operator.queue));
 
-const admin = await dashboard(await login("admin@fonolife.com.br", "admin123"));
+const admin = await dashboard(await login("admin"));
 assert.equal(typeof admin.financial.consolidated.balance_cents, "number");
 assert.ok(Array.isArray(admin.financial.byAccount));
 console.log("dashboard-smoke: consultas e segregação Admin/Operador aprovadas");

@@ -10,10 +10,8 @@ test.describe('Acessibilidade e Layout Responsivo (WCAG 2.1 AA)', () => {
       .analyze();
     expect(loginAxe.violations).toEqual([]);
 
-    // Realizar login
-    await page.getByLabel('E-mail').fill('admin@fonolife.com.br');
-    await page.getByLabel('Senha').fill('admin123');
-    await page.getByRole('button', { name: 'Entrar no Sistema', exact: true }).click();
+    // Realizar login demonstrativo sem transportar senha para o cliente
+    await page.getByRole('button', { name: /Entrar como Administrador/ }).click();
     await expect(page.getByRole('heading', { name: 'Início' })).toBeVisible();
 
     // 2. Dashboard principal

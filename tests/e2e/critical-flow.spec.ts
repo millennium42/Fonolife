@@ -3,9 +3,7 @@ import AxeBuilder from '@axe-core/playwright';
 
 async function login(page: Page) {
   await page.goto('/');
-  await page.getByLabel('E-mail').fill('admin@fonolife.com.br');
-  await page.getByLabel('Senha').fill('admin123');
-  await page.getByRole('button', { name: 'Entrar no Sistema', exact: true }).click();
+  await page.getByRole('button', { name: /Entrar como Administrador/ }).click();
   await expect(page.getByRole('heading', { name: 'Início' })).toBeVisible();
 }
 

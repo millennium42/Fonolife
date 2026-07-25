@@ -2576,6 +2576,23 @@ function LoginForm({ onLogin }: { onLogin: (user: User) => void }) {
     }
   };
 
+  const handleDemoLogin = async (role: "admin" | "operator" | "doctor") => {
+    setLoading(true);
+    setError("");
+    try {
+      const res = await api("/api/demo/session", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ role }),
+      });
+      onLogin(res.user);
+    } catch (err: any) {
+      setError(err.message || "Perfil demonstrativo indisponível");
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <div className="login">
       <section style={{ width: "min(100%, 450px)" }}>
@@ -2598,7 +2615,8 @@ function LoginForm({ onLogin }: { onLogin: (user: User) => void }) {
         </form>
 
         {demoMode && (
-          <div style={{ marginTop: "2rem", paddingTop: "1.25rem", borderTop: "1px solid var(--border)" }}>
+          <div className="demo-panel" style={{ marginTop: "2rem", paddingTop: "1.25rem", borderTop: "1px solid var(--border)" }}>
+            <p role="status" style={{ textAlign: "center" }}>AMBIENTE DE DEMONSTRAÇÃO — dados sintéticos e descartáveis</p>
             <p style={{ fontSize: "0.85rem", fontWeight: "bold", color: "#475569", marginBottom: "0.75rem", textAlign: "center" }}>
               ⚡ Acesso Rápido — Perfis de Demonstração (Demo):
             </p>
@@ -2608,11 +2626,7 @@ function LoginForm({ onLogin }: { onLogin: (user: User) => void }) {
                 className="secondary"
                 style={{ width: "100%", justifyContent: "space-between" }}
                 disabled={loading}
-                onClick={() => {
-                  setEmail("admin@fonolife.com.br");
-                  setPassword("admin123");
-                  handleLogin("admin@fonolife.com.br", "admin123");
-                }}
+                onClick={() => handleDemoLogin("admin")}
               >
                 <span>👑 Entrar como <strong>Administrador</strong></span>
                 <small style={{ opacity: 0.7 }}>Acesso Total</small>
@@ -2622,11 +2636,7 @@ function LoginForm({ onLogin }: { onLogin: (user: User) => void }) {
                 className="secondary"
                 style={{ width: "100%", justifyContent: "space-between" }}
                 disabled={loading}
-                onClick={() => {
-                  setEmail("operador@fonolife.com.br");
-                  setPassword("operador123");
-                  handleLogin("operador@fonolife.com.br", "operador123");
-                }}
+                onClick={() => handleDemoLogin("operator")}
               >
                 <span>🛒 Entrar como <strong>Operador (Caixa / PDV)</strong></span>
                 <small style={{ opacity: 0.7 }}>Atendimento & Vendas</small>
@@ -2636,11 +2646,7 @@ function LoginForm({ onLogin }: { onLogin: (user: User) => void }) {
                 className="secondary"
                 style={{ width: "100%", justifyContent: "space-between" }}
                 disabled={loading}
-                onClick={() => {
-                  setEmail("carlos.fonolife@gmail.com");
-                  setPassword("medico123");
-                  handleLogin("carlos.fonolife@gmail.com", "medico123");
-                }}
+                onClick={() => handleDemoLogin("doctor")}
               >
                 <span>🩺 Entrar como <strong>Médico Fonoaudiólogo</strong></span>
                 <small style={{ opacity: 0.7 }}>Agenda & Prontuários</small>
@@ -2656,11 +2662,16 @@ function LoginForm({ onLogin }: { onLogin: (user: User) => void }) {
 function App() {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
+  const [demoMode, setDemoMode] = useState(false);
   const [page, setPage] = useState("Início");
   const [patientId, setPatientId] = useState<string | null>(null);
   const [globalPatientId, setGlobalPatientId] = useState<string | null>(null);
 
   useEffect(() => {
+    fetch("/api/config")
+      .then((res) => res.json())
+      .then((data) => setDemoMode(data?.environment === "demo"))
+      .catch(() => setDemoMode(false));
     api("/api/auth/me")
       .then((data) => setUser(data.user))
       .catch(() => setUser(null))
@@ -2692,6 +2703,11 @@ function App() {
           </button>
         </div>
       </header>
+      {demoMode && (
+        <aside className="demo-banner" aria-label="Ambiente atual">
+          AMBIENTE DE DEMONSTRAÇÃO — dados sintéticos e descartáveis
+        </aside>
+      )}
 
       <nav>
         {pages.map((item) => (

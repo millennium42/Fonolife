@@ -13,8 +13,8 @@ assert.equal(missingOrigin.status,403); assert.match(missingOrigin.headers.get('
 const wrongOrigin=await fetch(`${base}/api/auth/login`,{method:'POST',headers:{origin:'https://evil.invalid','content-type':'application/json'},body:'{}'});
 assert.equal(wrongOrigin.status,403);
 
-async function login(email,password){const response=await fetch(`${base}/api/auth/login`,{method:'POST',headers:{origin,'content-type':'application/json'},body:JSON.stringify({email,password})});assert.equal(response.status,200);const cookie=response.headers.getSetCookie()[0];assert.match(cookie,/HttpOnly/i);assert.match(cookie,/SameSite=Lax/i);if(process.env.EXPECT_HSTS==='true')assert.match(cookie,/Secure/i);else assert.doesNotMatch(cookie,/Secure/i);return cookie.split(';')[0];}
-const operator=await login('operador@fonolife.com.br','operador123');
+async function login(role){const response=await fetch(`${base}/api/demo/session`,{method:'POST',headers:{origin,'content-type':'application/json'},body:JSON.stringify({role})});assert.equal(response.status,200);const cookie=response.headers.getSetCookie()[0];assert.match(cookie,/HttpOnly/i);assert.match(cookie,/SameSite=Lax/i);if(process.env.EXPECT_HSTS==='true')assert.match(cookie,/Secure/i);else assert.doesNotMatch(cookie,/Secure/i);return cookie.split(';')[0];}
+const operator=await login('operator');
 for(const path of ['/api/admin/users','/api/finance/summary']) assert.equal((await fetch(`${base}${path}`,{headers:{cookie:operator}})).status,403);
 assert.equal((await fetch(`${base}/api/company-accounts`,{method:'POST',headers:{origin,cookie:operator,'content-type':'application/json'},body:'{}'})).status,403);
 assert.equal((await fetch(`${base}/api/patients?search=${encodeURIComponent("' OR 1=1 --")}`,{headers:{cookie:operator}})).status,200);
