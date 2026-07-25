@@ -4,7 +4,7 @@
   "private": true,
   "type": "module",
   "engines": {
-    "node": ">=20"
+    "node": ">=24 <25"
   },
   "scripts": {
     "dev": "concurrently -k \"tsx watch src/server.ts\" \"vite\"",
@@ -17,7 +17,9 @@
     "typecheck": "tsc -p tsconfig.server.json --noEmit && tsc -p web/tsconfig.json --noEmit",
     "test": "node --import tsx --test tests/**/*.test.ts",
     "test:e2e": "playwright test",
-    "ci:check": "bash scripts/ci-check.sh"
+    "repo:hygiene": "node scripts/check-repository-hygiene.mjs",
+    "ci:check": "node scripts/run-ci-check.mjs",
+    "ci:check:full": "node scripts/run-ci-check.mjs --full"
   },
   "dependencies": {
     "@fastify/cookie": "^11.0.2",

@@ -3,32 +3,75 @@ import assert from "node:assert/strict";
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 
-describe("Suíte de Validação da Esteira de CI/CD e Integridade (PR-13)", () => {
-  test("verifica existência do arquivo de workflow do GitHub Actions em .github/workflows/ci.yml", () => {
-    const ciPath = join(process.cwd(), ".github", "workflows", "ci.yml");
-    assert.equal(existsSync(ciPath), true, "O arquivo .github/workflows/ci.yml deve existir");
+const root = process.cwd();
+const read = (...parts: string[]) => readFileSync(join(root, ...parts), "utf8");
 
-    const content = readFileSync(ciPath, "utf-8");
-    assert.ok(content.includes("typecheck"), "Deve conter a etapa de typecheck");
-    assert.ok(content.includes("npm test"), "Deve conter a etapa de execução de testes");
-    assert.ok(content.includes("npm run build"), "Deve conter a etapa de build");
-    assert.ok(content.includes("npm audit"), "Deve conter a etapa de auditoria de segurança");
-    assert.ok(content.includes("graphify update"), "Deve conter a etapa de verificação AST do Graphify");
+describe("CI, runtime e higiene do repositório", () => {
+  test("alinha todos os ambientes em Node 24", () => {
+    assert.match(read("package.json"), /"node"\s*:\s*">=24 <25"/);
+    assert.match(read("package-lock.json"), /"node"\s*:\s*">=24 <25"/);
+    assert.match(read("Dockerfile"), /^FROM node:24-alpine/m);
+    assert.match(read(".github", "workflows", "ci.yml"), /node-version:\s*24/);
+    assert.equal(read(".nvmrc").trim(), "24");
+    assert.equal(read(".node-version").trim(), "24");
+    assert.match(read("render.yaml"), /key:\s*NODE_VERSION[\s\S]*?value:\s*"24"/);
   });
 
-  test("verifica existência dos scripts de checagem local pre-commit/pre-push em scripts/", () => {
-    const shPath = join(process.cwd(), "scripts", "ci-check.sh");
-    const ps1Path = join(process.cwd(), "scripts", "ci-check.ps1");
+  test("executa CI em PR, push da main e acionamento manual", () => {
+    const workflow = read(".github", "workflows", "ci.yml");
+    assert.match(workflow, /pull_request:/);
+    assert.match(workflow, /push:\s*\n\s+branches:\s*\[main\]/);
+    assert.match(workflow, /workflow_dispatch:/);
+    assert.match(workflow, /group:\s*fonolife-/);
+    assert.match(workflow, /npm run ci:check:full/);
+    assert.match(workflow, /if:\s*failure\(\)/);
+    assert.match(workflow, /docker-compose\.log/);
+  });
 
-    assert.equal(existsSync(shPath), true, "O script scripts/ci-check.sh deve existir");
-    assert.equal(existsSync(ps1Path), true, "O script scripts/ci-check.ps1 deve existir");
+  test("mantém Compose local fora da fronteira de produção", () => {
+    assert.match(read("compose.yaml"), /NODE_ENV:\s*\$\{NODE_ENV:-development\}/);
+    assert.match(read("render.yaml"), /key:\s*NODE_ENV[\s\S]*?value:\s*production/);
+    assert.match(read("render.yaml"), /key:\s*DEMO_MODE[\s\S]*?value:\s*"false"/);
+  });
 
-    const shContent = readFileSync(shPath, "utf-8");
-    assert.ok(shContent.includes("typecheck"), "ci-check.sh deve executar typecheck");
-    assert.ok(shContent.includes("npm test"), "ci-check.sh deve executar testes");
+  test("mantém gates rápido e completo em uma fonte de verdade", () => {
+    const shPath = join(root, "scripts", "ci-check.sh");
+    const ps1Path = join(root, "scripts", "ci-check.ps1");
+    assert.equal(existsSync(shPath), true);
+    assert.equal(existsSync(ps1Path), true);
 
-    const ps1Content = readFileSync(ps1Path, "utf-8");
-    assert.ok(ps1Content.includes("typecheck"), "ci-check.ps1 deve executar typecheck");
-    assert.ok(ps1Content.includes("npm test"), "ci-check.ps1 deve executar testes");
+    const sh = read("scripts", "ci-check.sh");
+    for (const gate of [
+      "repo:hygiene",
+      "typecheck",
+      "npm test",
+      "npm run build",
+      "npm audit --audit-level=high",
+      "npx --yes @sentropic/graphify@0.17.1 update",
+      "docker compose",
+      "dist/db/migrate.js",
+      "dist/db/seed.js",
+      "assert_immutable_ledger",
+      "logs >docker-compose.log",
+      "test:e2e",
+    ]) {
+      assert.ok(sh.includes(gate), `ci-check.sh deve conter ${gate}`);
+    }
+    assert.match(read("scripts", "ci-check.ps1"), /scripts\/ci-check\.sh/);
+  });
+
+  test("não versiona estado local do Graphify, m1nd ou hooks pessoais", () => {
+    const ignore = read(".gitignore");
+    assert.match(ignore, /^\.graphify\/$/m);
+    assert.match(ignore, /^\.agents\/$/m);
+    assert.match(ignore, /^\.m1nd\/$/m);
+    assert.match(ignore, /^checkpoint-store\/$/m);
+    assert.match(ignore, /^\.codex\/hooks\.json$/m);
+
+    const hygiene = read("scripts", "check-repository-hygiene.mjs");
+    assert.match(hygiene, /caminho absoluto do Windows/);
+    assert.match(hygiene, /caminho pessoal Unix/);
+    assert.match(hygiene, /runtime deve usar Node 24/);
+    assert.match(hygiene, /boot_memory_state/);
   });
 });

@@ -1,8 +1,13 @@
 name: CI
-on: [push, pull_request]
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
 
 concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
+  group: fonolife-${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
 permissions:
@@ -11,7 +16,7 @@ permissions:
 jobs:
   validate:
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 35
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -19,88 +24,29 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 24
           cache: npm
-
-      - name: Check whitespace and formatting
-        run: git -c core.whitespace=blank-at-eol,blank-at-eof,space-before-tab,cr-at-eol diff --check
 
       - name: Install dependencies
         run: npm ci
 
-      - name: Audit dependencies
-        run: npm audit --audit-level=high
-
-      - name: Typecheck
-        run: npm run typecheck
-
-      - name: Unit and integration tests
-        run: npm test
-
-      - name: Build production bundle
-        run: npm run build
-
-      - name: Verify Graphify AST extraction
-        run: npx graphify update .
-
-      - name: Start Docker environment
-        run: docker compose up --build --wait
-
-      - name: Health check
-        run: curl --fail http://localhost:3000/api/health
-
-      - name: Run database migrations (1st run)
-        run: docker compose exec -T app node dist/db/migrate.js
-
-      - name: Verify database migration idempotency (2nd run)
-        run: docker compose exec -T app node dist/db/migrate.js
-
-      - name: Run database seed (1st run)
-        run: docker compose exec -T app node dist/db/seed.js
-
-      - name: Verify database seed idempotency (2nd run)
-        run: docker compose exec -T app node dist/db/seed.js
-
-      - name: Smoke tests (Dashboard)
-        run: node tests/dashboard-smoke.mjs
-
-      - name: Smoke tests (Finance)
-        run: node tests/finance-smoke.mjs
-
-      - name: Verify financial ledger immutability triggers
-        run: |
-          docker compose exec -T db psql -U fonolife -d fonolife -v ON_ERROR_STOP=0 -c "UPDATE financial_entries SET amount_cents=1" 2>&1 | tee /tmp/update.log
-          grep -q "histórico financeiro é imutável" /tmp/update.log
-          docker compose exec -T db psql -U fonolife -d fonolife -v ON_ERROR_STOP=0 -c "DELETE FROM financial_entries" 2>&1 | tee /tmp/delete.log
-          grep -q "histórico financeiro é imutável" /tmp/delete.log
-
-      - name: Install Playwright browsers
+      - name: Install Playwright browser
         run: npx playwright install --with-deps chromium
 
-      - name: End-to-end and accessibility tests (Playwright + Axe)
-        run: npm run test:e2e
+      - name: Run complete local-equivalent gate
+        run: npm run ci:check:full
 
-      - name: DevSec smoke tests
-        run: node tests/devsec-smoke.mjs
-
-      - name: Upload test artifacts and reports
-        if: always()
+      - name: Upload failure evidence
+        if: failure()
         uses: actions/upload-artifact@v4
         with:
-          name: qa-evidencias
+          name: qa-evidencias-${{ github.run_id }}
           path: |
-            playwright-report
-            test-results
+              playwright-report
+              test-results
+              docker-compose.log
           if-no-files-found: ignore
           retention-days: 14
-
-      - name: Export Docker logs on failure
-        if: failure()
-        run: docker compose logs
-
-      - name: Teardown Docker environment
-        if: always()
-        run: docker compose down -v
 
   image:
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'

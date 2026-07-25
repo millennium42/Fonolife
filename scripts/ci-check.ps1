@@ -1,30 +1,16 @@
-# Script de Validação da Esteira de CI/CD Local para Windows PowerShell
+param([switch]$Full)
+
 $ErrorActionPreference = "Stop"
+$mode = if ($Full) { "--full" } else { "--quick" }
+$bashCandidates = @(
+  "$env:ProgramFiles\Git\bin\bash.exe",
+  "$env:ProgramFiles\Git\usr\bin\bash.exe",
+  (Get-Command bash -ErrorAction SilentlyContinue | Select-Object -ExpandProperty Source -First 1)
+) | Where-Object { $_ -and (Test-Path $_) }
 
-Write-Host "=== [FONOLIFE] Executando Validação da Esteira de CI/CD Local ===" -ForegroundColor Cyan
+if (-not $bashCandidates) {
+  throw "Bash não encontrado. Instale Git for Windows ou execute o script no Linux."
+}
 
-Write-Host "1/6 Checando formatação e whitespace..." -ForegroundColor Cyan
-git -c core.whitespace=blank-at-eol,blank-at-eof,space-before-tab,cr-at-eol diff --check
-if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-
-Write-Host "2/6 Executando Typecheck..." -ForegroundColor Cyan
-npm run typecheck
-if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-
-Write-Host "3/6 Executando Suíte de Testes..." -ForegroundColor Cyan
-npm test
-if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-
-Write-Host "4/6 Compilando Build de Produção..." -ForegroundColor Cyan
-npm run build
-if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-
-Write-Host "5/6 Executando Auditoria de Segurança..." -ForegroundColor Cyan
-npm audit --audit-level=high
-if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-
-Write-Host "6/6 Verificando extração AST do Graphify..." -ForegroundColor Cyan
-npx graphify update .
-if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-
-Write-Host "✅ [FONOLIFE] Todos os 6 gates de qualidade foram aprovados com sucesso!" -ForegroundColor Green
+& $bashCandidates[0] scripts/ci-check.sh $mode
+exit $LASTEXITCODE

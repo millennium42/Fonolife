@@ -12,12 +12,12 @@ async function dashboard(cookie) {
   return response.json();
 }
 
-const operator = await dashboard(await login("operador@demo.local", "operador123"));
+const operator = await dashboard(await login("operador@fonolife.com.br", "operador123"));
 assert.equal("financial" in operator, false);
 for (const field of ["overdue", "today", "open_tasks", "adaptation", "month_sales"]) assert.equal(typeof operator[field], "number");
 assert.ok(Array.isArray(operator.queue));
 
-const admin = await dashboard(await login("admin@demo.local", "admin123"));
+const admin = await dashboard(await login("admin@fonolife.com.br", "admin123"));
 assert.equal(typeof admin.financial.consolidated.balance_cents, "number");
 assert.ok(Array.isArray(admin.financial.byAccount));
 console.log("dashboard-smoke: consultas e segregação Admin/Operador aprovadas");

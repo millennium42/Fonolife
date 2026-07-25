@@ -893,17 +893,17 @@ function Finance({ user, openGlobalPatient }: { user: User; openGlobalPatient: (
         <div className="finance-summary">
           <div className="kpi-card">
             <span>Saldo Consolidado</span>
-            <strong style={{ color: summary.consolidated.balance_cents >= 0 ? "#16a34a" : "#dc2626" }}>
+            <strong style={{ color: summary.consolidated.balance_cents >= 0 ? "var(--success)" : "var(--danger)" }}>
               {money(summary.consolidated.balance_cents)}
             </strong>
           </div>
           <div className="kpi-card">
             <span>Entradas Realizadas</span>
-            <strong style={{ color: "#16a34a" }}>+{money(summary.consolidated.income_cents)}</strong>
+            <strong style={{ color: "var(--success)" }}>+{money(summary.consolidated.income_cents)}</strong>
           </div>
           <div className="kpi-card">
             <span>Saídas Realizadas</span>
-            <strong style={{ color: "#dc2626" }}>−{money(summary.consolidated.expense_cents)}</strong>
+            <strong style={{ color: "var(--danger)" }}>−{money(summary.consolidated.expense_cents)}</strong>
           </div>
         </div>
       )}
@@ -974,7 +974,7 @@ function Finance({ user, openGlobalPatient }: { user: User; openGlobalPatient: (
                 <td>{categoryLabels[item.category] || item.category}</td>
                 <td>{item.company_account_label}</td>
                 <td>{paymentLabels[item.payment_method]}</td>
-                <td style={{ fontWeight: "bold", color: item.entry_type === "income" ? "#16a34a" : "#dc2626" }}>
+                <td style={{ fontWeight: "bold", color: item.entry_type === "income" ? "var(--success)" : "var(--danger)" }}>
                   {item.entry_type === "income" ? "+" : "−"} {money(item.amount_cents)}
                 </td>
                 <td>
@@ -1268,7 +1268,7 @@ function PatientAttachments({ patientId }: { patientId: string }) {
 
   return (
     <div style={{ marginTop: "1.5rem", padding: "1rem", border: "1px solid var(--border)", borderRadius: "6px" }}>
-      <h4>📄 Exames & Laudos Audiométricos</h4>
+      <h3>📄 Exames & Laudos Audiométricos</h3>
       {error && <p className="error" role="alert">{error}</p>}
 
       <div style={{ background: "#f8fafc", padding: "0.75rem", borderRadius: "6px", margin: "0.75rem 0", border: "1px solid #e2e8f0" }}>
@@ -1389,7 +1389,7 @@ function PatientMedicalReports({ patientId, user }: { patientId: string; user: U
   return (
     <div style={{ marginTop: "1.5rem", padding: "1rem", border: "1px solid var(--border)", borderRadius: "6px" }}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-        <h4>🩺 Laudos Médicos & Avaliações Fonoaudiológicas</h4>
+        <h3>🩺 Laudos Médicos & Avaliações Fonoaudiológicas</h3>
         <button type="button" onClick={() => setShowNewModal(true)}>+ Emitir Novo Laudo</button>
       </div>
 
@@ -1876,7 +1876,7 @@ function Dashboard({ user, openPatient, openFollowUps }: { user: User; openPatie
       <div className="dashboard-cards">
         <div className="dashboard-card" onClick={openFollowUps} style={{ cursor: "pointer" }}>
           <span>Contatos Atrasados</span>
-          <strong style={{ color: "#dc2626" }}>{data.overdue}</strong>
+          <strong style={{ color: "var(--danger)" }}>{data.overdue}</strong>
         </div>
         <div className="dashboard-card" onClick={openFollowUps} style={{ cursor: "pointer" }}>
           <span>Retornos Hoje</span>
@@ -1892,17 +1892,17 @@ function Dashboard({ user, openPatient, openFollowUps }: { user: User; openPatie
         </div>
         <div className="dashboard-card">
           <span>Vendas no Mês</span>
-          <strong style={{ color: "#16a34a" }}>{data.month_sales}</strong>
+          <strong style={{ color: "var(--success)" }}>{data.month_sales}</strong>
         </div>
       </div>
 
       {user.role === "admin" && data.financial && (
         <section className="card" style={{ margin: "1rem 0" }}>
-          <h3>💵 Resumo Financeiro Realizado</h3>
+          <h2>💵 Resumo Financeiro Realizado</h2>
           <div className="finance-summary">
             <div className="kpi-card"><span>Saldo Consolidado</span><strong>{money(data.financial.consolidated.balance_cents)}</strong></div>
-            <div className="kpi-card"><span>Entradas no Mês</span><strong style={{ color: "#16a34a" }}>{money(data.financial.consolidated.month_income_cents)}</strong></div>
-            <div className="kpi-card"><span>Saídas no Mês</span><strong style={{ color: "#dc2626" }}>{money(data.financial.consolidated.month_expense_cents)}</strong></div>
+            <div className="kpi-card"><span>Entradas no Mês</span><strong style={{ color: "var(--success)" }}>{money(data.financial.consolidated.month_income_cents)}</strong></div>
+            <div className="kpi-card"><span>Saídas no Mês</span><strong style={{ color: "var(--danger)" }}>{money(data.financial.consolidated.month_expense_cents)}</strong></div>
           </div>
         </section>
       )}
@@ -2132,8 +2132,8 @@ function Inventory({ user }: { user: User; openGlobalPatient?: (id: string) => v
           <small style={{ color: "#64748b" }}>Valor acumulado em saldo</small>
         </div>
         <div className="card" style={{ borderColor: lowStockProducts.length > 0 ? "#ef4444" : undefined }}>
-          <h3 style={{ color: lowStockProducts.length > 0 ? "#dc2626" : undefined }}>⚠️ Baixo Estoque</h3>
-          <p style={{ fontSize: "1.75rem", fontWeight: "bold", margin: "0.25rem 0", color: lowStockProducts.length > 0 ? "#dc2626" : "inherit" }}>
+          <h3 style={{ color: lowStockProducts.length > 0 ? "var(--danger)" : undefined }}>⚠️ Baixo Estoque</h3>
+          <p style={{ fontSize: "1.75rem", fontWeight: "bold", margin: "0.25rem 0", color: lowStockProducts.length > 0 ? "var(--danger)" : "inherit" }}>
             {lowStockProducts.length}
           </p>
           <small style={{ color: "#64748b" }}>Itens no limite ou abaixo</small>
@@ -2307,7 +2307,7 @@ function Inventory({ user }: { user: User; openGlobalPatient?: (id: string) => v
             </thead>
             <tbody>
               {lowStockProducts.length === 0 ? (
-                <tr><td colSpan={7} style={{ textAlign: "center", color: "#16a34a", padding: "2rem" }}>✅ Nenhum produto em baixo estoque! Todos os itens estão com estoque adequado.</td></tr>
+                <tr><td colSpan={7} style={{ textAlign: "center", color: "var(--success)", padding: "2rem" }}>✅ Nenhum produto em baixo estoque! Todos os itens estão com estoque adequado.</td></tr>
               ) : (
                 lowStockProducts.map((p) => (
                   <tr key={p.id} style={{ backgroundColor: "#fef2f2" }}>
@@ -2356,7 +2356,7 @@ function Inventory({ user }: { user: User; openGlobalPatient?: (id: string) => v
                       </span>
                     </td>
                     <td>
-                      <strong style={{ color: m.quantity > 0 ? "#16a34a" : "#dc2626" }}>
+                      <strong style={{ color: m.quantity > 0 ? "var(--success)" : "var(--danger)" }}>
                         {m.quantity > 0 ? `+${m.quantity}` : m.quantity} un.
                       </strong>
                     </td>

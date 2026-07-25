@@ -1,6 +1,6 @@
 :root {
-  --primary: #0284c7;
-  --primary-hover: #0369a1;
+  --primary: #0369a1;
+  --primary-hover: #075985;
   --primary-light: #e0f2fe;
   --navy: #0f172a;
   --navy-light: #1e293b;
@@ -9,9 +9,9 @@
   --text: #0f172a;
   --text-muted: #64748b;
   --border: #e2e8f0;
-  --success: #16a34a;
+  --success: #166534;
   --success-bg: #f0fdf4;
-  --danger: #dc2626;
+  --danger: #b91c1c;
   --danger-bg: #fef2f2;
   --warning: #d97706;
   --warning-bg: #fffbe6;
@@ -46,6 +46,7 @@ button:hover:not(:disabled) { background: var(--primary-hover); transform: trans
 button:disabled { opacity: 0.6; cursor: not-allowed; }
 
 button.secondary { background: var(--primary-light); color: var(--primary-hover); }
+button.secondary small { color: #075985; opacity: 1 !important; }
 button.secondary:hover:not(:disabled) { background: #bae6fd; }
 button.danger { background: var(--danger-bg); color: var(--danger); border: 1px solid #fca5a5; }
 button.danger:hover:not(:disabled) { background: #fee2e2; }
@@ -101,7 +102,7 @@ input:focus, select:focus, textarea:focus { outline: 2px solid var(--primary); o
   background: var(--navy-light); border-right: 1px solid #334155;
 }
 .shell nav button {
-  display: flex; width: 100%; text-align: left; margin-bottom: 0.4rem; background: transparent;
+  display: flex; width: 100%; text-align: left; margin-bottom: 0.4rem; background: var(--navy-light);
   color: #94a3b8; font-weight: 600; font-size: 0.95rem; padding: 0.65rem 0.85rem; justify-content: flex-start;
 }
 .shell nav button:hover { background: rgba(255, 255, 255, 0.05); color: white; }
