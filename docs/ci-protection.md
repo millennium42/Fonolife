@@ -88,7 +88,7 @@ Para evitar a inclusão de milhares de linhas voláteis de cache nos diffs de Pu
 
 Configuração desejada: Pull Request obrigatória, uma aprovação, check `validate`, branch atualizada, conversas resolvidas e bloqueio de force push/exclusão.
 
-Estado em 2026-07-25: `NOT_PROVEN`. O host local não possuía o binário `gh`, portanto a consulta `rtk gh api repos/millennium42/Fonolife/branches/main/protection` não alcançou a API. Não se declara proteção ativa sem resposta autenticada.
+Estado em 2026-07-25: `PROVEN`. A API retornou `strict=true`, contexto obrigatório `validate`, uma aprovação, descarte de aprovações obsoletas, aprovação após o último push, conversas resolvidas, histórico linear e bloqueios de force push e exclusão. A política também se aplica a administradores.
 
 ---
 

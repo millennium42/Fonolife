@@ -32,11 +32,13 @@ Sem migration ou módulo de produto. O modo completo usa PostgreSQL e Docker tem
 
 - A CI remota ainda precisa confirmar o recibo local em Node 24.
 - O modo completo exige Docker e Chromium do Playwright instalados.
-- Proteção da `main` permanece `NOT_PROVEN` até uma resposta autenticada da API.
+- O merge depende de uma aprovação externa e do check remoto `validate`.
 
 ## Testes
 
 `npm run ci:check:full` aprovado localmente em Node 24: higiene de 157 arquivos, typecheck, 95/95 testes, build, audit com zero vulnerabilidades, Graphify, migrations e seed idempotentes, três smokes e 6/6 cenários Playwright/axe.
+
+A proteção da `main` foi confirmada pela API com PR e uma aprovação obrigatórias, `validate` estrito, conversas resolvidas, histórico linear e bloqueio de force push/exclusão.
 
 ## Rollback
 
