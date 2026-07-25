@@ -68,7 +68,7 @@ export function buildApp(customStorage?: AttachmentStorage, customScanner?: Atta
     reply.header("x-content-type-options", "nosniff");
     reply.header("referrer-policy", "no-referrer");
     reply.header("content-security-policy", "default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; frame-ancestors 'none'; base-uri 'self'; form-action 'self'");
-    if (config.production) reply.header("strict-transport-security", "max-age=31536000; includeSubDomains");
+    if (config.secureRuntime) reply.header("strict-transport-security", "max-age=31536000; includeSubDomains");
     return payload;
   });
 

@@ -1,7 +1,7 @@
 import pg from 'pg';
 import { config } from '../config.js';
 
-const isCloudOrProduction = config.production || Boolean(process.env.DATABASE_SSL);
+const isCloudOrProduction = config.secureRuntime || Boolean(process.env.DATABASE_SSL);
 const ssl = isCloudOrProduction
   ? { rejectUnauthorized: false }
   : false;

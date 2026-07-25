@@ -62,6 +62,13 @@ docker compose -p "$project" exec -T app node dist/db/migrate.js
 docker compose -p "$project" exec -T app node dist/db/migrate.js
 docker compose -p "$project" exec -T app node dist/db/seed.js
 docker compose -p "$project" exec -T app node dist/db/seed.js
+for _ in 1 2; do
+  docker compose -p "$project" exec -T \
+    -e DEMO_RESET_CONFIRM=RESET_DEMO \
+    -e DEMO_OPERATION_TOKEN=ci-demo-reset-token \
+    -e DEMO_RESET_TOKEN=ci-demo-reset-token \
+    app npm run demo:reset
+done
 
 curl --fail --silent --show-error http://localhost:3000/api/health >/dev/null
 node tests/dashboard-smoke.mjs
@@ -73,7 +80,7 @@ assert_immutable_ledger() {
   local output
   local status
   set +e
-  output="$(docker compose -p "$project" exec -T db psql -U fonolife -d fonolife -v ON_ERROR_STOP=1 -c "$statement" 2>&1)"
+  output="$(docker compose -p "$project" exec -T db psql -U fonolife -d fonolife_demo -v ON_ERROR_STOP=1 -c "$statement" 2>&1)"
   status=$?
   set -e
   if [[ "$status" -eq 0 ]] || ! grep -q "histórico financeiro é imutável" <<<"$output"; then

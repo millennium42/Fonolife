@@ -12,6 +12,7 @@
     "start": "node dist/server.js",
     "migrate": "tsx src/db/migrate.ts",
     "seed": "tsx src/db/seed.ts",
+    "demo:reset": "node dist/scripts/reset-demo.js",
     "admin:create": "node dist/db/create-admin.js",
     "bootstrap-admin": "tsx src/scripts/bootstrap-admin.ts",
     "typecheck": "tsc -p tsconfig.server.json --noEmit && tsc -p web/tsconfig.json --noEmit",

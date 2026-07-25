@@ -49,6 +49,6 @@ export async function healthRoutes(
   });
 
   app.get("/api/config", async () => {
-    return { demoMode: config.demo };
+    return { demoMode: config.demo, environment: config.appEnv };
   });
 }

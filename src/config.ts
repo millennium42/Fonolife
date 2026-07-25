@@ -1,14 +1,34 @@
-const production = process.env.NODE_ENV === 'production';
-const demo = process.env.DEMO_MODE === 'true';
-const allowProductionDemo = process.env.ALLOW_PRODUCTION_DEMO === 'true';
-const authMemoryFallback = process.env.AUTH_MEMORY_FALLBACK === 'true' || (!production && process.env.AUTH_MEMORY_FALLBACK !== 'false');
+export type AppEnvironment = "test" | "development" | "demo" | "production";
 
-if (production && demo && !allowProductionDemo) {
-  throw new Error('CONFIG ERROR: DEMO_MODE cannot be enabled in production environment unless ALLOW_PRODUCTION_DEMO is explicitly set to true.');
+const appEnvironments = new Set<AppEnvironment>(["test", "development", "demo", "production"]);
+const secureRuntime = process.env.NODE_ENV === "production";
+const inferredAppEnv = process.env.NODE_ENV === "test"
+  ? "test"
+  : process.env.NODE_ENV === "production"
+    ? "production"
+    : "development";
+const appEnv = process.env.APP_ENV ?? inferredAppEnv;
+
+if (!appEnvironments.has(appEnv as AppEnvironment)) {
+  throw new Error("CONFIG ERROR: APP_ENV must be test, development, demo or production.");
 }
 
-if (production && process.env.AUTH_MEMORY_FALLBACK === 'true') {
-  throw new Error('CONFIG ERROR: AUTH_MEMORY_FALLBACK cannot be enabled in production environment.');
+const production = appEnv === "production";
+const demo = appEnv === "demo";
+const authMemoryFallback =
+  process.env.AUTH_MEMORY_FALLBACK === "true" ||
+  ((appEnv === "development" || appEnv === "test") && process.env.AUTH_MEMORY_FALLBACK !== "false");
+
+if (production && process.env.DEMO_MODE === "true") {
+  throw new Error("CONFIG ERROR: demo features cannot be enabled in production.");
+}
+
+if (production && Object.keys(process.env).some((key) => key.startsWith("DEMO_") && process.env[key])) {
+  throw new Error("CONFIG ERROR: demo configuration is forbidden in production.");
+}
+
+if ((production || demo) && process.env.AUTH_MEMORY_FALLBACK === "true") {
+  throw new Error("CONFIG ERROR: AUTH_MEMORY_FALLBACK cannot be enabled in production or demo.");
 }
 
 const storageProvider = process.env.ATTACHMENT_STORAGE_PROVIDER ?? process.env.STORAGE_PROVIDER ?? (production ? 's3' : 'local');
@@ -59,7 +79,9 @@ export const config = {
   databaseUrl: process.env.DATABASE_URL ?? 'postgres://fonolife:fonolife@localhost:5432/fonolife',
   port: Number(process.env.PORT ?? 3000),
   origin: process.env.APP_ORIGIN ?? process.env.RENDER_EXTERNAL_URL ?? 'http://localhost:5173',
+  appEnv: appEnv as AppEnvironment,
   production,
+  secureRuntime,
   demo,
   authMemoryFallback,
   storageProvider,

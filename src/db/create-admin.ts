@@ -8,7 +8,7 @@ const password = process.env.INITIAL_ADMIN_PASSWORD;
 const name = process.env.INITIAL_ADMIN_NAME?.trim() || 'Administrador';
 
 if (!email || !password || password.length < 12) throw new Error('Defina INITIAL_ADMIN_EMAIL e INITIAL_ADMIN_PASSWORD com ao menos 12 caracteres.');
-if (email.endsWith('@demo.local') || password === 'admin123') throw new Error('Credenciais DEMO são proibidas para o administrador inicial.');
+if (email.endsWith('@demo.invalid')) throw new Error('Identidades demonstrativas são proibidas para o administrador inicial.');
 
 await migrate();
 await pool.query(

@@ -28,10 +28,12 @@ describe("CI, runtime e higiene do repositório", () => {
     assert.match(workflow, /docker-compose\.log/);
   });
 
-  test("mantém Compose local fora da fronteira de produção", () => {
+  test("mantém ambientes de produção e demo separados", () => {
     assert.match(read("compose.yaml"), /NODE_ENV:\s*\$\{NODE_ENV:-development\}/);
+    assert.match(read("compose.yaml"), /APP_ENV:\s*\$\{APP_ENV:-demo\}/);
     assert.match(read("render.yaml"), /key:\s*NODE_ENV[\s\S]*?value:\s*production/);
-    assert.match(read("render.yaml"), /key:\s*DEMO_MODE[\s\S]*?value:\s*"false"/);
+    assert.match(read("render.yaml"), /key:\s*APP_ENV[\s\S]*?value:\s*production/);
+    assert.match(read("render.yaml"), /name:\s*fonolife-demo[\s\S]*?name:\s*fonolife-demo-db/);
   });
 
   test("mantém gates rápido e completo em uma fonte de verdade", () => {
@@ -51,6 +53,7 @@ describe("CI, runtime e higiene do repositório", () => {
       "docker compose",
       "dist/db/migrate.js",
       "dist/db/seed.js",
+      "demo:reset",
       "assert_immutable_ledger",
       "logs >docker-compose.log",
       "test:e2e",
