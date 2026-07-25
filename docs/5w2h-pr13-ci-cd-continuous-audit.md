@@ -1,5 +1,7 @@
 # 5W2H — PR 13: Consolidar Esteira de CI/CD e Auditoria Contínua
 
+> Registro histórico. A política de Node 20+ e os seis gates locais desta entrega foram substituídos pela ADR 001 e pela PR 16.
+
 ## Contexto
 
 Esta entrega (PROMPT 09) consolida a esteira de Integração Contínua (CI/CD) do Fonolife, adicionando validação de extração AST do Graphify (`graphify update .`), scripts de checagem local pre-commit/pre-push (`scripts/ci-check.sh` e `scripts/ci-check.ps1`), testes de integridade da esteira e atualização da documentação de proteção da branch `main`.

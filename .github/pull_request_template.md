@@ -12,6 +12,13 @@ Descreva o problema, o domínio alterado e a solução aplicada.
 - [ ] Docker Compose e health check
 - [ ] Validação desktop/mobile quando aplicável
 
+| Ferramenta | Comando principal | Resultado resumido | Artefato |
+|---|---|---|---|
+| m1nd |  |  |  |
+| Graphify |  |  |  |
+| Probe |  |  |  |
+| rtk |  |  |  |
+
 ## Riscos e rollback
 
 Liste riscos conhecidos. Rollback por imagem/commit anterior; banco recebe migration corretiva, nunca remoção de histórico.
