@@ -6,8 +6,8 @@ Este documento especifica os requisitos de Integração Contínua (CI), proteç�
 
 ## 1. Princípios Gerais
 
-1. **Push Direto Proibido**: Toda alteração deve ser entregue via Pull Request (PR) criada a partir de uma branch dedicada nomeada `codex/<entrega>`.
-2. **CI Obrigatória**: Nenhuma PR pode ser mesclada na branch `main` sem que todos os jobs do GitHub Actions tenham concluído com status verde (sucesso).
+1. **Entrega sequencial na `main`**: Por decisão do proprietário em 2026-07-25, “PR 16–20” identifica marcos lógicos. Cada marco é composto por commits pequenos diretamente na `main`, somente depois dos gates locais aplicáveis.
+2. **CI Obrigatória**: Todo push na `main` deve executar o workflow remoto. Um marco só avança após o check `validate` concluir com sucesso.
 3. **Evidência Empírica**: Declarações de qualidade sem logs, relatórios de teste ou status de CI são inaceitáveis.
 
 ---
@@ -64,21 +64,21 @@ powershell -ExecutionPolicy Bypass -File scripts/ci-check.ps1 -Full
 
 ## 4. Matriz de Severidade de Achados
 
-Antes do merge de qualquer PR, a revisão de código e testes deve classificar todos os problemas encontrados conforme a seguinte matriz:
+Antes de concluir qualquer marco lógico, a revisão de código e testes deve classificar todos os problemas encontrados conforme a seguinte matriz:
 
 - **P0 — Crítico**: Vulnerabilidade de segurança explorável (ex: bypass de auth, IDOR, SQL injection, vazamento de PII), perda de dados clínicos/financeiros, ou indisponibilidade total do sistema.
-  - *Critério de merge*: `P0 = 0` (Bloqueio absoluto).
+  - *Critério de avanço*: `P0 = 0` (Bloqueio absoluto).
 - **P1 — Bloqueador**: Regra de negócio violada (ex: saldo negativo de estoque, baixa duplicada de insumos, fallback silencioso de rate limit), falha em teste unitário/E2E ou erro de compilação.
-  - *Critério de merge*: `P1 = 0` (Bloqueio absoluto).
+  - *Critério de avanço*: `P1 = 0` (Bloqueio absoluto).
 - **P2 — Melhoria Necessária**: Débito técnico menor, inconsistência estética secundária ou documentação incompleta.
-  - *Critério de merge de PR intermediária*: Permitido se justificado e agendado para a release.
+  - *Critério de marco intermediário*: Permitido se justificado e agendado para a release.
   - *Critério da Release Final*: `P2 = 0` (A release final exige zero P2).
 
 ---
 
 ## 5. Política de Higiene do Graphify
 
-Para evitar a inclusão de milhares de linhas voláteis de cache nos diffs de Pull Requests:
+Para evitar a inclusão de milhares de linhas voláteis de cache nos diffs:
 
 1. **Ignorados no Git**: O arquivo `.gitignore` deve incluir expressamente as pastas e arquivos temporários do Graphify (`.graphify/cache/`, `.graphify/.graphify_describe_pending`, `.graphify/.graphify_detect.json`, `.graphify/.graphify_labels.json`, `.graphify/branch.json`, `.graphify/description-instructions/`, `.graphify/label-instructions/`, `.graphify/scope.json`, `.graphify/worktree.json`).
 2. **Estado local não versionado**: `.graphify/` e `graphify-out/` são regeneráveis e não entram no Git; isso elimina caminhos absolutos, timestamps e inventários de branches locais.
@@ -86,22 +86,20 @@ Para evitar a inclusão de milhares de linhas voláteis de cache nos diffs de Pu
 
 ## 6. Proteção da `main`
 
-Configuração desejada: Pull Request obrigatória, uma aprovação, check `validate`, branch atualizada, conversas resolvidas e bloqueio de force push/exclusão.
-
-Estado em 2026-07-25: `PROVEN`. A API retornou `strict=true`, contexto obrigatório `validate`, uma aprovação, descarte de aprovações obsoletas, aprovação após o último push, conversas resolvidas, histórico linear e bloqueios de force push e exclusão. A política também se aplica a administradores.
+Estado em 2026-07-25: `DIRECT_MAIN_BY_OWNER`. A proteção que exigia Pull Request foi removida após a orientação explícita para commits diretos na `main`. A segurança do fluxo passa a depender dos gates locais antes do push, do check remoto `validate` após o push e da interrupção imediata do próximo marco se a CI falhar.
 
 ---
 
 ## 7. Procedimento de rollback
 
-Em caso de identificação de defeitos pós-merge em produção ou na branch `main`:
+Em caso de identificação de defeitos após um push em produção ou na branch `main`:
 
 1. Executar o revert imediato via Git:
    ```bash
    rtk git switch main
    rtk git pull --ff-only
-   rtk git revert -m 1 <COMMIT_SHA>
+   rtk git revert <COMMIT_SHA>
    rtk git push origin main
    ```
 2. Confirmar a execução bem-sucedida do pipeline de CI pós-reversão.
-3. Notificar a equipe e abrir uma nova branch `codex/` para investigar a causa raiz com `m1nd` e `graphify`.
+3. Notificar a equipe e investigar a causa raiz com `m1nd` e `graphify` antes de novo commit.

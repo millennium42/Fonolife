@@ -2,7 +2,7 @@
 
 ## Estado
 
-Aceita para a PR 16; a prova remota depende da CI do respectivo Pull Request.
+Aceita no marco lógico PR 16; a prova remota depende da CI do respectivo push na `main`.
 
 ## Contexto
 

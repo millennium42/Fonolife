@@ -2,7 +2,7 @@
 
 ## What
 
-Alinhar Node.js 24, eliminar estado local versionado, consolidar os gates rápido/completo e registrar a situação real de PRs e proteção da `main`.
+Alinhar Node.js 24, eliminar estado local versionado, consolidar os gates rápido/completo e registrar o fluxo de commits diretos na `main`.
 
 ## Why
 
@@ -18,7 +18,7 @@ Primeira entrega do plano de convergência, nascida da `main` remota `0e6a80d`.
 
 ## Who
 
-Manutenção técnica pelo agente; aprovação, proteção da branch e merge pertencem ao responsável do repositório.
+Manutenção técnica pelo agente; o proprietário definiu os PRs 16–20 como marcos lógicos entregues por commits diretos na `main`.
 
 ## How
 
@@ -32,14 +32,14 @@ Sem migration ou módulo de produto. O modo completo usa PostgreSQL e Docker tem
 
 - A CI remota ainda precisa confirmar o recibo local em Node 24.
 - O modo completo exige Docker e Chromium do Playwright instalados.
-- O merge depende de uma aprovação externa e do check remoto `validate`.
+- O próximo marco depende do check remoto `validate` verde para o push anterior.
 
 ## Testes
 
 `npm run ci:check:full` aprovado localmente em Node 24: higiene de 157 arquivos, typecheck, 95/95 testes, build, audit com zero vulnerabilidades, Graphify, migrations e seed idempotentes, três smokes e 6/6 cenários Playwright/axe.
 
-A proteção da `main` foi confirmada pela API com PR e uma aprovação obrigatórias, `validate` estrito, conversas resolvidas, histórico linear e bloqueio de force push/exclusão.
+O check remoto `validate` do marco foi aprovado. A proteção que exigia PR foi removida depois da decisão explícita do proprietário por commits diretos na `main`.
 
 ## Rollback
 
-Reverter a PR. Não há alteração de schema ou dados. Os arquivos Graphify locais continuam regeneráveis por `graphify update .`.
+Reverter os commits do marco. Não há alteração de schema ou dados. Os arquivos Graphify locais continuam regeneráveis por `graphify update .`.
