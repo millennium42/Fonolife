@@ -1,5 +1,6 @@
 import { test, describe } from "node:test";
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
 import { validFinancialEntry } from "../src/domain/finance.js";
 import { validCents } from "../src/domain/sales.js";
 
@@ -39,5 +40,16 @@ describe("Suíte de Validação de Financeiro, Ledger e PDV (PR-10)", () => {
       }),
       false
     );
+  });
+
+  test("mantém snapshot de CMV e calcula margem sem consultar custo atual", () => {
+    const migration = readFileSync("migrations/021_sale_cost_snapshot.sql", "utf8");
+    const routes = readFileSync("src/modules/finance/routes.ts", "utf8");
+    assert.match(migration, /cost_amount_cents/);
+    assert.match(routes, /costAmountCents/);
+    assert.match(routes, /margin_cents/);
+    assert.match(routes, /FOR UPDATE OF p/);
+    assert.match(routes, /Estoque insuficiente para os insumos do serviço/);
+    assert.doesNotMatch(routes, /sum\(p\.cost_cents\)/);
   });
 });

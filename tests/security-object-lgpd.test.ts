@@ -83,7 +83,8 @@ test("suíte de autorização por objeto e LGPD (PR-01)", async (t) => {
     const patientRoutesSource = await readFile(new URL("../src/modules/patients/routes.ts", import.meta.url), "utf8");
     const privacyRoutesSource = await readFile(new URL("../src/modules/privacy/routes.ts", import.meta.url), "utf8");
     const doctorRoutesSource = await readFile(new URL("../src/modules/doctors/routes.ts", import.meta.url), "utf8");
-    const source = appSource + "\n" + patientRoutesSource + "\n" + privacyRoutesSource + "\n" + doctorRoutesSource;
+    const financeRoutesSource = await readFile(new URL("../src/modules/finance/routes.ts", import.meta.url), "utf8");
+    const source = appSource + "\n" + patientRoutesSource + "\n" + privacyRoutesSource + "\n" + doctorRoutesSource + "\n" + financeRoutesSource;
 
     // Valida se todas as rotas por paciente chamam loadAndAuthorizePatient
     assert.match(source, /loadAndAuthorizePatient/);
@@ -92,6 +93,8 @@ test("suíte de autorização por objeto e LGPD (PR-01)", async (t) => {
 
     // Valida se listagens de médico aplicam filtro SQL
     assert.match(source, /p\.responsible_doctor_id = \$/);
+    assert.match(financeRoutesSource, /operatorOrAdmin/);
+    assert.match(financeRoutesSource, /doctorScope/);
 
     // Valida se redação dinâmica usa o placeholder LGPD correto em timeline e eventos
     assert.match(source, /patient_redactions/);
