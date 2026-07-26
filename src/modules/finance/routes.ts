@@ -1,6 +1,7 @@
 import { randomUUID } from "node:crypto";
 import type { FastifyInstance, FastifyRequest } from "fastify";
 import { pool } from "../../db/pool.js";
+import { idempotencyFingerprint } from "../../domain/idempotency.js";
 import { validCnpj } from "../../domain/security.js";
 import {
   DELIVERY_STATUSES,
@@ -47,6 +48,18 @@ const pagination = (limitValue?: string, offsetValue?: string) => {
     offset: Number.isInteger(requestedOffset) && requestedOffset >= 0 ? requestedOffset : 0,
   };
 };
+
+const idempotencyRetry = (
+  reply: any,
+  row: { id: string; request_fingerprint: string | null },
+  requestFingerprint: string,
+) =>
+  row.request_fingerprint === requestFingerprint
+    ? reply.code(200).send({ id: row.id, idempotent: true })
+    : reply.code(409).type("application/problem+json").send({
+        title: "Chave de idempotência reutilizada com payload diferente",
+        status: 409,
+      });
 
 const financeWhere = (query: FinanceFilters, dateColumn: string) => {
   const values: unknown[] = [], terms: string[] = [];
@@ -119,18 +132,30 @@ export async function financeRoutes(app: FastifyInstance) {
       const authorized = await loadAndAuthorizePatient(request, reply, body.patientId, "write");
       if (!authorized) return;
 
+      const requestFingerprint = idempotencyFingerprint({
+        patientId: body.patientId,
+        productId: body.productId || null,
+        serviceId: body.serviceId || null,
+        product: body.product.trim(),
+        quantity: body.quantity,
+        totalAmountCents: body.totalAmountCents,
+        soldOn: body.soldOn,
+        companyAccountId: body.companyAccountId,
+        notes: body.notes?.trim() ?? "",
+        warrantyUntil: body.warrantyUntil || null,
+        deliveryStatus: body.deliveryStatus ?? "pending",
+        installments,
+      });
       const client = await pool.connect();
       try {
         await client.query("BEGIN");
         const retry = await client.query(
-          "SELECT id FROM sales WHERE client_request_id=$1",
+          "SELECT id,request_fingerprint FROM sales WHERE client_request_id=$1",
           [body.clientRequestId],
         );
         if (retry.rowCount) {
           await client.query("COMMIT");
-          return reply
-            .code(200)
-            .send({ id: retry.rows[0].id, idempotent: true });
+          return idempotencyRetry(reply, retry.rows[0], requestFingerprint);
         }
         const valid = await client.query(
           "SELECT p.id FROM patients p JOIN company_accounts c ON c.id=$2 AND c.active WHERE p.id=$1 AND p.archived_at IS NULL",
@@ -226,10 +251,11 @@ export async function financeRoutes(app: FastifyInstance) {
 
         const saleId = randomUUID();
         await client.query(
-          `INSERT INTO sales(id,client_request_id,patient_id,product_id,service_id,product,quantity,total_amount_cents,cost_amount_cents,sold_on,company_account_id,notes,warranty_until,delivery_status,created_by) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15)`,
+          `INSERT INTO sales(id,client_request_id,request_fingerprint,patient_id,product_id,service_id,product,quantity,total_amount_cents,cost_amount_cents,sold_on,company_account_id,notes,warranty_until,delivery_status,created_by) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16)`,
           [
             saleId,
             body.clientRequestId,
+            requestFingerprint,
             body.patientId,
             body.productId || null,
             body.serviceId || null,
@@ -346,13 +372,11 @@ export async function financeRoutes(app: FastifyInstance) {
         await client.query("ROLLBACK");
         if (error?.code === "23505") {
           const retry = await pool.query(
-            "SELECT id FROM sales WHERE client_request_id=$1",
+            "SELECT id,request_fingerprint FROM sales WHERE client_request_id=$1",
             [body.clientRequestId],
           );
           if (retry.rowCount)
-            return reply
-              .code(200)
-              .send({ id: retry.rows[0].id, idempotent: true });
+            return idempotencyRetry(reply, retry.rows[0], requestFingerprint);
         }
         throw error;
       } finally {
@@ -563,21 +587,33 @@ export async function financeRoutes(app: FastifyInstance) {
   app.post<{ Body: { clientRequestId?: string; entryType?: string; category?: string; description?: string; amountCents?: number; competenceOn?: string; occurredOn?: string; paymentMethod?: string; companyAccountId?: string; patientId?: string; notes?: string } }>("/api/finance/entries", { preHandler: operatorOrAdmin }, async (request, reply) => {
     const body = request.body ?? {};
     if (!validFinancialEntry(body)) return reply.code(400).type("application/problem+json").send({ title: "Confira tipo, categoria, descrição, valor, datas, pagamento e caixa", status: 400 });
+    const requestFingerprint = idempotencyFingerprint({
+      entryType: body.entryType,
+      category: body.category,
+      description: body.description!.trim(),
+      amountCents: body.amountCents,
+      competenceOn: body.competenceOn,
+      occurredOn: body.occurredOn,
+      paymentMethod: body.paymentMethod,
+      companyAccountId: body.companyAccountId,
+      patientId: body.patientId || null,
+      notes: body.notes?.trim() ?? "",
+    });
     const client = await pool.connect();
     try {
       await client.query("BEGIN");
-      const retry = await client.query("SELECT id FROM financial_entries WHERE client_request_id=$1", [body.clientRequestId]);
-      if (retry.rowCount) { await client.query("COMMIT"); return { id: retry.rows[0].id, idempotent: true }; }
+      const retry = await client.query("SELECT id,request_fingerprint FROM financial_entries WHERE client_request_id=$1", [body.clientRequestId]);
+      if (retry.rowCount) { await client.query("COMMIT"); return idempotencyRetry(reply, retry.rows[0], requestFingerprint); }
       const account = await client.query("SELECT id FROM company_accounts WHERE id=$1 AND active", [body.companyAccountId]);
       if (!account.rowCount) { await client.query("ROLLBACK"); return reply.code(404).type("application/problem+json").send({ title: "Caixa ativo não encontrado", status: 404 }); }
       const id = randomUUID();
-      await client.query(`INSERT INTO financial_entries(id,client_request_id,entry_type,category,description,amount_cents,competence_on,occurred_on,payment_method,company_account_id,patient_id,notes,created_by) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13)`, [id,body.clientRequestId,body.entryType,body.category,body.description!.trim(),body.amountCents,body.competenceOn,body.occurredOn,body.paymentMethod,body.companyAccountId,body.patientId || null,body.notes?.trim() ?? "",request.currentUser!.id]);
+      await client.query(`INSERT INTO financial_entries(id,client_request_id,request_fingerprint,entry_type,category,description,amount_cents,competence_on,occurred_on,payment_method,company_account_id,patient_id,notes,created_by) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14)`, [id,body.clientRequestId,requestFingerprint,body.entryType,body.category,body.description!.trim(),body.amountCents,body.competenceOn,body.occurredOn,body.paymentMethod,body.companyAccountId,body.patientId || null,body.notes?.trim() ?? "",request.currentUser!.id]);
       await client.query("INSERT INTO audit_events(user_id,action,entity_type,entity_id,details) VALUES($1,'create','financial_entry',$2,$3)", [request.currentUser!.id,id,{ entryType: body.entryType, amountCents: body.amountCents }]);
       await client.query("COMMIT");
       return reply.code(201).send({ id });
     } catch (error: any) {
       await client.query("ROLLBACK");
-      if (error?.code === "23505") { const retry = await pool.query("SELECT id FROM financial_entries WHERE client_request_id=$1", [body.clientRequestId]); if (retry.rowCount) return { id: retry.rows[0].id, idempotent: true }; }
+      if (error?.code === "23505") { const retry = await pool.query("SELECT id,request_fingerprint FROM financial_entries WHERE client_request_id=$1", [body.clientRequestId]); if (retry.rowCount) return idempotencyRetry(reply, retry.rows[0], requestFingerprint); }
       throw error;
     } finally { client.release(); }
   });
@@ -599,23 +635,29 @@ export async function financeRoutes(app: FastifyInstance) {
   app.post<{ Params: { id: string }; Body: { clientRequestId?: string; receivedOn?: string; companyAccountId?: string; paymentMethod?: string } }>("/api/finance/receivables/:id/settle", { preHandler: operatorOrAdmin }, async (request, reply) => {
     const { clientRequestId, receivedOn, companyAccountId, paymentMethod } = request.body ?? {};
     if (!/^[0-9a-f-]{36}$/i.test(clientRequestId ?? "") || !/^\d{4}-\d{2}-\d{2}$/.test(receivedOn ?? "")) return reply.code(400).type("application/problem+json").send({ title: "Informe a data do recebimento", status: 400 });
+    const requestFingerprint = idempotencyFingerprint({
+      receivableId: request.params.id,
+      receivedOn,
+      companyAccountId: companyAccountId || null,
+      paymentMethod: paymentMethod || null,
+    });
     const client = await pool.connect();
     try {
       await client.query("BEGIN");
-      const retry = await client.query("SELECT id FROM financial_entries WHERE client_request_id=$1", [clientRequestId]);
-      if (retry.rowCount) { await client.query("COMMIT"); return { id: retry.rows[0].id, idempotent: true }; }
+      const retry = await client.query("SELECT id,request_fingerprint FROM financial_entries WHERE client_request_id=$1", [clientRequestId]);
+      if (retry.rowCount) { await client.query("COMMIT"); return idempotencyRetry(reply, retry.rows[0], requestFingerprint); }
       const installment = await client.query(`SELECT r.*,s.product,s.sold_on,s.company_account_id,s.patient_id,s.cancelled_at FROM receivable_installments r JOIN sales s ON s.id=r.sale_id WHERE r.id=$1 FOR UPDATE OF r`, [request.params.id]);
       if (!installment.rowCount || installment.rows[0].cancelled_at) { await client.query("ROLLBACK"); return reply.code(409).type("application/problem+json").send({ title: "Parcela não encontrada ou venda cancelada", status: 409 }); }
-      const retryAfterLock = await client.query("SELECT id FROM financial_entries WHERE client_request_id=$1", [clientRequestId]);
-      if (retryAfterLock.rowCount) { await client.query("COMMIT"); return { id: retryAfterLock.rows[0].id, idempotent: true }; }
+      const retryAfterLock = await client.query("SELECT id,request_fingerprint FROM financial_entries WHERE client_request_id=$1", [clientRequestId]);
+      if (retryAfterLock.rowCount) { await client.query("COMMIT"); return idempotencyRetry(reply, retryAfterLock.rows[0], requestFingerprint); }
       const row = installment.rows[0], id = randomUUID();
       const targetAccountId = companyAccountId || row.company_account_id;
       const targetPaymentMethod = paymentMethod || row.payment_method;
-      await client.query(`INSERT INTO financial_entries(id,client_request_id,entry_type,category,description,amount_cents,competence_on,occurred_on,payment_method,company_account_id,patient_id,sale_id,receivable_installment_id,created_by) VALUES($1,$2,'income','hearing_aid_sale',$3,$4,$5,$6,$7,$8,$9,$10,$11,$12)`, [id,clientRequestId,`Venda: ${row.product}`,row.amount_cents,row.sold_on,receivedOn,targetPaymentMethod,targetAccountId,row.patient_id,row.sale_id,row.id,request.currentUser!.id]);
+      await client.query(`INSERT INTO financial_entries(id,client_request_id,request_fingerprint,entry_type,category,description,amount_cents,competence_on,occurred_on,payment_method,company_account_id,patient_id,sale_id,receivable_installment_id,created_by) VALUES($1,$2,$3,'income','hearing_aid_sale',$4,$5,$6,$7,$8,$9,$10,$11,$12,$13)`, [id,clientRequestId,requestFingerprint,`Venda: ${row.product}`,row.amount_cents,row.sold_on,receivedOn,targetPaymentMethod,targetAccountId,row.patient_id,row.sale_id,row.id,request.currentUser!.id]);
       await client.query("INSERT INTO audit_events(user_id,action,entity_type,entity_id,details) VALUES($1,'settle','receivable_installment',$2,$3)", [request.currentUser!.id,row.id,{ financialEntryId:id, receivedOn, companyAccountId: targetAccountId }]);
       await client.query("COMMIT");
       return reply.code(201).send({ id });
-    } catch (error: any) { await client.query("ROLLBACK"); const retry = await pool.query("SELECT id FROM financial_entries WHERE client_request_id=$1", [clientRequestId]); if (retry.rowCount) return { id: retry.rows[0].id, idempotent: true }; throw error; } finally { client.release(); }
+    } catch (error: any) { await client.query("ROLLBACK"); const retry = await pool.query("SELECT id,request_fingerprint FROM financial_entries WHERE client_request_id=$1", [clientRequestId]); if (retry.rowCount) return idempotencyRetry(reply, retry.rows[0], requestFingerprint); throw error; } finally { client.release(); }
   });
 
   const handleReverseEntry = async (request: FastifyRequest<{ Params: { id: string }; Body: { clientRequestId?: string; reason?: string; reversalReason?: string; occurredOn?: string } }>, reply: any) => {
@@ -625,22 +667,38 @@ export async function financeRoutes(app: FastifyInstance) {
     const finalOccurredOn = occurredOn || new Intl.DateTimeFormat("en-CA", { timeZone: "America/Sao_Paulo" }).format(new Date());
 
     if (!finalReason || finalReason.length < 3) return reply.code(400).type("application/problem+json").send({ title: "Informe a justificativa do estorno (mínimo 3 caracteres)", status: 400 });
-    const result = await pool.query(
-      `WITH reversed AS (
-         INSERT INTO financial_entries(id,client_request_id,entry_type,category,description,amount_cents,competence_on,occurred_on,payment_method,company_account_id,patient_id,sale_id,reversal_of_id,reversal_reason,notes,created_by)
-         SELECT $1,$2,CASE entry_type WHEN 'income' THEN 'expense' ELSE 'income' END,category,'Estorno: '||description,amount_cents,competence_on,$3,payment_method,company_account_id,patient_id,sale_id,id,$4,notes,$5
-         FROM financial_entries original WHERE id=$6 AND reversal_of_id IS NULL AND NOT EXISTS(SELECT 1 FROM financial_entries r WHERE r.reversal_of_id=original.id)
-         RETURNING id
-       ),
-       audited AS (
-         INSERT INTO audit_events(user_id,action,entity_type,entity_id,details)
-         SELECT $5,'reverse','financial_entry',id,jsonb_build_object('reversalOfId',$6::text,'reason',$4::text) FROM reversed
-       )
-       SELECT id FROM reversed`,
-      [randomUUID(), finalClientRequestId, finalOccurredOn, finalReason, request.currentUser!.id, request.params.id]
-    );
-    if (!result.rowCount) return reply.code(409).type("application/problem+json").send({ title: "Lançamento não encontrado ou já estornado", status: 409 });
-    return reply.code(201).send({ id: result.rows[0].id });
+    if (!/^[0-9a-f-]{36}$/i.test(finalClientRequestId) || !/^\d{4}-\d{2}-\d{2}$/.test(finalOccurredOn)) return reply.code(400).type("application/problem+json").send({ title: "Confira a chave e a data do estorno", status: 400 });
+    const requestFingerprint = idempotencyFingerprint({
+      financialEntryId: request.params.id,
+      occurredOn: finalOccurredOn,
+      reason: finalReason,
+    });
+    const retry = await pool.query("SELECT id,request_fingerprint FROM financial_entries WHERE client_request_id=$1", [finalClientRequestId]);
+    if (retry.rowCount) return idempotencyRetry(reply, retry.rows[0], requestFingerprint);
+    try {
+      const result = await pool.query(
+        `WITH reversed AS (
+           INSERT INTO financial_entries(id,client_request_id,request_fingerprint,entry_type,category,description,amount_cents,competence_on,occurred_on,payment_method,company_account_id,patient_id,sale_id,reversal_of_id,reversal_reason,notes,created_by)
+           SELECT $1,$2,$3,CASE entry_type WHEN 'income' THEN 'expense' ELSE 'income' END,category,'Estorno: '||description,amount_cents,competence_on,$4,payment_method,company_account_id,patient_id,sale_id,id,$5,notes,$6
+           FROM financial_entries original WHERE id=$7 AND reversal_of_id IS NULL AND NOT EXISTS(SELECT 1 FROM financial_entries r WHERE r.reversal_of_id=original.id)
+           RETURNING id
+         ),
+         audited AS (
+           INSERT INTO audit_events(user_id,action,entity_type,entity_id,details)
+           SELECT $6,'reverse','financial_entry',id,jsonb_build_object('reversalOfId',$7::text,'reason',$5::text) FROM reversed
+         )
+         SELECT id FROM reversed`,
+        [randomUUID(), finalClientRequestId, requestFingerprint, finalOccurredOn, finalReason, request.currentUser!.id, request.params.id]
+      );
+      if (!result.rowCount) return reply.code(409).type("application/problem+json").send({ title: "Lançamento não encontrado ou já estornado", status: 409 });
+      return reply.code(201).send({ id: result.rows[0].id });
+    } catch (error: any) {
+      if (error?.code === "23505") {
+        const concurrentRetry = await pool.query("SELECT id,request_fingerprint FROM financial_entries WHERE client_request_id=$1", [finalClientRequestId]);
+        if (concurrentRetry.rowCount) return idempotencyRetry(reply, concurrentRetry.rows[0], requestFingerprint);
+      }
+      throw error;
+    }
   };
 
   app.post("/api/finance/entries/:id/reverse", { preHandler: admin }, handleReverseEntry as any);

@@ -1,6 +1,7 @@
 import { randomUUID } from "node:crypto";
 import type { FastifyInstance, FastifyRequest } from "fastify";
 import { pool } from "../../db/pool.js";
+import { idempotencyFingerprint } from "../../domain/idempotency.js";
 import { validInventoryMovement, validProduct } from "../../domain/inventory.js";
 import { validService } from "../../domain/services.js";
 import { audit } from "../audit/service.js";
@@ -140,16 +141,30 @@ export async function catalogRoutes(app: FastifyInstance) {
           status: 400,
         });
 
+    const requestFingerprint = idempotencyFingerprint({
+      productId,
+      movementType,
+      quantity,
+      notes: notes?.trim() || "",
+    });
+    const handleRetry = (row: { id: string; request_fingerprint: string | null }) =>
+      row.request_fingerprint === requestFingerprint
+        ? reply.code(200).send({ id: row.id, idempotent: true })
+        : reply.code(409).type("application/problem+json").send({
+            title: "Chave de idempotência reutilizada com payload diferente",
+            status: 409,
+          });
+
     const client = await pool.connect();
     try {
       await client.query("BEGIN");
 
       // Idempotência
       if (clientRequestId) {
-        const retry = await client.query("SELECT id FROM inventory_movements WHERE client_request_id=$1", [clientRequestId]);
+        const retry = await client.query("SELECT id,request_fingerprint FROM inventory_movements WHERE client_request_id=$1", [clientRequestId]);
         if (retry.rowCount) {
           await client.query("COMMIT");
-          return reply.code(200).send({ id: retry.rows[0].id, idempotent: true });
+          return handleRetry(retry.rows[0]);
         }
       }
 
@@ -183,8 +198,8 @@ export async function catalogRoutes(app: FastifyInstance) {
 
       const id = randomUUID();
       await client.query(
-        "INSERT INTO inventory_movements(id,product_id,movement_type,quantity,notes,client_request_id,created_by) VALUES($1,$2,$3,$4,$5,$6,$7)",
-        [id, productId, movementType, quantity, notes?.trim() || "", clientRequestId || null, request.currentUser!.id]
+        "INSERT INTO inventory_movements(id,product_id,movement_type,quantity,notes,client_request_id,request_fingerprint,created_by) VALUES($1,$2,$3,$4,$5,$6,$7,$8)",
+        [id, productId, movementType, quantity, notes?.trim() || "", clientRequestId || null, clientRequestId ? requestFingerprint : null, request.currentUser!.id]
       );
       await client.query(
         "INSERT INTO audit_events(user_id,action,entity_type,entity_id,details) VALUES($1,$2,$3,$4,$5)",
@@ -195,8 +210,8 @@ export async function catalogRoutes(app: FastifyInstance) {
     } catch (err: any) {
       await client.query("ROLLBACK");
       if (err?.code === "23505" && clientRequestId) {
-        const retry = await pool.query("SELECT id FROM inventory_movements WHERE client_request_id=$1", [clientRequestId]);
-        if (retry.rowCount) return reply.code(200).send({ id: retry.rows[0].id, idempotent: true });
+        const retry = await pool.query("SELECT id,request_fingerprint FROM inventory_movements WHERE client_request_id=$1", [clientRequestId]);
+        if (retry.rowCount) return handleRetry(retry.rows[0]);
       }
       throw err;
     } finally {

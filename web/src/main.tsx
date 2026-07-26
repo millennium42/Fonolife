@@ -2768,7 +2768,7 @@ function LoginForm({ onLogin }: { onLogin: (user: User) => void }) {
   return (
     <div className="login">
       <section style={{ width: "min(100%, 450px)" }}>
-        <div className="brand" style={{ marginBottom: "0.5rem", textAlign: "center" }}>🦻 Fonolife CRM</div>
+        <h1 className="brand" style={{ marginBottom: "0.5rem", textAlign: "center" }}>🦻 Fonolife CRM</h1>
         <p style={{ textAlign: "center", color: "#64748b", fontSize: "0.9rem", marginBottom: "1.5rem" }}>
           Sistema de Gestão Clínica, Caixa & Prontuários
         </p>

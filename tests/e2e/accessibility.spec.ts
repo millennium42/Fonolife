@@ -41,4 +41,18 @@ test.describe('Acessibilidade e Layout Responsivo (WCAG 2.1 AA)', () => {
     await expect(dialog).toBeHidden();
     await expect(trigger).toBeFocused();
   });
+
+  test("zoom de 200% preserva navegação, conteúdo e foco", async ({ page }, testInfo) => {
+    test.skip(testInfo.project.name !== "desktop-1440", "Zoom é validado no viewport desktop.");
+    await page.goto("/");
+    await page.evaluate(() => {
+      document.documentElement.style.zoom = "2";
+    });
+    await expect(page.getByRole("heading", { name: /Fonolife CRM/ })).toBeVisible();
+    await page.keyboard.press("Tab");
+    await expect(page.locator(":focus")).toBeVisible();
+    await page.getByRole("button", { name: /Entrar como Administrador/ }).click();
+    await expect(page.getByRole("heading", { name: "Início" })).toBeVisible();
+    await expect(page.getByRole("navigation", { name: "Navegação principal" })).toBeVisible();
+  });
 });

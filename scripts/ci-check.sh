@@ -9,6 +9,7 @@ fi
 
 project="fonolife-check"
 compose_started=false
+secondary_app_id=""
 
 cleanup() {
   local status=$?
@@ -16,7 +17,7 @@ cleanup() {
     if [[ "$status" -ne 0 ]]; then
       docker compose -p "$project" logs >docker-compose.log 2>&1 || true
     fi
-    docker compose -p "$project" down -v || true
+    docker compose -p "$project" down -v --remove-orphans || true
   fi
 }
 trap cleanup EXIT
@@ -60,8 +61,35 @@ docker compose -p "$project" up -d --build --wait
 
 docker compose -p "$project" exec -T app node dist/db/migrate.js
 docker compose -p "$project" exec -T app node dist/db/migrate.js
+docker compose -p "$project" exec -T db createdb -U fonolife fonolife_upgrade
+for migration in migrations/*.sql; do
+  if [[ "$(basename "$migration")" == "022_idempotency_fingerprints.sql" ]]; then
+    break
+  fi
+  docker compose -p "$project" exec -T db \
+    psql -U fonolife -d fonolife_upgrade -v ON_ERROR_STOP=1 <"$migration" >/dev/null
+done
+for _ in 1 2; do
+  docker compose -p "$project" exec -T db \
+    psql -U fonolife -d fonolife_upgrade -v ON_ERROR_STOP=1 \
+    <migrations/022_idempotency_fingerprints.sql >/dev/null
+done
+docker compose -p "$project" exec -T db dropdb -U fonolife fonolife_upgrade
+docker compose -p "$project" exec -T -e APP_ENV=test app node dist/db/seed.js
+docker compose -p "$project" exec -T -e APP_ENV=test app node dist/db/seed.js
 docker compose -p "$project" exec -T app node dist/db/seed.js
 docker compose -p "$project" exec -T app node dist/db/seed.js
+set +e
+production_seed_output="$(
+  docker compose -p "$project" exec -T -e APP_ENV=production app node dist/db/seed.js 2>&1
+)"
+production_seed_status=$?
+set -e
+if [[ "$production_seed_status" -eq 0 ]] || ! grep -q "demo configuration is forbidden in production" <<<"$production_seed_output"; then
+  echo "Production demo-seed refusal check failed." >&2
+  echo "$production_seed_output" >&2
+  exit 1
+fi
 for _ in 1 2; do
   docker compose -p "$project" exec -T \
     -e DEMO_RESET_CONFIRM=RESET_DEMO \
@@ -71,9 +99,22 @@ for _ in 1 2; do
 done
 
 curl --fail --silent --show-error http://localhost:3000/api/health >/dev/null
+secondary_app_id="$(docker compose -p "$project" run -d --no-deps -p 127.0.0.1::3000 app)"
+secondary_port="$(
+  docker inspect --format \
+    '{{(index (index .NetworkSettings.Ports "3000/tcp") 0).HostPort}}' \
+    "$secondary_app_id"
+)"
+secondary_origin="http://localhost:$secondary_port"
+for _ in {1..20}; do
+  if curl --fail --silent "$secondary_origin/api/health" >/dev/null; then break; fi
+  sleep 1
+done
+curl --fail --silent --show-error "$secondary_origin/api/health" >/dev/null
 node tests/dashboard-smoke.mjs
 node tests/finance-smoke.mjs
 node tests/devsec-smoke.mjs
+SECONDARY_ORIGIN="$secondary_origin" node tests/release-concurrency-smoke.mjs
 
 assert_immutable_ledger() {
   local statement="$1"
