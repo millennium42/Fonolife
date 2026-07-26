@@ -1,7 +1,18 @@
 import React, { useEffect, useRef, useState } from "react";
 import { createRoot } from "react-dom/client";
+import {
+  AppShell,
+  Button,
+  DataTable,
+  Drawer,
+  LoadingState,
+  Modal,
+  PageHeader,
+  PatientLink,
+  Sidebar,
+  TopBar,
+} from "./components/ui";
 import "./style.css";
-import "./sales.css";
 
 type User = {
   id: string;
@@ -68,6 +79,7 @@ type FinancialEntry = {
 };
 type Receivable = {
   id: string;
+  patient_id: string;
   amount_cents: number;
   due_on: string;
   payment_method: string;
@@ -223,30 +235,13 @@ function monthly(total: number, count: number, first: string) {
 function GlobalPatientModal({ user, patientId, onClose }: { user: User; patientId: string | null; onClose: () => void }) {
   if (!patientId) return null;
   return (
-    <div className="modal-overlay" onClick={onClose}>
-      <div className="modal-content" onClick={(e) => e.stopPropagation()} style={{ width: "min(100%, 900px)" }}>
+    <Drawer label="Prontuário do paciente" onClose={onClose}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1rem" }}>
           <h2 style={{ margin: 0 }}>📋 Prontuário do Paciente</h2>
           <button className="secondary" onClick={onClose}>✕ Fechar Prontuário</button>
         </div>
         <PatientRecord id={patientId} user={user} onBack={onClose} />
-      </div>
-    </div>
-  );
-}
-
-function PatientNameLink({ patientId, name, openGlobal }: { patientId: string; name: string; openGlobal: (id: string) => void }) {
-  return (
-    <button
-      type="button"
-      className="patient-link"
-      onClick={(e) => {
-        e.stopPropagation();
-        openGlobal(patientId);
-      }}
-    >
-      {name}
-    </button>
+    </Drawer>
   );
 }
 
@@ -608,7 +603,7 @@ function PosCheckout({ user, openGlobalPatient }: { user: User; openGlobalPatien
         </label>
         {selectedPatientId && (
           <div style={{ gridColumn: "1/-1" }}>
-            <PatientNameLink patientId={selectedPatientId} name="👉 Clique aqui para ver o prontuário deste paciente" openGlobal={openGlobalPatient} />
+            <PatientLink patientId={selectedPatientId} name="👉 Clique aqui para ver o prontuário deste paciente" onOpen={openGlobalPatient} />
           </div>
         )}
       </div>
@@ -953,7 +948,7 @@ function Finance({ user, openGlobalPatient }: { user: User; openGlobalPatient: (
       </div>
 
       {tab === "entries" ? (
-        <table>
+        <DataTable aria-label="Lançamentos financeiros">
           <thead>
             <tr>
               <th>Data</th>
@@ -992,9 +987,9 @@ function Finance({ user, openGlobalPatient }: { user: User; openGlobalPatient: (
               </tr>
             ))}
           </tbody>
-        </table>
+        </DataTable>
       ) : (
-        <table>
+        <DataTable aria-label="Parcelas a receber">
           <thead>
             <tr>
               <th>Paciente</th>
@@ -1010,7 +1005,7 @@ function Finance({ user, openGlobalPatient }: { user: User; openGlobalPatient: (
           <tbody>
             {receivables.map((r) => (
               <tr key={r.id}>
-                <td><strong>{r.patient_name}</strong></td>
+                <td><PatientLink patientId={r.patient_id} name={r.patient_name} onOpen={openGlobalPatient} /></td>
                 <td>{date(r.due_on)}</td>
                 <td>{r.product}</td>
                 <td>{r.company_account_label}</td>
@@ -1031,14 +1026,13 @@ function Finance({ user, openGlobalPatient }: { user: User; openGlobalPatient: (
               </tr>
             ))}
           </tbody>
-        </table>
+        </DataTable>
       )}
 
       {/* Modal de Baixa de Parcela */}
       {settleReceivable && (
-        <div className="modal-overlay" onClick={() => setSettleReceivable(null)}>
-          <div className="modal-content" onClick={(e) => e.stopPropagation()} style={{ width: "min(100%, 550px)" }}>
-            <h2>💳 Baixar Parcela — {settleReceivable.patient_name}</h2>
+        <Modal label="Baixar parcela" onClose={() => setSettleReceivable(null)} size="small">
+            <h2>💳 Baixar Parcela — <PatientLink patientId={settleReceivable.patient_id} name={settleReceivable.patient_name} onOpen={openGlobalPatient} /></h2>
             <p style={{ color: "#64748b", fontSize: "0.9rem" }}>
               Item: <strong>{settleReceivable.product}</strong> | Valor: <strong>{money(settleReceivable.amount_cents)}</strong>
             </p>
@@ -1072,13 +1066,11 @@ function Finance({ user, openGlobalPatient }: { user: User; openGlobalPatient: (
                 <button type="submit">Confirmar Recebimento</button>
               </div>
             </form>
-          </div>
-        </div>
+        </Modal>
       )}
 
       {showForm && (
-        <div className="modal-overlay" onClick={() => setShowForm(false)}>
-          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+        <Modal label="Novo lançamento financeiro" onClose={() => setShowForm(false)}>
             <form onSubmit={createEntry} className="form">
               <h3>💵 Lançamento no Fluxo de Caixa</h3>
               <div className="fields">
@@ -1097,13 +1089,11 @@ function Finance({ user, openGlobalPatient }: { user: User; openGlobalPatient: (
                 <button type="button" className="secondary" onClick={() => setShowForm(false)}>Cancelar</button>
               </div>
             </form>
-          </div>
-        </div>
+        </Modal>
       )}
 
       {reversalModalEntry && (
-        <div className="modal-overlay" onClick={() => setReversalModalEntry(null)}>
-          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+        <Modal label="Estornar lançamento financeiro" onClose={() => setReversalModalEntry(null)}>
             <h3>⚠️ Popup Modal de Estorno Financeiro Imutável</h3>
             <p>Os lançamentos no Fonolife são <strong>append-only</strong>. O estorno gerará um registro compensatório oposto vinculado a esta entrada.</p>
             <div style={{ background: "#f8fafc", padding: "0.75rem", borderRadius: "6px", margin: "1rem 0" }}>
@@ -1117,8 +1107,7 @@ function Finance({ user, openGlobalPatient }: { user: User; openGlobalPatient: (
               <button type="button" className="danger" onClick={handleConfirmReversal}>Confirmar Estorno Auditado</button>
               <button type="button" className="secondary" onClick={() => setReversalModalEntry(null)}>Cancelar</button>
             </div>
-          </div>
-        </div>
+        </Modal>
       )}
     </section>
   );
@@ -1157,11 +1146,9 @@ function Patients({ initialPatientId, user, openGlobalPatient }: { initialPatien
           </div>
 
           {showAddForm && (
-            <div className="modal-overlay" onClick={() => setShowAddForm(false)}>
-              <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+            <Modal label="Novo paciente" onClose={() => setShowAddForm(false)}>
                 <PatientForm onCancel={() => setShowAddForm(false)} onDone={(id) => { setShowAddForm(false); setSelectedId(id); }} />
-              </div>
-            </div>
+            </Modal>
           )}
 
           <table>
@@ -1179,7 +1166,7 @@ function Patients({ initialPatientId, user, openGlobalPatient }: { initialPatien
               {patients.map((p) => (
                 <tr key={p.id}>
                   <td>
-                    <PatientNameLink patientId={p.id} name={p.name} openGlobal={openGlobalPatient} />
+                    <PatientLink patientId={p.id} name={p.name} onOpen={openGlobalPatient} />
                   </td>
                   <td>{p.phone}</td>
                   <td><span className="badge info">{statuses[p.journey_status]}</span></td>
@@ -1330,8 +1317,7 @@ function PatientAttachments({ patientId }: { patientId: string }) {
 
       {/* Modal de Pré-visualização Segura */}
       {previewAttachment && (
-        <div className="modal-overlay" onClick={() => setPreviewAttachment(null)}>
-          <div className="modal-content" onClick={(e) => e.stopPropagation()} style={{ width: "min(100%, 800px)" }}>
+        <Modal label={`Visualizar ${previewAttachment.original_name}`} onClose={() => setPreviewAttachment(null)} size="large">
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1rem" }}>
               <h3>👁️ Visualizador Seguro: {previewAttachment.original_name}</h3>
               <button type="button" className="secondary" onClick={() => setPreviewAttachment(null)}>Fechar</button>
@@ -1356,8 +1342,7 @@ function PatientAttachments({ patientId }: { patientId: string }) {
                 />
               )}
             </div>
-          </div>
-        </div>
+        </Modal>
       )}
     </div>
   );
@@ -1432,8 +1417,7 @@ function PatientMedicalReports({ patientId, user }: { patientId: string; user: U
 
       {/* Modal de Visualização & Impressão do Laudo Timbrado */}
       {viewReport && (
-        <div className="modal-overlay" onClick={() => setViewReport(null)}>
-          <div className="modal-content" onClick={(e) => e.stopPropagation()} style={{ width: "min(100%, 850px)", padding: "2rem" }}>
+        <Modal label="Pré-visualização do laudo" onClose={() => setViewReport(null)} size="large">
             <div className="no-print" style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1.5rem", borderBottom: "1px solid #e2e8f0", paddingBottom: "0.75rem" }}>
               <h3>👁️ Pré-visualização do Laudo Oficial Timbrado</h3>
               <div style={{ display: "flex", gap: "0.5rem" }}>
@@ -1493,8 +1477,7 @@ function PatientMedicalReports({ patientId, user }: { patientId: string; user: U
                 </div>
               </div>
             </div>
-          </div>
-        </div>
+        </Modal>
       )}
     </div>
   );
@@ -1531,8 +1514,7 @@ function NewMedicalReportModal({ patientId, user, onClose, onCreated }: { patien
   };
 
   return (
-    <div className="modal-overlay" onClick={onClose}>
-      <div className="modal-content" onClick={(e) => e.stopPropagation()} style={{ width: "min(100%, 700px)" }}>
+    <Modal label="Emitir laudo clínico" onClose={onClose}>
         <h3>🩺 Emissão Formal de Laudo Clínico / Audiométrico</h3>
         <p style={{ fontSize: "0.85rem", color: "#64748b" }}>
           Emissor: <strong>{user.name}</strong> ({user.license_number || "Sem registro cadastrado"})
@@ -1571,8 +1553,7 @@ function NewMedicalReportModal({ patientId, user, onClose, onCreated }: { patien
             <button type="submit" disabled={submitting}>{submitting ? "Gerando Laudo..." : "Emitir Laudo Oficial"}</button>
           </div>
         </form>
-      </div>
-    </div>
+    </Modal>
   );
 }
 
@@ -1727,11 +1708,9 @@ function PatientRecord({ id, user, onBack }: { id: string; user: User; onBack: (
       {error && <p className="error" role="alert">{error}</p>}
 
       {showSaleModal && (
-        <div className="modal-overlay" onClick={() => setShowSaleModal(false)}>
-          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+        <Modal label="Nova venda ou serviço" onClose={() => setShowSaleModal(false)}>
             <SaleForm patientId={id} onDone={() => { setShowSaleModal(false); setMessage("Venda/Serviço registrado no prontuário!"); load(); }} />
-          </div>
-        </div>
+        </Modal>
       )}
 
       <section className="card record">
@@ -1839,7 +1818,7 @@ function FollowUps({ openGlobalPatient }: { openGlobalPatient: (id: string) => v
             {items.map((item) => (
               <tr key={item.task_id || item.patient_id}>
                 <td>
-                  <PatientNameLink patientId={item.patient_id} name={item.patient_name} openGlobal={openGlobalPatient} />
+                  <PatientLink patientId={item.patient_id} name={item.patient_name} onOpen={openGlobalPatient} />
                 </td>
                 <td>
                   <WhatsAppButton patientId={item.patient_id} phone={item.phone} patientName={item.patient_name} defaultMessage={`Olá, ${item.patient_name}! Como está a adaptação do seu aparelho auditivo?`} />
@@ -2372,8 +2351,7 @@ function Inventory({ user }: { user: User; openGlobalPatient?: (id: string) => v
 
       {/* Modal de Ajuste de Estoque */}
       {adjustProduct && (
-        <div className="modal-overlay" onClick={() => setAdjustProduct(null)}>
-          <div className="modal-content" onClick={(e) => e.stopPropagation()} style={{ width: "min(100%, 550px)" }}>
+        <Modal label={`Ajustar estoque de ${adjustProduct.name}`} onClose={() => setAdjustProduct(null)} size="small">
             <h2>⚖️ Ajustar Estoque — {adjustProduct.name}</h2>
             <p style={{ color: "#64748b", fontSize: "0.9rem" }}>
               Estoque atual: <strong>{adjustProduct.stock_balance} un.</strong> | Estoque mínimo: <strong>{adjustProduct.min_stock ?? 0} un.</strong>
@@ -2412,14 +2390,12 @@ function Inventory({ user }: { user: User; openGlobalPatient?: (id: string) => v
                 <button type="submit">Confirmar Ajuste</button>
               </div>
             </form>
-          </div>
-        </div>
+        </Modal>
       )}
 
       {/* Modal de Cadastro / Edição de Produto */}
       {editProduct && (
-        <div className="modal-overlay" onClick={() => setEditProduct(null)}>
-          <div className="modal-content" onClick={(e) => e.stopPropagation()} style={{ width: "min(100%, 600px)" }}>
+        <Modal label={editProduct === "new" ? "Novo produto" : `Editar ${editProduct.name}`} onClose={() => setEditProduct(null)}>
             <h2>{editProduct === "new" ? "📦 Novo Produto" : `✏️ Editar Produto — ${editProduct.name}`}</h2>
 
             <form onSubmit={handleSaveProduct} className="form" style={{ marginTop: "1rem" }}>
@@ -2459,14 +2435,12 @@ function Inventory({ user }: { user: User; openGlobalPatient?: (id: string) => v
                 <button type="submit">Salvar Produto</button>
               </div>
             </form>
-          </div>
-        </div>
+        </Modal>
       )}
 
       {/* Modal de Cadastro / Edição de Serviço */}
       {editService && (
-        <div className="modal-overlay" onClick={() => setEditService(null)}>
-          <div className="modal-content" onClick={(e) => e.stopPropagation()} style={{ width: "min(100%, 650px)" }}>
+        <Modal label={editService === "new" ? "Novo serviço" : `Editar ${editService.name}`} onClose={() => setEditService(null)}>
             <h2>{editService === "new" ? "🩺 Novo Serviço Fonoaudiológico" : `✏️ Editar Serviço — ${editService.name}`}</h2>
 
             <form onSubmit={handleSaveService} className="form" style={{ marginTop: "1rem" }}>
@@ -2498,8 +2472,7 @@ function Inventory({ user }: { user: User; openGlobalPatient?: (id: string) => v
                 <button type="submit">Salvar Serviço</button>
               </div>
             </form>
-          </div>
-        </div>
+        </Modal>
       )}
     </div>
   );
@@ -2678,7 +2651,7 @@ function App() {
       .finally(() => setLoading(false));
   }, []);
 
-  if (loading) return <div className="center"><p>Carregando Fonolife…</p></div>;
+  if (loading) return <div className="center"><LoadingState label="Carregando Fonolife…" /></div>;
 
   if (!user) {
     return <LoginForm onLogin={setUser} />;
@@ -2690,39 +2663,35 @@ function App() {
       : ["Início", "Caixa (PDV)", "Pacientes", "Acompanhamento", "Estoque & Catálogo", "Financeiro", "Importação CSV"];
 
   return (
-    <div className="shell">
-      <header>
+    <AppShell>
+      <TopBar>
         <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
           <span className="brand">🦻 Fonolife</span>
           <span style={{ fontSize: "0.85rem", opacity: 0.8 }}>| Clínica Fonoaudiológica</span>
         </div>
         <div style={{ display: "flex", alignItems: "center", gap: "1rem" }}>
           <span>{user.name} ({user.role})</span>
-          <button className="secondary" style={{ minHeight: "auto", padding: "0.3rem 0.6rem" }} onClick={() => api("/api/auth/logout", { method: "POST" }).then(() => setUser(null))}>
+          <Button variant="secondary" className="compact-button" onClick={() => api("/api/auth/logout", { method: "POST" }).then(() => setUser(null))}>
             Sair
-          </button>
+          </Button>
         </div>
-      </header>
+      </TopBar>
       {demoMode && (
         <aside className="demo-banner" aria-label="Ambiente atual">
           AMBIENTE DE DEMONSTRAÇÃO — dados sintéticos e descartáveis
         </aside>
       )}
 
-      <nav>
+      <Sidebar>
         {pages.map((item) => (
           <button key={item} className={page === item ? "active" : ""} onClick={() => setPage(item)}>
             {item}
           </button>
         ))}
-      </nav>
+      </Sidebar>
 
       <main>
-        <div className="title">
-          <div>
-            <h1>{page}</h1>
-          </div>
-        </div>
+        <PageHeader title={page} />
 
         {page === "Caixa (PDV)" ? (
           <PosCheckout user={user} openGlobalPatient={setGlobalPatientId} />
@@ -2742,7 +2711,7 @@ function App() {
       </main>
 
       <GlobalPatientModal user={user} patientId={globalPatientId} onClose={() => setGlobalPatientId(null)} />
-    </div>
+    </AppShell>
   );
 }
 
