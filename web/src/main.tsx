@@ -3,8 +3,11 @@ import { createRoot } from "react-dom/client";
 import {
   AppShell,
   Button,
+  Card,
   DataTable,
   Drawer,
+  EmptyState,
+  ErrorState,
   LoadingState,
   Modal,
   PageHeader,
@@ -118,6 +121,9 @@ type FinanceSummary = {
     balance_cents: number;
     income_cents: number;
     expense_cents: number;
+    sales_revenue_cents: number;
+    cmv_cents: number;
+    margin_cents: number;
   };
   byAccount: {
     company_account_id: string;
@@ -125,7 +131,30 @@ type FinanceSummary = {
     balance_cents: number;
     income_cents: number;
     expense_cents: number;
+    sales_revenue_cents: number;
+    cmv_cents: number;
+    margin_cents: number;
   }[];
+};
+type PatientCommercial = {
+  sales: Array<{
+    id: string;
+    product: string;
+    quantity: number;
+    total_amount_cents: number;
+    cost_amount_cents: number;
+    sold_on: string;
+    delivery_status: string;
+    cancelled_at: string | null;
+  }>;
+  receivables: Array<{
+    id: string;
+    product: string;
+    amount_cents: number;
+    due_on: string;
+    payment_method: string;
+    status: "expected" | "received" | "cancelled";
+  }>;
 };
 type DashboardData = {
   overdue: number;
@@ -490,6 +519,7 @@ function PosCheckout({ user, openGlobalPatient }: { user: User; openGlobalPatien
   const [paymentMethod, setPaymentMethod] = useState("pix");
   const [installmentsCount, setInstallmentsCount] = useState(1);
   const [loading, setLoading] = useState(false);
+  const checkoutInFlight = useRef(false);
   const [successMsg, setSuccessMsg] = useState("");
   const [error, setError] = useState("");
 
@@ -530,10 +560,12 @@ function PosCheckout({ user, openGlobalPatient }: { user: User; openGlobalPatien
   const totalCents = cart.reduce((acc, item) => acc + item.priceCents * item.qty, 0);
 
   const handleCheckout = async () => {
+    if (checkoutInFlight.current) return;
     if (!selectedPatientId) { setError("Selecione um paciente para registrar o caixa."); return; }
     if (!companyAccountId) { setError("Selecione a conta/caixa responsável."); return; }
     if (cart.length === 0) { setError("Adicione ao menos um produto ou serviço ao carrinho."); return; }
 
+    checkoutInFlight.current = true;
     setLoading(true);
     setError("");
     setSuccessMsg("");
@@ -572,6 +604,7 @@ function PosCheckout({ user, openGlobalPatient }: { user: User; openGlobalPatien
     } catch (err: any) {
       setError(err.message);
     } finally {
+      checkoutInFlight.current = false;
       setLoading(false);
     }
   };
@@ -757,6 +790,9 @@ function Finance({ user, openGlobalPatient }: { user: User; openGlobalPatient: (
   const [reversalModalEntry, setReversalModalEntry] = useState<FinancialEntry | null>(null);
   const [reversalReason, setReversalReason] = useState("");
   const [filters, setFilters] = useState({ from: "", to: "", companyAccountId: "", entryType: "", category: "", paymentMethod: "" });
+  const [pageOffset, setPageOffset] = useState(0);
+  const [entriesHasMore, setEntriesHasMore] = useState(false);
+  const [receivablesHasMore, setReceivablesHasMore] = useState(false);
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
   const operationIds = useRef(new Set<string>());
@@ -764,6 +800,8 @@ function Finance({ user, openGlobalPatient }: { user: User; openGlobalPatient: (
   const load = async () => {
     try {
       const q = new URLSearchParams(Object.entries(filters).filter(([, v]) => v));
+      q.set("limit", "25");
+      q.set("offset", String(pageOffset));
       const [accData, entriesData, recData] = await Promise.all([
         api("/api/company-accounts"),
         api(`/api/finance/entries?${q.toString()}`),
@@ -772,6 +810,8 @@ function Finance({ user, openGlobalPatient }: { user: User; openGlobalPatient: (
       setAccounts(accData.accounts || []);
       setEntries(entriesData.entries || []);
       setReceivables(recData.receivables || []);
+      setEntriesHasMore(Boolean(entriesData.pagination?.hasMore));
+      setReceivablesHasMore(Boolean(recData.pagination?.hasMore));
       if (user.role === "admin") {
         const sumData = await api(`/api/finance/summary?${q.toString()}`);
         setSummary(sumData);
@@ -783,6 +823,10 @@ function Finance({ user, openGlobalPatient }: { user: User; openGlobalPatient: (
 
   useEffect(() => {
     load();
+  }, [filters, tab, pageOffset]);
+
+  useEffect(() => {
+    setPageOffset(0);
   }, [filters, tab]);
 
   async function createEntry(e: React.FormEvent<HTMLFormElement>) {
@@ -795,6 +839,7 @@ function Finance({ user, openGlobalPatient }: { user: User; openGlobalPatient: (
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
+          clientRequestId: crypto.randomUUID(),
           entryType: v.entryType,
           category: v.category,
           description: String(v.description),
@@ -869,6 +914,23 @@ function Finance({ user, openGlobalPatient }: { user: User; openGlobalPatient: (
     }
   }
 
+  async function exportCsv() {
+    setError("");
+    const q = new URLSearchParams(Object.entries(filters).filter(([, value]) => value));
+    const response = await fetch(`/api/finance/entries.csv?${q.toString()}`);
+    if (!response.ok) {
+      const problem = await response.json();
+      setError(problem.title ?? "Não foi possível exportar o financeiro.");
+      return;
+    }
+    const url = URL.createObjectURL(await response.blob());
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = "fonolife-financeiro.csv";
+    link.click();
+    URL.revokeObjectURL(url);
+  }
+
   return (
     <section className="card">
       <div className="section-title">
@@ -877,7 +939,9 @@ function Finance({ user, openGlobalPatient }: { user: User; openGlobalPatient: (
           <p>Acompanhamento de DRE, fluxo de caixa, relatórios por CNPJ e previsão de recebimentos.</p>
         </div>
         <div className="actions">
-          <button onClick={() => setShowForm(true)}>+ Novo Lançamento</button>
+          <Button onClick={() => setShowForm(true)}>+ Novo Lançamento</Button>
+          <Button variant="secondary" onClick={exportCsv}>Exportar CSV</Button>
+          <Button variant="secondary" onClick={() => window.print()}>Imprimir</Button>
         </div>
       </div>
 
@@ -899,6 +963,20 @@ function Finance({ user, openGlobalPatient }: { user: User; openGlobalPatient: (
           <div className="kpi-card">
             <span>Saídas Realizadas</span>
             <strong style={{ color: "var(--danger)" }}>−{money(summary.consolidated.expense_cents)}</strong>
+          </div>
+          <div className="kpi-card">
+            <span>Vendas por Competência</span>
+            <strong>{money(summary.consolidated.sales_revenue_cents)}</strong>
+          </div>
+          <div className="kpi-card">
+            <span>CMV Histórico</span>
+            <strong>{money(summary.consolidated.cmv_cents)}</strong>
+          </div>
+          <div className="kpi-card">
+            <span>Margem Bruta</span>
+            <strong style={{ color: summary.consolidated.margin_cents >= 0 ? "var(--success)" : "var(--danger)" }}>
+              {money(summary.consolidated.margin_cents)}
+            </strong>
           </div>
         </div>
       )}
@@ -1028,6 +1106,20 @@ function Finance({ user, openGlobalPatient }: { user: User; openGlobalPatient: (
           </tbody>
         </DataTable>
       )}
+
+      <nav className="pagination" aria-label={`Paginação de ${tab === "entries" ? "lançamentos" : "recebíveis"}`}>
+        <Button variant="secondary" disabled={pageOffset === 0} onClick={() => setPageOffset(Math.max(0, pageOffset - 25))}>
+          Anterior
+        </Button>
+        <span>Página {Math.floor(pageOffset / 25) + 1}</span>
+        <Button
+          variant="secondary"
+          disabled={!(tab === "entries" ? entriesHasMore : receivablesHasMore)}
+          onClick={() => setPageOffset(pageOffset + 25)}
+        >
+          Próxima
+        </Button>
+      </nav>
 
       {/* Modal de Baixa de Parcela */}
       {settleReceivable && (
@@ -1658,6 +1750,7 @@ function PatientForm({ patient, onCancel, onDone }: { patient?: Patient; onCance
 function PatientRecord({ id, user, onBack }: { id: string; user: User; onBack: () => void }) {
   const [patient, setPatient] = useState<Patient | null>(null);
   const [timeline, setTimeline] = useState<TimelineItem[]>([]);
+  const [commercial, setCommercial] = useState<PatientCommercial>({ sales: [], receivables: [] });
   const [editing, setEditing] = useState(false);
   const [showSaleModal, setShowSaleModal] = useState(false);
   const [message, setMessage] = useState("");
@@ -1665,12 +1758,14 @@ function PatientRecord({ id, user, onBack }: { id: string; user: User; onBack: (
 
   async function load() {
     try {
-      const [detail, history] = await Promise.all([
+      const [detail, history, commercialData] = await Promise.all([
         api(`/api/patients/${id}`),
         api(`/api/patients/${id}/timeline`),
+        api(`/api/patients/${id}/commercial`),
       ]);
       setPatient(detail.patient);
       setTimeline(history.items);
+      setCommercial(commercialData);
     } catch (reason) {
       setError((reason as Error).message);
     }
@@ -1720,7 +1815,9 @@ function PatientRecord({ id, user, onBack }: { id: string; user: User; onBack: (
             <p>{patient.phone} · <span className="badge info">{statuses[patient.journey_status]}</span></p>
           </div>
           <div className="actions">
-            <button onClick={() => setShowSaleModal(true)}>🛒 Nova Venda / Serviço (Catálogo)</button>
+            {user.role !== "doctor" && (
+              <button onClick={() => setShowSaleModal(true)}>🛒 Nova Venda / Serviço (Catálogo)</button>
+            )}
             <button className="secondary" onClick={() => setEditing(true)}>Editar Prontuário</button>
           </div>
         </div>
@@ -1749,6 +1846,47 @@ function PatientRecord({ id, user, onBack }: { id: string; user: User; onBack: (
         </dl>
 
         {patient.notes && <p><strong>Observações Clínicas:</strong> {patient.notes}</p>}
+
+        <h3>Vendas e Serviços</h3>
+        {commercial.sales.length === 0 ? (
+          <EmptyState>Nenhuma venda ou serviço registrado.</EmptyState>
+        ) : (
+          <DataTable aria-label="Vendas e serviços do paciente">
+            <thead><tr><th>Data</th><th>Item</th><th>Qtd.</th><th>Total</th><th>CMV histórico</th><th>Status</th></tr></thead>
+            <tbody>
+              {commercial.sales.map((sale) => (
+                <tr key={sale.id}>
+                  <td>{date(sale.sold_on)}</td>
+                  <td>{sale.product}</td>
+                  <td>{sale.quantity}</td>
+                  <td>{money(sale.total_amount_cents)}</td>
+                  <td>{money(sale.cost_amount_cents)}</td>
+                  <td>{sale.cancelled_at ? "Cancelada" : sale.delivery_status}</td>
+                </tr>
+              ))}
+            </tbody>
+          </DataTable>
+        )}
+
+        <h3>Financeiro do Paciente</h3>
+        {commercial.receivables.length === 0 ? (
+          <EmptyState>Nenhuma parcela registrada.</EmptyState>
+        ) : (
+          <DataTable aria-label="Financeiro do paciente">
+            <thead><tr><th>Vencimento</th><th>Item</th><th>Forma</th><th>Valor</th><th>Status</th></tr></thead>
+            <tbody>
+              {commercial.receivables.map((item) => (
+                <tr key={item.id}>
+                  <td>{date(item.due_on)}</td>
+                  <td>{item.product}</td>
+                  <td>{paymentLabels[item.payment_method]}</td>
+                  <td>{money(item.amount_cents)}</td>
+                  <td>{item.status === "received" ? "Recebida" : item.status === "cancelled" ? "Cancelada" : "Prevista"}</td>
+                </tr>
+              ))}
+            </tbody>
+          </DataTable>
+        )}
 
         <PatientAttachments patientId={id} />
         <PatientMedicalReports patientId={id} user={user} />
@@ -1836,6 +1974,67 @@ function FollowUps({ openGlobalPatient }: { openGlobalPatient: (id: string) => v
         </table>
       )}
     </section>
+  );
+}
+
+type DoctorSchedule = {
+  tasks: Array<{ task_id: string; patient_id: string; patient_name: string; title: string; due_on: string; status: string }>;
+  events: Array<{ event_id: string; patient_id: string; patient_name: string; event_type: string; description: string; created_at: string }>;
+};
+
+function DoctorAgenda({ openGlobalPatient }: { openGlobalPatient: (id: string) => void }) {
+  const [schedule, setSchedule] = useState<DoctorSchedule | null>(null);
+  const [error, setError] = useState("");
+
+  useEffect(() => {
+    const current = new Date();
+    api(`/api/doctor/schedule?year=${current.getFullYear()}&month=${current.getMonth() + 1}`)
+      .then(setSchedule)
+      .catch((reason) => setError((reason as Error).message));
+  }, []);
+
+  if (error) return <ErrorState>{error}</ErrorState>;
+  if (!schedule) return <LoadingState label="Carregando agenda médica…" />;
+  const rows = [
+    ...schedule.tasks.map((item) => ({
+      id: item.task_id,
+      patientId: item.patient_id,
+      patientName: item.patient_name,
+      when: item.due_on,
+      kind: item.status === "overdue" ? "Retorno atrasado" : "Retorno",
+      description: item.title,
+    })),
+    ...schedule.events.map((item) => ({
+      id: item.event_id,
+      patientId: item.patient_id,
+      patientName: item.patient_name,
+      when: item.created_at,
+      kind: "Atendimento",
+      description: item.description,
+    })),
+  ].sort((left, right) => left.when.localeCompare(right.when));
+
+  return (
+    <Card>
+      <h2>Agenda médica do mês</h2>
+      {rows.length === 0 ? (
+        <EmptyState>Nenhum retorno ou atendimento neste mês.</EmptyState>
+      ) : (
+        <DataTable aria-label="Agenda médica">
+          <thead><tr><th>Data</th><th>Paciente</th><th>Tipo</th><th>Descrição</th></tr></thead>
+          <tbody>
+            {rows.map((item) => (
+              <tr key={`${item.kind}-${item.id}`}>
+                <td>{date(item.when)}</td>
+                <td><PatientLink patientId={item.patientId} name={item.patientName} onOpen={openGlobalPatient} /></td>
+                <td>{item.kind}</td>
+                <td>{item.description}</td>
+              </tr>
+            ))}
+          </tbody>
+        </DataTable>
+      )}
+    </Card>
   );
 }
 
@@ -2693,7 +2892,11 @@ function App() {
       <main>
         <PageHeader title={page} />
 
-        {page === "Caixa (PDV)" ? (
+        {page === "Minha Agenda" ? (
+          <DoctorAgenda openGlobalPatient={setGlobalPatientId} />
+        ) : page === "Meus Pacientes" || page === "Atendimento Clínico" ? (
+          <Patients user={user} initialPatientId={patientId} openGlobalPatient={setGlobalPatientId} />
+        ) : page === "Caixa (PDV)" ? (
           <PosCheckout user={user} openGlobalPatient={setGlobalPatientId} />
         ) : page === "Pacientes" ? (
           <Patients user={user} initialPatientId={patientId} openGlobalPatient={setGlobalPatientId} />
