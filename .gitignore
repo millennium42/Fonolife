@@ -3,6 +3,7 @@ dist/
 .env
 playwright-report/
 test-results/
+tests/e2e/visual-baseline.spec.ts-snapshots/*-win32.png
 docker-compose.log
 .tmp-node24/
 graphify-out/

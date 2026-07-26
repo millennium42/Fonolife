@@ -26,4 +26,19 @@ test.describe('Acessibilidade e Layout Responsivo (WCAG 2.1 AA)', () => {
     });
     expect(hasHorizontalOverflow).toBe(false);
   });
+
+  test("modal prende foco, fecha com Escape e devolve foco ao gatilho", async ({ page }) => {
+    await page.goto("/");
+    await page.getByRole("button", { name: /Entrar como Administrador/ }).click();
+    await page.getByRole("button", { name: "Financeiro" }).click();
+    const trigger = page.getByRole("button", { name: "+ Novo Lançamento" });
+    await trigger.focus();
+    await trigger.click();
+    const dialog = page.getByRole("dialog", { name: "Novo lançamento financeiro" });
+    await expect(dialog).toBeVisible();
+    await expect(dialog.locator(":focus")).toBeVisible();
+    await page.keyboard.press("Escape");
+    await expect(dialog).toBeHidden();
+    await expect(trigger).toBeFocused();
+  });
 });
