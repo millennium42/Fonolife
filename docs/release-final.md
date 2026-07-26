@@ -16,8 +16,8 @@
 - Axe: 0 violações WCAG 2.1 A/AA nas telas cobertas.
 - Build TypeScript/Vite: aprovado.
 - `npm audit --audit-level=high`: 0 vulnerabilidades.
-- Graphify: 568 nós, 2393 arestas e 24 comunidades na última atualização do código; cache local não versionado.
-- CI remota da `main`: aguardando o push deste documento.
+- Graphify: 587 nós, 2425 arestas e 25 comunidades na atualização final; cache local não versionado.
+- CI remota da `main`: run `30183577039` aprovado para `cb528266a4c6b8682b0fa43b29f4a9bae1a47cac`; `validate` em 2m12s e imagem em 38s.
 
 ## Ambientes comprovados
 
@@ -61,4 +61,4 @@
 
 ## Smoke pós-main
 
-O gate completo sobre a árvore do SHA candidato aprovou health, login, pacientes/dashboard, estoque, Caixa, Financeiro, segurança, anexos e laudo. A confirmação remota será registrada após o push direto da `main`.
+O gate completo sobre a árvore do SHA candidato aprovou health, login, pacientes/dashboard, estoque, Caixa, Financeiro, segurança, anexos e laudo. O run remoto `30183577039` repetiu o gate sobre a `main` e publicou a imagem correspondente.

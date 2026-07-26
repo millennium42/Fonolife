@@ -20,6 +20,7 @@ P2 aberto: **0**
 | FNL-20-004 | P2 | Marca do login era um `div` | Hierarquia semântica incompleta para tecnologia assistiva | `web/src/main.tsx` | Marca promovida a `h1` | `tests/e2e/accessibility.spec.ts` | Corrigido |
 | FNL-20-005 | P2 | Matriz não exercitava zoom de 200% | Reflow e foco ampliados não tinham prova | `tests/e2e/accessibility.spec.ts` | Cenário desktop com zoom, teclado, navegação e conteúdo | Playwright `desktop-1440` | Corrigido |
 | FNL-20-006 | P2 | Segunda instância usava inicialmente porta fixa | Gate podia colidir com serviço local | `scripts/ci-check.sh` | Porta publicada dinamicamente e descoberta via Docker | `npm run ci:check:full` | Corrigido |
+| FNL-20-007 | P2 | Run remoto `30183577039` alertou actions internas baseadas em Node 20 | Depreciação futura do runner | `.github/workflows/ci.yml` | Checkout/setup atualizados para v6 e actions Docker para v4/v7 | CI remota final | Corrigido |
 
 ## Revisão por área
 
@@ -61,4 +62,4 @@ P2 aberto: **0**
 
 ## Limites honestos
 
-O gate comprova o artefato local, a imagem Docker e a CI, mas não equivale a publicação em produção. O Graphify atualizou 104 arquivos e reportou apenas a limitação conhecida de parser para `scripts/ci-check.ps1`; o script Bash é a fonte de verdade e o espelho PowerShell é coberto pelos testes de governança.
+O gate comprova o artefato local, a imagem Docker e a CI, mas não equivale a publicação em produção. O Graphify atualizou 108 arquivos e reportou apenas a limitação conhecida de parser para `scripts/ci-check.ps1`; o script Bash é a fonte de verdade e o espelho PowerShell é coberto pelos testes de governança.
