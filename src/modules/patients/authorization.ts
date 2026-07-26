@@ -23,6 +23,14 @@ export const admin = async (request: FastifyRequest) => {
     });
 };
 
+export const operatorOrAdmin = async (request: FastifyRequest) => {
+  await authenticated(request);
+  if (!["admin", "operator"].includes(request.currentUser!.role))
+    throw Object.assign(new Error("Acesso restrito à operação financeira"), {
+      statusCode: 403,
+    });
+};
+
 export const loadAndAuthorizePatient = async (
   request: FastifyRequest,
   reply: FastifyReply,

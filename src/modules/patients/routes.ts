@@ -103,6 +103,18 @@ export async function patientRoutes(app: FastifyInstance) {
         .type("application/problem+json")
         .send({ title: "Apenas perfis autorizados podem atribuir médico responsável", status: 403 });
     }
+    if (body.responsibleDoctorId) {
+      const doctor = await pool.query(
+        "SELECT 1 FROM users WHERE id=$1 AND role='doctor' AND active",
+        [body.responsibleDoctorId],
+      );
+      if (!doctor.rowCount) {
+        return reply.code(400).type("application/problem+json").send({
+          title: "Selecione um médico ativo",
+          status: 400,
+        });
+      }
+    }
 
     const assigned = body.assignedUserId ?? request.currentUser!.id;
     const duplicate = await pool.query(
@@ -198,6 +210,21 @@ export async function patientRoutes(app: FastifyInstance) {
           .code(403)
           .type("application/problem+json")
           .send({ title: "Apenas perfis autorizados podem alterar médico responsável", status: 403 });
+      }
+      if (
+        body.responsibleDoctorId &&
+        body.responsibleDoctorId !== authorized.responsible_doctor_id
+      ) {
+        const doctor = await pool.query(
+          "SELECT 1 FROM users WHERE id=$1 AND role='doctor' AND active",
+          [body.responsibleDoctorId],
+        );
+        if (!doctor.rowCount) {
+          return reply.code(400).type("application/problem+json").send({
+            title: "Selecione um médico ativo",
+            status: 400,
+          });
+        }
       }
 
       const result = await pool.query(

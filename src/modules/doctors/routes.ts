@@ -8,7 +8,7 @@ export async function doctorRoutes(app: FastifyInstance) {
   app.get("/api/doctors", { preHandler: authenticated }, async () => ({
     doctors: (
       await pool.query(
-        "SELECT id, name, email, role, license_number, specialty FROM users WHERE role IN ('doctor', 'admin') AND active ORDER BY name"
+        "SELECT id, name, email, role, license_number, specialty FROM users WHERE role='doctor' AND active ORDER BY name"
       )
     ).rows,
   }));

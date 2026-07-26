@@ -8,8 +8,9 @@ import {
   type SaleInstallment,
 } from "../../domain/sales.js";
 import { validFinancialEntry } from "../../domain/finance.js";
+import { sanitizeCsvCell } from "../../domain/csv-import.js";
 import { audit } from "../audit/service.js";
-import { admin, authenticated, loadAndAuthorizePatient } from "../patients/authorization.js";
+import { admin, authenticated, loadAndAuthorizePatient, operatorOrAdmin } from "../patients/authorization.js";
 
 type SaleBody = {
   clientRequestId?: string;
@@ -34,6 +35,17 @@ type FinanceFilters = {
   entryType?: string;
   category?: string;
   paymentMethod?: string;
+  limit?: string;
+  offset?: string;
+};
+
+const pagination = (limitValue?: string, offsetValue?: string) => {
+  const requestedLimit = Number(limitValue ?? 25);
+  const requestedOffset = Number(offsetValue ?? 0);
+  return {
+    limit: Number.isInteger(requestedLimit) && requestedLimit > 0 ? Math.min(requestedLimit, 100) : 25,
+    offset: Number.isInteger(requestedOffset) && requestedOffset >= 0 ? requestedOffset : 0,
+  };
 };
 
 const financeWhere = (query: FinanceFilters, dateColumn: string) => {
@@ -47,7 +59,7 @@ const financeWhere = (query: FinanceFilters, dateColumn: string) => {
 };
 
 export async function financeRoutes(app: FastifyInstance) {
-  app.get("/api/company-accounts", { preHandler: authenticated }, async () => ({
+  app.get("/api/company-accounts", { preHandler: operatorOrAdmin }, async () => ({
     accounts: (
       await pool.query(
         "SELECT id,trade_name,cnpj,short_label,active FROM company_accounts ORDER BY short_label",
@@ -79,7 +91,7 @@ export async function financeRoutes(app: FastifyInstance) {
 
   app.post<{ Body: SaleBody }>(
     "/api/sales",
-    { preHandler: authenticated },
+    { preHandler: operatorOrAdmin },
     async (request, reply) => {
       const body = request.body ?? {};
       const installments = body.installments ?? [];
@@ -135,7 +147,28 @@ export async function financeRoutes(app: FastifyInstance) {
             });
         }
 
+        if (body.productId && body.serviceId) {
+          await client.query("ROLLBACK");
+          return reply.code(400).type("application/problem+json").send({
+            title: "Selecione produto ou serviço, não ambos",
+            status: 400,
+          });
+        }
+        let costAmountCents = 0;
+        let serviceProducts: { product_id: string; quantity: number }[] = [];
         if (body.productId) {
+          const product = await client.query<{ cost_cents: string }>(
+            "SELECT cost_cents FROM products WHERE id=$1 AND active FOR UPDATE",
+            [body.productId],
+          );
+          if (!product.rowCount) {
+            await client.query("ROLLBACK");
+            return reply.code(404).type("application/problem+json").send({
+              title: "Produto ativo não encontrado",
+              status: 404,
+            });
+          }
+          costAmountCents = Number(product.rows[0].cost_cents) * Number(body.quantity);
           const balance = await client.query<{ stock: string }>(
             "SELECT COALESCE(SUM(quantity),0) stock FROM inventory_movements WHERE product_id=$1",
             [body.productId]
@@ -152,17 +185,58 @@ export async function financeRoutes(app: FastifyInstance) {
               });
           }
         }
+        if (body.serviceId) {
+          const service = await client.query<{ cmv_cents: string }>(
+            "SELECT cmv_cents FROM services WHERE id=$1 AND active FOR SHARE",
+            [body.serviceId],
+          );
+          if (!service.rowCount) {
+            await client.query("ROLLBACK");
+            return reply.code(404).type("application/problem+json").send({
+              title: "Serviço ativo não encontrado",
+              status: 404,
+            });
+          }
+          costAmountCents = Number(service.rows[0].cmv_cents) * Number(body.quantity);
+          const related = await client.query<{ product_id: string; quantity: number }>(
+            `SELECT sp.product_id,sp.quantity
+             FROM service_products sp
+             JOIN products p ON p.id=sp.product_id
+             WHERE sp.service_id=$1
+             ORDER BY p.id
+             FOR UPDATE OF p`,
+            [body.serviceId],
+          );
+          serviceProducts = related.rows;
+          for (const item of serviceProducts) {
+            const balance = await client.query<{ stock: string }>(
+              "SELECT COALESCE(SUM(quantity),0) stock FROM inventory_movements WHERE product_id=$1",
+              [item.product_id],
+            );
+            const requested = item.quantity * Number(body.quantity);
+            if (Number(balance.rows[0]?.stock ?? 0) < requested) {
+              await client.query("ROLLBACK");
+              return reply.code(409).type("application/problem+json").send({
+                title: "Estoque insuficiente para os insumos do serviço",
+                status: 409,
+              });
+            }
+          }
+        }
 
         const saleId = randomUUID();
         await client.query(
-          `INSERT INTO sales(id,client_request_id,patient_id,product,quantity,total_amount_cents,sold_on,company_account_id,notes,warranty_until,delivery_status,created_by) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12)`,
+          `INSERT INTO sales(id,client_request_id,patient_id,product_id,service_id,product,quantity,total_amount_cents,cost_amount_cents,sold_on,company_account_id,notes,warranty_until,delivery_status,created_by) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15)`,
           [
             saleId,
             body.clientRequestId,
             body.patientId,
+            body.productId || null,
+            body.serviceId || null,
             body.product.trim(),
             body.quantity,
             body.totalAmountCents,
+            costAmountCents,
             body.soldOn,
             body.companyAccountId,
             body.notes?.trim() ?? "",
@@ -186,11 +260,7 @@ export async function financeRoutes(app: FastifyInstance) {
         }
 
         if (body.serviceId) {
-          const serviceProducts = await client.query<{ product_id: string; quantity: number }>(
-            "SELECT product_id, quantity FROM service_products WHERE service_id=$1",
-            [body.serviceId]
-          );
-          for (const sp of serviceProducts.rows) {
+          for (const sp of serviceProducts) {
             const deductionQty = -Math.abs(sp.quantity * Number(body.quantity));
             await client.query(
               "INSERT INTO inventory_movements(id,product_id,movement_type,quantity,notes,created_by) VALUES($1,$2,'sale_deduction',$3,$4,$5)",
@@ -316,9 +386,47 @@ export async function financeRoutes(app: FastifyInstance) {
     },
   );
 
+  app.get<{ Params: { id: string } }>(
+    "/api/patients/:id/commercial",
+    { preHandler: authenticated },
+    async (request, reply) => {
+      const authorized = await loadAndAuthorizePatient(request, reply, request.params.id, "read");
+      if (!authorized) return;
+      const [sales, receivables] = await Promise.all([
+        pool.query(
+          `SELECT id,product,quantity,total_amount_cents,cost_amount_cents,sold_on,delivery_status,cancelled_at
+           FROM sales WHERE patient_id=$1 ORDER BY sold_on DESC,created_at DESC`,
+          [request.params.id],
+        ),
+        pool.query(
+          `SELECT r.id,r.amount_cents,r.due_on,r.payment_method,s.product,
+                  CASE WHEN s.cancelled_at IS NOT NULL THEN 'cancelled'
+                       WHEN EXISTS(SELECT 1 FROM financial_entries f WHERE f.receivable_installment_id=r.id AND f.reversal_of_id IS NULL) THEN 'received'
+                       ELSE 'expected' END status
+           FROM receivable_installments r
+           JOIN sales s ON s.id=r.sale_id
+           WHERE s.patient_id=$1
+           ORDER BY r.due_on DESC,r.id`,
+          [request.params.id],
+        ),
+      ]);
+      return {
+        sales: sales.rows.map((row) => ({
+          ...row,
+          total_amount_cents: Number(row.total_amount_cents),
+          cost_amount_cents: Number(row.cost_amount_cents),
+        })),
+        receivables: receivables.rows.map((row) => ({
+          ...row,
+          amount_cents: Number(row.amount_cents),
+        })),
+      };
+    },
+  );
+
   app.patch<{ Params: { id: string }; Body: { deliveryStatus?: string } }>(
     "/api/sales/:id/delivery",
-    { preHandler: authenticated },
+    { preHandler: operatorOrAdmin },
     async (request, reply) => {
       if (!DELIVERY_STATUSES.includes(request.body?.deliveryStatus as never))
         return reply
@@ -408,13 +516,51 @@ export async function financeRoutes(app: FastifyInstance) {
     },
   );
 
-  app.get<{ Querystring: FinanceFilters }>("/api/finance/entries", { preHandler: authenticated }, async (request) => {
+  app.get<{ Querystring: FinanceFilters }>("/api/finance/entries", { preHandler: operatorOrAdmin }, async (request) => {
     const where = financeWhere(request.query, "f.occurred_on");
-    const result = await pool.query(`SELECT f.id,f.entry_type,f.category,f.description,f.amount_cents,f.competence_on,f.occurred_on,f.payment_method,f.company_account_id,c.short_label company_account_label,f.patient_id,p.name patient_name,f.sale_id,f.reversal_of_id,f.reversal_reason,f.notes,f.created_at,u.name created_by_name,EXISTS(SELECT 1 FROM financial_entries r WHERE r.reversal_of_id=f.id) reversed FROM financial_entries f JOIN company_accounts c ON c.id=f.company_account_id JOIN users u ON u.id=f.created_by LEFT JOIN patients p ON p.id=f.patient_id ${where.sql} ORDER BY f.occurred_on DESC,f.created_at DESC LIMIT 500`, where.values);
-    return { entries: result.rows.map(row => ({ ...row, amount_cents: Number(row.amount_cents) })) };
+    const page = pagination(request.query.limit, request.query.offset);
+    where.values.push(page.limit + 1, page.offset);
+    const result = await pool.query(`SELECT f.id,f.entry_type,f.category,f.description,f.amount_cents,f.competence_on,f.occurred_on,f.payment_method,f.company_account_id,c.short_label company_account_label,f.patient_id,p.name patient_name,f.sale_id,f.reversal_of_id,f.reversal_reason,f.notes,f.created_at,u.name created_by_name,EXISTS(SELECT 1 FROM financial_entries r WHERE r.reversal_of_id=f.id) reversed FROM financial_entries f JOIN company_accounts c ON c.id=f.company_account_id JOIN users u ON u.id=f.created_by LEFT JOIN patients p ON p.id=f.patient_id ${where.sql} ORDER BY f.occurred_on DESC,f.created_at DESC LIMIT $${where.values.length - 1} OFFSET $${where.values.length}`, where.values);
+    const rows = result.rows.slice(0, page.limit);
+    return {
+      entries: rows.map(row => ({ ...row, amount_cents: Number(row.amount_cents) })),
+      pagination: { ...page, count: rows.length, hasMore: result.rows.length > page.limit },
+    };
   });
 
-  app.post<{ Body: { clientRequestId?: string; entryType?: string; category?: string; description?: string; amountCents?: number; competenceOn?: string; occurredOn?: string; paymentMethod?: string; companyAccountId?: string; patientId?: string; notes?: string } }>("/api/finance/entries", { preHandler: authenticated }, async (request, reply) => {
+  app.get<{ Querystring: FinanceFilters }>("/api/finance/entries.csv", { preHandler: operatorOrAdmin }, async (request, reply) => {
+    const where = financeWhere(request.query, "f.occurred_on");
+    const result = await pool.query(
+      `SELECT f.occurred_on,f.entry_type,f.category,f.description,f.amount_cents,c.short_label company_account_label,f.payment_method,p.name patient_name
+       FROM financial_entries f
+       JOIN company_accounts c ON c.id=f.company_account_id
+       LEFT JOIN patients p ON p.id=f.patient_id
+       ${where.sql}
+       ORDER BY f.occurred_on DESC,f.created_at DESC
+       LIMIT 5000`,
+      where.values,
+    );
+    const cell = (value: unknown) => `"${sanitizeCsvCell(String(value ?? "")).replaceAll('"', '""')}"`;
+    const lines = [
+      ["data", "tipo", "categoria", "descricao", "valor_centavos", "conta", "pagamento", "paciente"].map(cell).join(","),
+      ...result.rows.map((row) => [
+        row.occurred_on,
+        row.entry_type,
+        row.category,
+        row.description,
+        row.amount_cents,
+        row.company_account_label,
+        row.payment_method,
+        row.patient_name,
+      ].map(cell).join(",")),
+    ];
+    return reply
+      .header("Content-Type", "text/csv; charset=utf-8")
+      .header("Content-Disposition", 'attachment; filename="fonolife-financeiro.csv"')
+      .send(`\uFEFF${lines.join("\r\n")}\r\n`);
+  });
+
+  app.post<{ Body: { clientRequestId?: string; entryType?: string; category?: string; description?: string; amountCents?: number; competenceOn?: string; occurredOn?: string; paymentMethod?: string; companyAccountId?: string; patientId?: string; notes?: string } }>("/api/finance/entries", { preHandler: operatorOrAdmin }, async (request, reply) => {
     const body = request.body ?? {};
     if (!validFinancialEntry(body)) return reply.code(400).type("application/problem+json").send({ title: "Confira tipo, categoria, descrição, valor, datas, pagamento e caixa", status: 400 });
     const client = await pool.connect();
@@ -436,15 +582,21 @@ export async function financeRoutes(app: FastifyInstance) {
     } finally { client.release(); }
   });
 
-  app.get<{ Querystring: { from?: string; to?: string; companyAccountId?: string; paymentMethod?: string; status?: string } }>("/api/finance/receivables", { preHandler: authenticated }, async (request) => {
+  app.get<{ Querystring: { from?: string; to?: string; companyAccountId?: string; paymentMethod?: string; status?: string; limit?: string; offset?: string } }>("/api/finance/receivables", { preHandler: operatorOrAdmin }, async (request) => {
     const values: unknown[] = [], terms: string[] = [];
     for (const [value, sql] of [[request.query.from,"r.due_on >="],[request.query.to,"r.due_on <="],[request.query.companyAccountId,"s.company_account_id ="],[request.query.paymentMethod,"r.payment_method ="]] as const) if (value) { values.push(value); terms.push(`${sql} $${values.length}`); }
     if (request.query.status) { values.push(request.query.status); terms.push(`CASE WHEN s.cancelled_at IS NOT NULL THEN 'cancelled' WHEN receipt.id IS NOT NULL THEN 'received' ELSE 'expected' END = $${values.length}`); }
-    const result = await pool.query(`SELECT r.id,r.amount_cents,r.due_on,r.payment_method,s.id sale_id,s.product,s.patient_id,p.name patient_name,s.company_account_id,c.short_label company_account_label,receipt.id receipt_id,receipt.occurred_on received_on,CASE WHEN s.cancelled_at IS NOT NULL THEN 'cancelled' WHEN receipt.id IS NOT NULL THEN 'received' ELSE 'expected' END status FROM receivable_installments r JOIN sales s ON s.id=r.sale_id JOIN patients p ON p.id=s.patient_id JOIN company_accounts c ON c.id=s.company_account_id LEFT JOIN LATERAL (SELECT f.id,f.occurred_on FROM financial_entries f WHERE f.receivable_installment_id=r.id AND f.reversal_of_id IS NULL AND NOT EXISTS(SELECT 1 FROM financial_entries reversal WHERE reversal.reversal_of_id=f.id) ORDER BY f.created_at DESC LIMIT 1) receipt ON true ${terms.length ? `WHERE ${terms.join(" AND ")}` : ""} ORDER BY r.due_on,r.id LIMIT 500`, values);
-    return { receivables: result.rows.map(row => ({ ...row, amount_cents: Number(row.amount_cents) })) };
+    const page = pagination(request.query.limit, request.query.offset);
+    values.push(page.limit + 1, page.offset);
+    const result = await pool.query(`SELECT r.id,r.amount_cents,r.due_on,r.payment_method,s.id sale_id,s.product,s.patient_id,p.name patient_name,s.company_account_id,c.short_label company_account_label,receipt.id receipt_id,receipt.occurred_on received_on,CASE WHEN s.cancelled_at IS NOT NULL THEN 'cancelled' WHEN receipt.id IS NOT NULL THEN 'received' ELSE 'expected' END status FROM receivable_installments r JOIN sales s ON s.id=r.sale_id JOIN patients p ON p.id=s.patient_id JOIN company_accounts c ON c.id=s.company_account_id LEFT JOIN LATERAL (SELECT f.id,f.occurred_on FROM financial_entries f WHERE f.receivable_installment_id=r.id AND f.reversal_of_id IS NULL AND NOT EXISTS(SELECT 1 FROM financial_entries reversal WHERE reversal.reversal_of_id=f.id) ORDER BY f.created_at DESC LIMIT 1) receipt ON true ${terms.length ? `WHERE ${terms.join(" AND ")}` : ""} ORDER BY r.due_on,r.id LIMIT $${values.length - 1} OFFSET $${values.length}`, values);
+    const rows = result.rows.slice(0, page.limit);
+    return {
+      receivables: rows.map(row => ({ ...row, amount_cents: Number(row.amount_cents) })),
+      pagination: { ...page, count: rows.length, hasMore: result.rows.length > page.limit },
+    };
   });
 
-  app.post<{ Params: { id: string }; Body: { clientRequestId?: string; receivedOn?: string; companyAccountId?: string; paymentMethod?: string } }>("/api/finance/receivables/:id/settle", { preHandler: authenticated }, async (request, reply) => {
+  app.post<{ Params: { id: string }; Body: { clientRequestId?: string; receivedOn?: string; companyAccountId?: string; paymentMethod?: string } }>("/api/finance/receivables/:id/settle", { preHandler: operatorOrAdmin }, async (request, reply) => {
     const { clientRequestId, receivedOn, companyAccountId, paymentMethod } = request.body ?? {};
     if (!/^[0-9a-f-]{36}$/i.test(clientRequestId ?? "") || !/^\d{4}-\d{2}-\d{2}$/.test(receivedOn ?? "")) return reply.code(400).type("application/problem+json").send({ title: "Informe a data do recebimento", status: 400 });
     const client = await pool.connect();
@@ -497,26 +649,76 @@ export async function financeRoutes(app: FastifyInstance) {
   app.get<{ Querystring: FinanceFilters }>("/api/finance/summary", { preHandler: admin }, async (request) => {
     const where = financeWhere(request.query, "f.occurred_on");
     const result = await pool.query(`SELECT c.id company_account_id,c.short_label company_account_label,COALESCE(sum(CASE WHEN f.entry_type='income' THEN f.amount_cents ELSE -f.amount_cents END),0) balance_cents,COALESCE(sum(f.amount_cents) FILTER(WHERE f.entry_type='income'),0) income_cents,COALESCE(sum(f.amount_cents) FILTER(WHERE f.entry_type='expense'),0) expense_cents FROM financial_entries f JOIN company_accounts c ON c.id=f.company_account_id ${where.sql} GROUP BY c.id,c.short_label ORDER BY c.short_label`, where.values);
-    const byAccount = result.rows.map(row => ({ ...row, balance_cents:Number(row.balance_cents), income_cents:Number(row.income_cents), expense_cents:Number(row.expense_cents) }));
-    return { consolidated: byAccount.reduce((total,row) => ({ balance_cents:total.balance_cents+row.balance_cents,income_cents:total.income_cents+row.income_cents,expense_cents:total.expense_cents+row.expense_cents }), { balance_cents:0,income_cents:0,expense_cents:0 }), byAccount };
+    const saleValues: unknown[] = [], saleTerms = ["cancelled_at IS NULL"];
+    for (const [value, sql] of [
+      [request.query.from, "sold_on >="],
+      [request.query.to, "sold_on <="],
+      [request.query.companyAccountId, "company_account_id ="],
+    ] as const) if (value) {
+      saleValues.push(value);
+      saleTerms.push(`${sql} $${saleValues.length}`);
+    }
+    const costs = await pool.query(
+      `SELECT company_account_id,COALESCE(sum(total_amount_cents),0) sales_revenue_cents,COALESCE(sum(cost_amount_cents),0) cmv_cents
+       FROM sales WHERE ${saleTerms.join(" AND ")}
+       GROUP BY company_account_id`,
+      saleValues,
+    );
+    const costsByAccount = new Map(costs.rows.map((row) => [
+      row.company_account_id,
+      { revenue: Number(row.sales_revenue_cents), cost: Number(row.cmv_cents) },
+    ]));
+    const byAccount = result.rows.map(row => {
+      const incomeCents = Number(row.income_cents);
+      const sale = costsByAccount.get(row.company_account_id) ?? { revenue: 0, cost: 0 };
+      return {
+        ...row,
+        balance_cents: Number(row.balance_cents),
+        income_cents: incomeCents,
+        expense_cents: Number(row.expense_cents),
+        sales_revenue_cents: sale.revenue,
+        cmv_cents: sale.cost,
+        margin_cents: sale.revenue - sale.cost,
+      };
+    });
+    return {
+      consolidated: byAccount.reduce(
+        (total,row) => ({
+          balance_cents: total.balance_cents + row.balance_cents,
+          income_cents: total.income_cents + row.income_cents,
+          expense_cents: total.expense_cents + row.expense_cents,
+          sales_revenue_cents: total.sales_revenue_cents + row.sales_revenue_cents,
+          cmv_cents: total.cmv_cents + row.cmv_cents,
+          margin_cents: total.margin_cents + row.margin_cents,
+        }),
+        { balance_cents:0,income_cents:0,expense_cents:0,sales_revenue_cents:0,cmv_cents:0,margin_cents:0 },
+      ),
+      byAccount,
+    };
   });
 
   app.get("/api/dashboard", { preHandler: authenticated }, async (request) => {
     const today = "(now() AT TIME ZONE 'America/Sao_Paulo')::date";
+    const doctorId = request.currentUser!.role === "doctor" ? request.currentUser!.id : null;
+    const doctorParams = doctorId ? [doctorId] : [];
+    const doctorScope = (alias: string) => doctorId
+      ? `AND (${alias}.responsible_doctor_id=$1 OR ${alias}.assigned_user_id=$1)`
+      : "";
     const [counts, queue] = await Promise.all([
       pool.query(`SELECT
         count(*) FILTER (WHERE t.due_on < ${today})::int overdue,
         count(*) FILTER (WHERE t.due_on = ${today})::int today,
         count(*)::int open_tasks,
-        (SELECT count(*)::int FROM patients WHERE archived_at IS NULL AND journey_status='adaptation') adaptation,
-        (SELECT count(*)::int FROM sales WHERE cancelled_at IS NULL AND date_trunc('month',sold_on)=date_trunc('month',${today})) month_sales
-        FROM follow_up_tasks t
-        WHERE t.completed_at IS NULL AND t.cancelled_at IS NULL`),
+        (SELECT count(*)::int FROM patients p2 WHERE p2.archived_at IS NULL AND p2.journey_status='adaptation' ${doctorScope("p2")}) adaptation,
+        (SELECT count(*)::int FROM sales s JOIN patients p3 ON p3.id=s.patient_id WHERE s.cancelled_at IS NULL AND date_trunc('month',s.sold_on)=date_trunc('month',${today}) ${doctorScope("p3")}) month_sales
+        FROM follow_up_tasks t JOIN patients p ON p.id=t.patient_id
+        WHERE t.completed_at IS NULL AND t.cancelled_at IS NULL ${doctorScope("p")}`, doctorParams),
       pool.query(`SELECT t.id task_id,t.patient_id,p.name patient_name,p.phone,t.title,t.due_on,
         CASE WHEN t.due_on < ${today} THEN 'overdue' WHEN t.due_on = ${today} THEN 'today' ELSE 'upcoming' END timing
         FROM follow_up_tasks t JOIN patients p ON p.id=t.patient_id
         WHERE t.completed_at IS NULL AND t.cancelled_at IS NULL AND p.archived_at IS NULL
-        ORDER BY CASE WHEN t.due_on < ${today} THEN 0 WHEN t.due_on = ${today} THEN 1 ELSE 2 END,t.due_on,p.name LIMIT 12`),
+        ${doctorScope("p")}
+        ORDER BY CASE WHEN t.due_on < ${today} THEN 0 WHEN t.due_on = ${today} THEN 1 ELSE 2 END,t.due_on,p.name LIMIT 12`, doctorParams),
     ]);
     const response: Record<string, unknown> = { ...counts.rows[0], queue: queue.rows };
     if (request.currentUser!.role === "admin") {

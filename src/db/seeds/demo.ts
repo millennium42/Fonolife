@@ -162,9 +162,9 @@ export async function seedDemo() {
     const existingSale = await client.query("SELECT 1 FROM sales WHERE id=$1", [saleId]);
     if (!existingSale.rowCount) {
       await client.query(
-        `INSERT INTO sales(id, client_request_id, patient_id, product, quantity, total_amount_cents, sold_on, company_account_id, notes, delivery_status, created_by)
-         VALUES($1, $2, $3, 'Aparelho Auditivo Phonak Audéo Paradise P90-R', 1, 850000, CURRENT_DATE - INTERVAL '5 days', $4, 'Venda com adaptação inclusa', 'completed', $5)`,
-        [saleId, randomUUID(), realPat1Id, matrizAccount, realAdminId]
+        `INSERT INTO sales(id, client_request_id, patient_id, product_id, product, quantity, total_amount_cents, cost_amount_cents, sold_on, company_account_id, notes, delivery_status, created_by)
+         VALUES($1, $2, $3, $4, 'Aparelho Auditivo Phonak Audéo Paradise P90-R', 1, 850000, 320000, CURRENT_DATE - INTERVAL '5 days', $5, 'Venda com adaptação inclusa', 'completed', $6)`,
+        [saleId, randomUUID(), realPat1Id, prod1Id, matrizAccount, realAdminId]
       );
 
       await client.query(
@@ -179,6 +179,10 @@ export async function seedDemo() {
         [randomUUID(), matrizAccount, realPat1Id, saleId, instId, realAdminId]
       );
     }
+    await client.query(
+      "UPDATE sales SET product_id=$1,cost_amount_cents=320000 WHERE id=$2",
+      [prod1Id, saleId],
+    );
 
     await client.query("COMMIT");
     console.log("✅ Banco de Dados Fonolife povoado com sucesso com dados realistas de demonstração!");
