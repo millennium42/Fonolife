@@ -11,6 +11,15 @@ services:
       interval: 3s
       timeout: 3s
       retries: 20
+  clamav:
+    image: clamav/clamav:latest
+    ports: ["3310:3310"]
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "clamdcheck.sh"]
+      interval: 10s
+      timeout: 5s
+      retries: 30
   app:
     build: .
     environment:
@@ -21,6 +30,8 @@ services:
       APP_ENV: ${APP_ENV:-demo}
       DEMO_DATABASE_HOST: db
       DEMO_DATABASE_NAME: fonolife_demo
+      CLAMAV_HOST: clamav
+      CLAMAV_PORT: 3310
     ports: ["3000:3000"]
     depends_on:
       db: { condition: service_healthy }
