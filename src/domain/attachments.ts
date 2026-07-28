@@ -2,6 +2,7 @@ import { createHash, randomUUID } from "node:crypto";
 import { mkdir, readFile, writeFile, unlink, stat, readdir } from "node:fs/promises";
 import { join, resolve, basename } from "node:path";
 import { Readable } from "node:stream";
+import net from "node:net";
 import {
   S3Client,
   PutObjectCommand,
@@ -450,6 +451,7 @@ export interface AttachmentScanResult {
 
 export interface AttachmentScanner {
   scan(data: Buffer | Readable, declaredMime?: string): Promise<AttachmentScanResult>;
+  healthCheck?(): Promise<{ status: "ok" | "degraded" | "down"; details?: string }>;
 }
 
 /**
@@ -538,45 +540,226 @@ export class ClamAVAttachmentScanner implements AttachmentScanner {
   constructor(options?: { host?: string; port?: number; timeoutMs?: number }) {
     this.host = options?.host ?? process.env.CLAMAV_HOST ?? "localhost";
     this.port = options?.port ?? Number(process.env.CLAMAV_PORT ?? 3310);
-    this.timeoutMs = options?.timeoutMs ?? 10000;
+    this.timeoutMs = options?.timeoutMs ?? Number(process.env.CLAMAV_TIMEOUT_MS ?? 10000);
+  }
+
+  async healthCheck(): Promise<{ status: "ok" | "degraded" | "down"; details?: string }> {
+    try {
+      const response = await this.executeCommand("zPING\0");
+      if (response.includes("PONG")) {
+        return { status: "ok" };
+      }
+      return { status: "degraded", details: `Resposta inesperada do ClamAV no PING: ${response}` };
+    } catch (err: any) {
+      return { status: "down", details: `ClamAV indisponível: ${err?.message || err}` };
+    }
+  }
+
+  async ping(): Promise<boolean> {
+    const res = await this.healthCheck();
+    return res.status === "ok";
+  }
+
+  private executeCommand(cmd: string): Promise<string> {
+    return new Promise((resolve, reject) => {
+      const socket = net.createConnection({ host: this.host, port: this.port });
+      let response = "";
+
+      const cleanup = () => {
+        socket.removeAllListeners();
+        if (!socket.destroyed) {
+          socket.destroy();
+        }
+      };
+
+      socket.setTimeout(this.timeoutMs, () => {
+        cleanup();
+        reject(new Error("Timeout de conexão/leitura ao comunicar com ClamAV daemon"));
+      });
+
+      socket.on("error", (err) => {
+        cleanup();
+        reject(err);
+      });
+
+      socket.on("connect", () => {
+        socket.write(Buffer.from(cmd, "binary"));
+      });
+
+      socket.on("data", (chunk) => {
+        response += chunk.toString("utf-8");
+        if (response.endsWith("\0") || response.endsWith("\n") || response.includes("PONG")) {
+          cleanup();
+          resolve(response.replace(/[\r\n\0]/g, "").trim());
+        }
+      });
+
+      socket.on("end", () => {
+        cleanup();
+        resolve(response.replace(/[\r\n\0]/g, "").trim());
+      });
+    });
   }
 
   async scan(data: Buffer | Readable, declaredMime?: string): Promise<AttachmentScanResult> {
-    try {
-      let buffer: Buffer;
-      if (Buffer.isBuffer(data)) {
-        buffer = data;
-      } else {
-        const chunks: Buffer[] = [];
-        for await (const chunk of data) {
-          chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk));
+    // 1. Validação estrutural com Magic Bytes mantida como camada de proteção estrutural e de tamanho
+    let buffer: Buffer;
+    if (Buffer.isBuffer(data)) {
+      buffer = data;
+    } else {
+      const chunks: Buffer[] = [];
+      let totalLength = 0;
+      for await (const chunk of data) {
+        const buf = Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk);
+        totalLength += buf.length;
+        if (totalLength > MAX_FILE_SIZE_BYTES) {
+          return {
+            status: "failed",
+            clean: false,
+            engine: "clamav",
+            reason: `Tamanho do stream excede limite máximo permitido de ${MAX_FILE_SIZE_BYTES} bytes`,
+          };
         }
-        buffer = Buffer.concat(chunks);
+        chunks.push(buf);
       }
+      buffer = Buffer.concat(chunks);
+    }
 
-      // Verificação da assinatura EICAR padrão em teste/demo do ClamAV
-      const str = buffer.toString("utf8");
-      if (str.includes("EICAR-STANDARD-ANTIVIRUS-TEST-FILE")) {
-        return {
-          status: "infected",
-          clean: false,
-          engine: "clamav",
-          signature: "Win.Test.EICAR_HDB-1",
-          reason: "EICAR Test Signature detected",
-        };
-      }
-
-      return {
-        status: "clean",
-        clean: true,
-        engine: "clamav",
-      };
-    } catch (err) {
+    if (!buffer || buffer.length === 0) {
       return {
         status: "failed",
         clean: false,
         engine: "clamav",
-        reason: (err as Error).message ?? "Falha de comunicação com daemon ClamAV",
+        reason: "Arquivo de anexo vazio (0 bytes)",
+      };
+    }
+
+    if (buffer.length > MAX_FILE_SIZE_BYTES) {
+      return {
+        status: "failed",
+        clean: false,
+        engine: "clamav",
+        reason: `Anexo excede o tamanho máximo de ${MAX_FILE_SIZE_BYTES} bytes`,
+      };
+    }
+
+    if (
+      (buffer[0] === 0x4d && buffer[1] === 0x5a) ||
+      (buffer[0] === 0x7f && buffer[1] === 0x45 && buffer[2] === 0x4c && buffer[3] === 0x46) ||
+      (buffer[0] === 0x23 && buffer[1] === 0x21)
+    ) {
+      return {
+        status: "infected",
+        clean: false,
+        engine: "clamav",
+        signature: "Malicious-Executable-Header",
+        reason: "Conteúdo executável proibido detectado no cabeçalho binário",
+      };
+    }
+
+    const detectedMimeType = detectMimeTypeFromMagicBytes(buffer);
+    if (declaredMime && detectedMimeType) {
+      if (declaredMime.toLowerCase().trim() !== detectedMimeType) {
+        return {
+          status: "infected",
+          clean: false,
+          engine: "clamav",
+          reason: `Divergência entre MIME declarado ('${declaredMime}') e detectado por magic bytes ('${detectedMimeType}')`,
+          detectedMimeType,
+        };
+      }
+    }
+
+    // 2. Comunicação real com clamd via protocolo TCP INSTREAM
+    try {
+      const scanResultString = await new Promise<string>((resolve, reject) => {
+        const socket = net.createConnection({ host: this.host, port: this.port });
+        let response = "";
+        let finished = false;
+
+        const finish = (err: Error | null, res?: string) => {
+          if (finished) return;
+          finished = true;
+          socket.removeAllListeners();
+          if (!socket.destroyed) socket.destroy();
+          if (err) reject(err);
+          else resolve(res || "");
+        };
+
+        socket.setTimeout(this.timeoutMs, () => {
+          finish(new Error("Timeout na comunicação TCP INSTREAM com daemon ClamAV"));
+        });
+
+        socket.on("error", (err) => finish(err));
+
+        socket.on("connect", () => {
+          try {
+            socket.write(Buffer.from("zINSTREAM\0", "binary"));
+
+            const chunkSize = Math.min(buffer.length, 65536);
+            for (let offset = 0; offset < buffer.length; offset += chunkSize) {
+              const slice = buffer.subarray(offset, offset + chunkSize);
+              const lenBuf = Buffer.alloc(4);
+              lenBuf.writeUInt32BE(slice.length, 0);
+              socket.write(lenBuf);
+              socket.write(slice);
+            }
+
+            const terminator = Buffer.alloc(4);
+            socket.write(terminator);
+          } catch (e: any) {
+            finish(e);
+          }
+        });
+
+        socket.on("data", (chunk) => {
+          response += chunk.toString("utf-8");
+          if (response.includes("\0") || response.includes("\n")) {
+            finish(null, response.replace(/[\r\n\0]/g, "").trim());
+          }
+        });
+
+        socket.on("end", () => {
+          finish(null, response.replace(/[\r\n\0]/g, "").trim());
+        });
+      });
+
+      // 3. Parser explícito de status ClamAV
+      if (scanResultString === "stream: OK" || scanResultString === "OK" || scanResultString.endsWith(": OK")) {
+        return {
+          status: "clean",
+          clean: true,
+          engine: "clamav",
+          detectedMimeType,
+        };
+      }
+
+      if (scanResultString.includes("FOUND")) {
+        const match = scanResultString.match(/^(?:stream:\s*)?(.+?)\s+FOUND$/i);
+        const signature = match ? match[1] : "Malicious-Signature-Found";
+        return {
+          status: "infected",
+          clean: false,
+          engine: "clamav",
+          signature,
+          reason: `Malware detectado pelo ClamAV: ${signature}`,
+          detectedMimeType,
+        };
+      }
+
+      return {
+        status: "failed",
+        clean: false,
+        engine: "clamav",
+        reason: `Resposta desconhecida do scanner (fail-closed): ${scanResultString || "Sem resposta"}`,
+        detectedMimeType,
+      };
+    } catch (err: any) {
+      return {
+        status: "failed",
+        clean: false,
+        engine: "clamav",
+        reason: err?.message || "Indisponibilidade ou erro na comunicação com ClamAV daemon",
       };
     }
   }

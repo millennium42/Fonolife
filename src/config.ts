@@ -33,6 +33,9 @@ if ((production || demo) && process.env.AUTH_MEMORY_FALLBACK === "true") {
 
 const storageProvider = process.env.ATTACHMENT_STORAGE_PROVIDER ?? process.env.STORAGE_PROVIDER ?? (production ? 's3' : demo ? 'demo' : 'local');
 const scannerProvider = process.env.ATTACHMENT_SCANNER_PROVIDER ?? (production ? 'clamav' : 'dev');
+const clamavHost = process.env.CLAMAV_HOST ?? 'localhost';
+const clamavPort = Number(process.env.CLAMAV_PORT ?? 3310);
+const clamavTimeoutMs = Number(process.env.CLAMAV_TIMEOUT_MS ?? 10000);
 const s3Bucket = process.env.S3_BUCKET ?? (production ? undefined : 'fonolife-attachments-private');
 const s3Region = process.env.S3_REGION ?? 'us-east-1';
 const s3Endpoint = process.env.S3_ENDPOINT;
@@ -49,6 +52,9 @@ export function validateAttachmentConfig(options: {
   s3Bucket?: string;
   s3AccessKeyId?: string;
   s3SecretAccessKey?: string;
+  clamavHost?: string;
+  clamavPort?: number;
+  clamavTimeoutMs?: number;
 }) {
   if (options.production) {
     if (options.storageProvider === "local") {
@@ -59,6 +65,15 @@ export function validateAttachmentConfig(options: {
     }
     if (options.scannerProvider === "dev" || options.scannerProvider === "mock") {
       throw new Error("CONFIG ERROR: DevAttachmentScanner não pode ser utilizado em ambiente de produção.");
+    }
+    if (options.scannerProvider !== "clamav") {
+      throw new Error(`CONFIG ERROR: Provider de scanner '${options.scannerProvider}' não pode ser utilizado em ambiente de produção (obrigatório 'clamav').`);
+    }
+    const checkHost = options.clamavHost ?? process.env.CLAMAV_HOST ?? "localhost";
+    const checkPort = options.clamavPort ?? Number(process.env.CLAMAV_PORT ?? 3310);
+    const checkTimeout = options.clamavTimeoutMs ?? Number(process.env.CLAMAV_TIMEOUT_MS ?? 10000);
+    if (!checkHost || isNaN(checkPort) || checkPort <= 0 || checkPort > 65535 || isNaN(checkTimeout) || checkTimeout <= 0) {
+      throw new Error("CONFIG ERROR: Configuração de host, porta ou timeout para ClamAV é inválida em produção.");
     }
     if (options.storageProvider === "s3") {
       const hasExplicitCreds = !!(options.s3AccessKeyId && options.s3SecretAccessKey);
@@ -78,6 +93,9 @@ validateAttachmentConfig({
   s3Bucket,
   s3AccessKeyId,
   s3SecretAccessKey,
+  clamavHost,
+  clamavPort,
+  clamavTimeoutMs,
 });
 
 export const config = {
@@ -97,6 +115,9 @@ export const config = {
   s3ForcePathStyle,
   s3AccessKeyId,
   s3SecretAccessKey,
+  clamavHost,
+  clamavPort,
+  clamavTimeoutMs,
   attachmentMaxBytes,
   attachmentDownloadTtlSeconds,
 };

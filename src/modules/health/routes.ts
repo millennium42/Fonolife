@@ -33,14 +33,26 @@ export async function healthRoutes(
     }
 
     let scannerStatus = "ok";
+    let scannerDetails: string | undefined;
     try {
-      await attachmentScanner.scan(Buffer.from("%PDF-1.4\n%%EOF"), "application/pdf");
-    } catch {
+      if (typeof attachmentScanner.healthCheck === "function") {
+        const h = await attachmentScanner.healthCheck();
+        scannerStatus = h.status;
+        scannerDetails = h.details;
+      } else {
+        const s = await attachmentScanner.scan(Buffer.from("%PDF-1.4\n%%EOF"), "application/pdf");
+        if (s.status !== "clean" || !s.clean) {
+          scannerStatus = "degraded";
+          scannerDetails = `Scanner respondeu status não limpo: ${s.reason || s.status}`;
+        }
+      }
+    } catch (err: any) {
       scannerStatus = "degraded";
+      scannerDetails = err?.message || "Scanner indisponível";
     }
 
     let overallStatus: "healthy" | "degraded" | "unavailable" = "healthy";
-    if (dbStatus === "down" || storageStatus === "down") {
+    if (dbStatus === "down" || storageStatus === "down" || scannerStatus === "down") {
       overallStatus = "unavailable";
     } else if (storageStatus === "degraded" || scannerStatus === "degraded") {
       overallStatus = "degraded";
@@ -52,6 +64,7 @@ export async function healthRoutes(
       storage: storageStatus,
       storageDetails,
       scanner: scannerStatus,
+      scannerDetails,
       storageProvider: config.storageProvider,
       scannerProvider: config.scannerProvider,
     };
