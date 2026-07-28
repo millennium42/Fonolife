@@ -146,9 +146,14 @@ export async function attachmentRoutes(
 
         await client.query("COMMIT");
         return reply.code(201).send({ id: attachmentId, status: "ready", category: finalCategory });
-      } catch (err) {
+      } catch (err: any) {
         await client.query("ROLLBACK");
-        await attachmentStorage.delete(storageKey);
+        try {
+          await attachmentStorage.delete(storageKey);
+        } catch (compErr: any) {
+          request.log.error(compErr, `Falha de compensação: não foi possível remover anexo do storage após erro no banco (key: ${storageKey})`);
+          err = new Error(`${err?.message || "Erro no banco"} (Falha de compensação no storage: ${compErr?.message || compErr})`);
+        }
         throw err;
       } finally {
         client.release();
@@ -184,8 +189,15 @@ export async function attachmentRoutes(
         .header("X-Content-Type-Options", "nosniff")
         .header("Content-Security-Policy", "default-src 'self' data:; frame-ancestors 'self'");
       return reply.send(stream);
-    } catch {
-      return reply.code(404).type("application/problem+json").send({ title: "Arquivo físico não encontrado", status: 404 });
+    } catch (err: any) {
+      if (err?.notFound || err?.code === "ENOENT" || (typeof err?.message === "string" && err.message.includes("não encontrado"))) {
+        return reply.code(404).type("application/problem+json").send({ title: "Arquivo físico não encontrado", status: 404 });
+      }
+      request.log.error(err, `Indisponibilidade ao acessar storage para o arquivo ${key}`);
+      return reply
+        .code(503)
+        .type("application/problem+json")
+        .send({ title: `Storage indisponível no momento: ${err?.message || "Erro no armazenamento de arquivos"}`, status: 503 });
     }
   };
 

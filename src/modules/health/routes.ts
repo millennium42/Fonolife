@@ -18,10 +18,18 @@ export async function healthRoutes(
     }
 
     let storageStatus = "ok";
+    let storageDetails: string | undefined;
     try {
-      await attachmentStorage.exists("__health_check__");
-    } catch {
+      if (typeof attachmentStorage.health === "function") {
+        const h = await attachmentStorage.health();
+        storageStatus = h.status;
+        storageDetails = h.details;
+      } else {
+        await attachmentStorage.exists("__health_check__");
+      }
+    } catch (err: any) {
       storageStatus = "degraded";
+      storageDetails = err?.message || "Storage indisponível";
     }
 
     let scannerStatus = "ok";
@@ -32,7 +40,7 @@ export async function healthRoutes(
     }
 
     let overallStatus: "healthy" | "degraded" | "unavailable" = "healthy";
-    if (dbStatus === "down") {
+    if (dbStatus === "down" || storageStatus === "down") {
       overallStatus = "unavailable";
     } else if (storageStatus === "degraded" || scannerStatus === "degraded") {
       overallStatus = "degraded";
@@ -42,6 +50,7 @@ export async function healthRoutes(
       status: overallStatus,
       database: dbStatus,
       storage: storageStatus,
+      storageDetails,
       scanner: scannerStatus,
       storageProvider: config.storageProvider,
       scannerProvider: config.scannerProvider,
@@ -49,6 +58,15 @@ export async function healthRoutes(
   });
 
   app.get("/api/config", async () => {
-    return { demoMode: config.demo, environment: config.appEnv };
+    return {
+      demoMode: config.demo,
+      environment: config.appEnv,
+      storageProvider: config.storageProvider,
+      storageClass: config.storageProvider === "demo" || config.storageProvider === "memory" || config.storageProvider === "in-memory"
+        ? "InMemoryAttachmentStorage"
+        : config.storageProvider === "s3"
+        ? "S3AttachmentStorage"
+        : "LocalAttachmentStorage",
+    };
   });
 }

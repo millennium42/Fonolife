@@ -2,6 +2,16 @@ import { createHash, randomUUID } from "node:crypto";
 import { mkdir, readFile, writeFile, unlink, stat, readdir } from "node:fs/promises";
 import { join, resolve, basename } from "node:path";
 import { Readable } from "node:stream";
+import {
+  S3Client,
+  PutObjectCommand,
+  GetObjectCommand,
+  HeadObjectCommand,
+  DeleteObjectCommand,
+  HeadBucketCommand,
+  ListObjectsV2Command,
+} from "@aws-sdk/client-s3";
+import { getSignedUrl as awsGetSignedUrl } from "@aws-sdk/s3-request-presigner";
 
 export const ALLOWED_MIME_TYPES = [
   "application/pdf",
@@ -29,6 +39,74 @@ export interface AttachmentStorage {
   delete(key: string): Promise<void>;
   exists(key: string): Promise<boolean>;
   getSignedUrl?(key: string, ttlSeconds?: number): Promise<string>;
+  health(): Promise<{ status: "ok" | "degraded" | "down"; details?: string }>;
+}
+
+/**
+  Adapter de Armazenamento Volátil em Memória.
+  Permitido unicamente nos ambientes de 'test' e 'demo'.
+ */
+export class InMemoryAttachmentStorage implements AttachmentStorage {
+  private store: Map<string, { buffer: Buffer; mimeType: string }> = new Map();
+
+  async save(key: string, data: Buffer | Readable, mimeType: string): Promise<SaveResult> {
+    let buffer: Buffer;
+    if (Buffer.isBuffer(data)) {
+      buffer = data;
+    } else {
+      const chunks: Buffer[] = [];
+      for await (const chunk of data) {
+        chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk));
+      }
+      buffer = Buffer.concat(chunks);
+    }
+
+    if (buffer.length > MAX_FILE_SIZE_BYTES) {
+      throw new Error(`Tamanho de arquivo excede o limite máximo permitido (10MB)`);
+    }
+
+    const hash = calculateFileHash(buffer);
+    this.store.set(key, { buffer, mimeType });
+    return { sizeBytes: buffer.length, hash };
+  }
+
+  async getStream(key: string): Promise<Readable> {
+    const item = this.store.get(key);
+    if (!item) {
+      const err = new Error(`Objeto não encontrado no storage em memória: ${key}`);
+      (err as any).notFound = true;
+      (err as any).code = "ENOENT";
+      throw err;
+    }
+    return Readable.from(item.buffer);
+  }
+
+  async delete(key: string): Promise<void> {
+    this.store.delete(key);
+  }
+
+  async exists(key: string): Promise<boolean> {
+    return this.store.has(key);
+  }
+
+  async getSignedUrl(key: string, ttlSeconds = 300): Promise<string> {
+    if (!await this.exists(key)) {
+      const err = new Error(`Objeto não encontrado para gerar URL assinada: ${key}`);
+      (err as any).notFound = true;
+      throw err;
+    }
+    const expires = Math.floor(Date.now() / 1000) + ttlSeconds;
+    const safeKey = encodeURIComponent(key);
+    return `https://demo-inmemory.fonolife.local/${safeKey}?expires=${expires}&signature=demo_inmemory_${randomUUID()}`;
+  }
+
+  async health(): Promise<{ status: "ok" | "degraded" | "down"; details?: string }> {
+    return { status: "ok", details: "in-memory-isolated" };
+  }
+
+  async listKeys(): Promise<string[]> {
+    return Array.from(this.store.keys());
+  }
 }
 
 /**
@@ -80,8 +158,16 @@ export class LocalAttachmentStorage implements AttachmentStorage {
     try {
       const buffer = await readFile(targetPath);
       return Readable.from(buffer);
-    } catch {
-      throw new Error(`Objeto de armazenamento não encontrado: ${key}`);
+    } catch (err: any) {
+      if (err?.code === "ENOENT") {
+        const error = new Error(`Objeto de armazenamento não encontrado: ${key}`);
+        (error as any).notFound = true;
+        (error as any).code = "ENOENT";
+        throw error;
+      }
+      const unavailErr = new Error(`Storage local indisponível ao ler (${key}): ${err?.message || err}`);
+      (unavailErr as any).unavailable = true;
+      throw unavailErr;
     }
   }
 
@@ -104,6 +190,15 @@ export class LocalAttachmentStorage implements AttachmentStorage {
     }
   }
 
+  async health(): Promise<{ status: "ok" | "degraded" | "down"; details?: string }> {
+    try {
+      await mkdir(this.baseDir, { recursive: true });
+      return { status: "ok" };
+    } catch (err: any) {
+      return { status: "degraded", details: err?.message || "Falha ao acessar diretório local de armazenamento" };
+    }
+  }
+
   async listKeys(): Promise<string[]> {
     try {
       await mkdir(this.baseDir, { recursive: true });
@@ -115,28 +210,74 @@ export class LocalAttachmentStorage implements AttachmentStorage {
   }
 }
 
+export interface S3AttachmentStorageOptions {
+  bucket?: string;
+  region?: string;
+  endpoint?: string;
+  forcePathStyle?: boolean;
+  accessKeyId?: string;
+  secretAccessKey?: string;
+  client?: S3Client;
+}
+
 /**
   Adapter Privado Compatível com S3 (Produção).
-  Suporta AWS S3 / MinIO / Cloudflare R2 ou modo mock para testes contratuais.
+  Suporta AWS S3 / MinIO / Cloudflare R2 utilizando AWS SDK v3 oficial.
  */
 export class S3AttachmentStorage implements AttachmentStorage {
   private bucket: string;
-  private mockStore: Map<string, Buffer> = new Map();
-  private mockMode: boolean;
+  private s3Client: S3Client;
 
-  constructor(options?: { bucket?: string; mockMode?: boolean }) {
+  constructor(options?: S3AttachmentStorageOptions) {
     this.bucket = options?.bucket ?? process.env.S3_BUCKET ?? "fonolife-attachments-private";
-    this.mockMode = options?.mockMode ?? (!process.env.S3_ACCESS_KEY_ID && !process.env.AWS_ACCESS_KEY_ID);
+    if (!this.bucket) {
+      throw new Error("CONFIG ERROR: S3_BUCKET ausente ao inicializar S3AttachmentStorage.");
+    }
+    if ((options as any)?.mockMode) {
+      throw new Error("CONFIG ERROR: mockMode foi removido de S3AttachmentStorage. Utilize InMemoryAttachmentStorage para test/demo.");
+    }
+
+    if (options?.client) {
+      this.s3Client = options.client;
+    } else {
+      const region = options?.region ?? process.env.S3_REGION ?? process.env.AWS_REGION ?? "us-east-1";
+      const endpoint = options?.endpoint ?? process.env.S3_ENDPOINT ?? process.env.AWS_ENDPOINT;
+      const forcePathStyle = options?.forcePathStyle ?? (process.env.S3_FORCE_PATH_STYLE === "true" || !!endpoint);
+      const accessKeyId = options?.accessKeyId ?? process.env.S3_ACCESS_KEY_ID ?? process.env.AWS_ACCESS_KEY_ID;
+      const secretAccessKey = options?.secretAccessKey ?? process.env.S3_SECRET_ACCESS_KEY ?? process.env.AWS_SECRET_ACCESS_KEY;
+
+      const clientConfig: any = {
+        region,
+        forcePathStyle,
+      };
+
+      if (endpoint) {
+        clientConfig.endpoint = endpoint;
+      }
+
+      // Utiliza credenciais explícitas se configuradas ou delega à provider chain oficial da AWS se adotada no ambiente
+      if (accessKeyId && secretAccessKey) {
+        clientConfig.credentials = { accessKeyId, secretAccessKey };
+      }
+
+      this.s3Client = new S3Client(clientConfig);
+    }
   }
 
-  async save(key: string, data: Buffer | Readable, _mimeType: string): Promise<SaveResult> {
+  async save(key: string, data: Buffer | Readable, mimeType: string): Promise<SaveResult> {
     let buffer: Buffer;
     if (Buffer.isBuffer(data)) {
       buffer = data;
     } else {
       const chunks: Buffer[] = [];
+      let totalLength = 0;
       for await (const chunk of data) {
-        chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk));
+        const buf = Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk);
+        totalLength += buf.length;
+        if (totalLength > MAX_FILE_SIZE_BYTES) {
+          throw new Error(`Tamanho de arquivo excede o limite máximo permitido (10MB)`);
+        }
+        chunks.push(buf);
       }
       buffer = Buffer.concat(chunks);
     }
@@ -146,33 +287,151 @@ export class S3AttachmentStorage implements AttachmentStorage {
     }
 
     const hash = calculateFileHash(buffer);
-    this.mockStore.set(key, buffer);
+
+    const putParams: any = {
+      Bucket: this.bucket,
+      Key: key,
+      Body: buffer,
+      ContentType: mimeType,
+      ContentLength: buffer.length,
+      ServerSideEncryption: "AES256",
+    };
+
+    await this.s3Client.send(new PutObjectCommand(putParams));
     return { sizeBytes: buffer.length, hash };
   }
 
+  private isNotFoundError(err: any): boolean {
+    const name = err?.name || err?.Code || err?.code;
+    const status = err?.$metadata?.httpStatusCode || err?.statusCode;
+    return (
+      name === "NoSuchKey" ||
+      name === "NotFound" ||
+      status === 404 ||
+      (typeof err?.message === "string" && (err.message.includes("NoSuchKey") || err.message.includes("NotFound") || err.message.includes("404")))
+    );
+  }
+
   async getStream(key: string): Promise<Readable> {
-    const buffer = this.mockStore.get(key);
-    if (!buffer) {
-      throw new Error(`Objeto S3 não encontrado no bucket ${this.bucket}: ${key}`);
+    try {
+      const res = await this.s3Client.send(new GetObjectCommand({
+        Bucket: this.bucket,
+        Key: key,
+      }));
+      if (!res.Body) {
+        const err = new Error(`Corpo do objeto S3 está vazio: ${key}`);
+        (err as any).notFound = true;
+        (err as any).code = "ENOENT";
+        throw err;
+      }
+      if (res.Body instanceof Readable) {
+        return res.Body;
+      }
+      if (typeof (res.Body as any).transformToByteArray === "function") {
+        const bytes = await (res.Body as any).transformToByteArray();
+        return Readable.from(Buffer.from(bytes));
+      }
+      return Readable.from(res.Body as any);
+    } catch (err: any) {
+      if (this.isNotFoundError(err)) {
+        const notFoundErr = new Error(`Arquivo físico não encontrado no storage S3: ${key}`);
+        (notFoundErr as any).notFound = true;
+        (notFoundErr as any).code = "ENOENT";
+        throw notFoundErr;
+      }
+      const unavailErr = new Error(`Storage S3 indisponível ao ler objeto (${key}): ${err?.message || err}`);
+      (unavailErr as any).unavailable = true;
+      throw unavailErr;
     }
-    return Readable.from(buffer);
   }
 
   async delete(key: string): Promise<void> {
-    this.mockStore.delete(key);
+    try {
+      await this.s3Client.send(new DeleteObjectCommand({
+        Bucket: this.bucket,
+        Key: key,
+      }));
+    } catch (err: any) {
+      if (this.isNotFoundError(err)) {
+        return;
+      }
+      throw new Error(`Storage S3 indisponível ao excluir objeto (${key}): ${err?.message || err}`);
+    }
   }
 
   async exists(key: string): Promise<boolean> {
-    return this.mockStore.has(key);
+    try {
+      await this.s3Client.send(new HeadObjectCommand({
+        Bucket: this.bucket,
+        Key: key,
+      }));
+      return true;
+    } catch (err: any) {
+      if (this.isNotFoundError(err)) {
+        return false;
+      }
+      throw new Error(`Storage S3 indisponível ao verificar existência de (${key}): ${err?.message || err}`);
+    }
   }
 
   async getSignedUrl(key: string, ttlSeconds = 300): Promise<string> {
     if (!await this.exists(key)) {
-      throw new Error(`Objeto não encontrado para gerar URL assinada: ${key}`);
+      const notFoundErr = new Error(`Objeto não encontrado para gerar URL assinada: ${key}`);
+      (notFoundErr as any).notFound = true;
+      (notFoundErr as any).code = "ENOENT";
+      throw notFoundErr;
     }
-    const expires = Math.floor(Date.now() / 1000) + ttlSeconds;
-    const safeKey = encodeURIComponent(key);
-    return `https://${this.bucket}.s3.amazonaws.com/${safeKey}?expires=${expires}&signature=mock_sig_${randomUUID()}`;
+    const command = new GetObjectCommand({
+      Bucket: this.bucket,
+      Key: key,
+    });
+    return awsGetSignedUrl(this.s3Client, command, { expiresIn: ttlSeconds });
+  }
+
+  async health(): Promise<{ status: "ok" | "degraded" | "down"; details?: string }> {
+    try {
+      await this.s3Client.send(new HeadBucketCommand({ Bucket: this.bucket }));
+      return { status: "ok" };
+    } catch (err: any) {
+      const statusCode = err?.$metadata?.httpStatusCode;
+      const errName = err?.name || err?.Code || "";
+      const errMsg = String(err?.message || "");
+      const isFatal =
+        statusCode === 404 ||
+        statusCode === 403 ||
+        statusCode === 401 ||
+        ["NoSuchBucket", "NotFound", "InvalidAccessKeyId", "AccessDenied", "CredentialsProviderError", "Forbidden"].some(
+          (token) => errName.includes(token) || errMsg.includes(token) || errMsg.includes("does not exist")
+        );
+
+      if (isFatal) {
+        let cause = `Bucket inexistente ou falha de credenciais no storage S3 (${errName || errMsg})`;
+        if (statusCode === 404 || ["NoSuchBucket", "NotFound"].some((t) => errName.includes(t) || errMsg.includes(t) || errMsg.includes("does not exist"))) {
+          cause = `NoSuchBucket / NotFound: bucket '${this.bucket}' inexistente ou inacessível (${errName || errMsg})`;
+        } else if (statusCode === 403 || statusCode === 401 || ["InvalidAccessKeyId", "AccessDenied", "CredentialsProviderError", "Forbidden"].some((t) => errName.includes(t) || errMsg.includes(t))) {
+          cause = `InvalidAccessKeyId / Forbidden: credenciais inválidas ou acesso negado no S3 (${errName || errMsg})`;
+        }
+        return {
+          status: "down",
+          details: cause,
+        };
+      }
+
+      return {
+        status: "degraded",
+        details: errMsg || "Falha transitória na verificação do bucket S3 (HeadBucket)",
+      };
+    }
+  }
+
+  async listKeys(): Promise<string[]> {
+    try {
+      const res = await this.s3Client.send(new ListObjectsV2Command({ Bucket: this.bucket }));
+      if (!res.Contents) return [];
+      return res.Contents.map((item) => item.Key || "").filter(Boolean);
+    } catch (err: any) {
+      throw new Error(`Storage S3 indisponível ao listar chaves: ${err?.message || err}`);
+    }
   }
 
   getBucketName(): string {

@@ -8,6 +8,7 @@ import { config } from "./config.js";
 import { hashToken } from "./domain/security.js";
 import {
   LocalAttachmentStorage,
+  InMemoryAttachmentStorage,
   S3AttachmentStorage,
   DevAttachmentScanner,
   ClamAVAttachmentScanner,
@@ -49,9 +50,16 @@ export function buildApp(customStorage?: AttachmentStorage, customScanner?: Atta
 
   const attachmentStorage: AttachmentStorage = customStorage ?? (
     config.storageProvider === "s3"
-      ? new S3AttachmentStorage({ bucket: config.s3Bucket })
-      : config.storageProvider === "demo"
-      ? new S3AttachmentStorage({ bucket: config.s3Bucket, mockMode: true })
+      ? new S3AttachmentStorage({
+          bucket: config.s3Bucket,
+          region: config.s3Region,
+          endpoint: config.s3Endpoint,
+          forcePathStyle: config.s3ForcePathStyle,
+          accessKeyId: config.s3AccessKeyId,
+          secretAccessKey: config.s3SecretAccessKey,
+        })
+      : config.storageProvider === "demo" || config.storageProvider === "memory" || config.storageProvider === "in-memory"
+      ? new InMemoryAttachmentStorage()
       : new LocalAttachmentStorage()
   );
   const attachmentScanner: AttachmentScanner = customScanner ?? (
