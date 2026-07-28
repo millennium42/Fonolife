@@ -227,6 +227,11 @@ export async function patientRoutes(app: FastifyInstance) {
         }
       }
 
+      const responsibleDoctorIdValue =
+        body.responsibleDoctorId !== undefined
+          ? (body.responsibleDoctorId || null)
+          : authorized.responsible_doctor_id;
+
       const result = await pool.query(
         `WITH updated AS (UPDATE patients SET name=$1,phone=$2,birth_date=$3,guardian_name=$4,contact_source=$5,journey_status=$6,notes=$7,care_alert=$8,assigned_user_id=COALESCE($9,assigned_user_id),responsible_doctor_id=$10,version=version+1,updated_at=now() WHERE id=$11 AND version=$12 AND archived_at IS NULL RETURNING id,version), audited AS (INSERT INTO audit_events(user_id,action,entity_type,entity_id,details) SELECT $13,'update','patient',id,jsonb_build_object('version',version) FROM updated) SELECT version FROM updated`,
         [
@@ -239,7 +244,7 @@ export async function patientRoutes(app: FastifyInstance) {
           body.notes?.trim() || "",
           body.careAlert?.trim() || "",
           body.assignedUserId || null,
-          body.responsibleDoctorId || null,
+          responsibleDoctorIdValue,
           request.params.id,
           body.version,
           request.currentUser!.id,
