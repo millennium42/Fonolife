@@ -64,7 +64,7 @@ export function buildApp(customStorage?: AttachmentStorage, customScanner?: Atta
   );
   const attachmentScanner: AttachmentScanner = customScanner ?? (
     config.scannerProvider === "clamav"
-      ? new ClamAVAttachmentScanner()
+      ? new ClamAVAttachmentScanner({ host: config.clamavHost, port: config.clamavPort, timeoutMs: config.clamavTimeoutMs })
       : config.scannerProvider === "mock"
       ? new MockAttachmentScanner()
       : new DevAttachmentScanner()

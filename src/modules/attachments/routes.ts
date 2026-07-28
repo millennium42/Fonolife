@@ -81,11 +81,25 @@ export async function attachmentRoutes(
           .send({ title: "Tamanho de arquivo excede o limite seguro de 10MB", status: 400 });
 
       const scanResult = await attachmentScanner.scan(buffer, mimeType);
-      if (!scanResult.clean) {
+      if (scanResult.status !== "clean" || scanResult.clean !== true) {
+        request.log.warn({
+          action: "attachment_security_scan_rejected",
+          patientId: request.params.id,
+          status: scanResult.status,
+          signature: scanResult.signature,
+          reason: scanResult.reason,
+        }, "Anexo rejeitado ou falha no serviço do scanner antivírus");
+
+        const isFailed = scanResult.status === "failed";
+        const statusCode = isFailed ? 503 : 400;
+        const title = isFailed
+          ? "Serviço de segurança antivírus indisponível no momento. O upload foi suspenso por segurança."
+          : `Falha na verificação de segurança do anexo: ${scanResult.reason || "Conteúdo não autorizado"}`;
+
         return reply
-          .code(400)
+          .code(statusCode)
           .type("application/problem+json")
-          .send({ title: `Falha na verificação de segurança do anexo: ${scanResult.reason}`, status: 400 });
+          .send({ title, status: statusCode });
       }
 
       const sanitizedOriginal = sanitizeFilename(fileName);
