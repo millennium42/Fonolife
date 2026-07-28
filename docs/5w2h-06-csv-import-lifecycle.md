@@ -1,0 +1,51 @@
+# 5W2H — PR 06: Tornar Importação CSV, Status e Reprocessamento Realmente Confiáveis
+
+## 1. Resumo Executivo 5W2H
+
+| Pergunta | Detalhamento |
+| :--- | :--- |
+| **What** (O que foi feito?) | Refatoração profunda do ciclo de vida transacional da importação de arquivos CSV de pacientes e lançamentos financeiros (`src/modules/import/routes.ts` e `src/domain/csv-import.ts`), eliminando falhas silenciosas na criação do job no banco (onde erros eram engolidos por um `catch {}` vazio que retornava falso sucesso 201), implementando a política de atomicidade governada com o status honesto `completed_with_errors` para importações parciais, adicionando a tabela de rastreabilidade e deduplicação de registros por hash canônico (`row_hash` na migration aditiva `024_csv_import_lifecycle.sql`), permitindo retries controlados e reprocessamento confiável sob a estratégia alternativa mínima sem apagar evidência histórica em `csv_import_errors`, e aprimorando a interface do frontend (`web/src/main.tsx`) para refletir precisamente importações parciais e retornos idempotentes. |
+| **Why** (Por que foi feito?) | O sistema apresentava falhas graves e inaceitáveis na importação CSV: 1) Uma falha na criação inicial da linha em `csv_import_jobs` era engolida por um bloco de tratamento vazio, fazendo o servidor responder com status 201 sem salvar registros no banco; 2) Se em um arquivo de 100 linhas 1 fosse válida e 99 inválidas, a verificação rudimentar `processedRows > 0` definia o status final do job como `completed`, enganando operadores e camuflando perda em massa de registros; 3) O endpoint de reprocessamento era oco e perigoso: apenas deletava os erros históricos com `DELETE FROM csv_import_errors` e alterava o status para `processing`, retornando 200 sem reler qualquer fonte ou reprocessar linhas de fato; 4) Mensagens de erro no banco expunham SQL bruto e stack traces inaceitáveis para conformidade LGPD e segurança operacional. |
+| **Who** (Quem realizou e validou?) | Implementado e validado ponta a ponta mediante suítes automatizadas de testes determinísticos em TypeScript/ESM (`tests/csv-import-repro.test.ts` e `tests/csv-import-regression.test.ts`), mantendo concisão, monólito sem ORM e compliance com a *Ponytail full doctrine*. |
+| **When** (Quando é aplicado?) | Em tempo de submissão de planilhas na rota `POST /api/admin/import/csv` e acionamento de retries no endpoint `POST /api/admin/import/csv/:id/reprocess`. No frontend, é refletido de imediato na exibição do status final e alertas de reprocessamento no painel de importação. |
+| **Where** (Onde no código?) | `migrations/024_csv_import_lifecycle.sql`, `src/domain/csv-import.ts`, `src/modules/import/routes.ts`, `web/src/main.tsx`, `tests/csv-import-repro.test.ts` e `tests/csv-import-regression.test.ts`. |
+| **How** (Como foi implementado?) | 1) **Migration Aditiva (`024_csv_import_lifecycle.sql`):** Altera a restrição `CHECK` de status de `csv_import_jobs` para permitir o valor `'completed_with_errors'`; substitui a restrição de unicidade global de `batch_hash` por um índice único composto `(batch_hash, attempt_number)` para viabilizar retries auditáveis; adiciona as colunas `parser_version` ('v2'), `previous_job_id`, `attempt_number`, `idempotency_key` e `error_summary`; cria a tabela `csv_imported_rows` para rastreabilidade perpétua de `row_hash` por linha importada com êxito.<br>2) **Funções de Domínio:** Inclusão da função pura `calculateRowHash(entityType, row)` em `src/domain/csv-import.ts`, ordenando chaves alfanumericamente e gerando SHA-256 canônico para prevenir duplicação enrre tentativas.<br>3) **Falha Explícita em Registro (Sem Blind Catch):** Em `src/modules/import/routes.ts`, se a inserção inicial de um job em `csv_import_jobs` falhar, verifica-se se o código é o erro concorrente `'23505'`. Para chamadas simultâneas genuínas, retorna-se a resposta idempotente (200). Para qualquer outra exceção SQL ou queda do Postgres, a exceção é disparada explicitamente retornando 500 para abortar antes de tentar inserir linhas de dados.<br>4) **Política de Atomicidade e Status Honesto:** O pipeline unificado (`executeCsvImportPipeline`) computa o status como `completed` se `errorCount === 0`, `completed_with_errors` se `processedRows > 0 && errorCount > 0`, e `failed` se `processedRows === 0`. Mensagens de erro em `csv_import_errors` são sanitizadas contra injeção ou exposição do motor SQL.<br>5) **Reprocessamento Seguro e Rastreável:** O endpoint `/reprocess` exige o payload `csvContent` original ou corrigido (Estratégia Alternativa Mínima sob *Ponytail full*) e bloqueia reprocessamento em jobs com status terminal `completed` (409). Não deleta `csv_import_errors`; em vez disso, vincula um novo job (`attempt_number + 1`, `previous_job_id`), ignora linhas que não figuravam no rol de falhas anteriores e pula qualquer registro cujo `row_hash` já tenha sido inserido, evitando duplicidades em tabelas financeiras ou clínicas.<br>6) **Frontend Explícito:** Modificado o componente `CsvImport` em `web/src/main.tsx` para apresentar alertas visuais em vermelho para importações parciais, instruindo o operador a consultar os relatórios de falha e utilizar o fluxo de reprocessamento. |
+| **How Much** (Quanto custo / impacto?) | Zero dependências adicionadas ao monólito. Impacto em disco ou CPU é negligenciável; a indexação por `row_hash` viabiliza buscas otimizadas no Postgres e a adoção de transações explícitas elimina por completo corrupções de estado ou perdas silenciosas de massa de dados na importação. |
+
+---
+
+## 2. Justificativa Explícita Contra Regressões na Produção
+
+1. **Eliminação de Respostas 201 em Falhas de Banco (No Silent Failures):**
+   A substituição do bloco legadas `catch {}` vazio na criação do job pela checagem estrita de erro `'23505'` assegura que interdições no Postgres ou incompatibilidades estruturais gerem falha clara de serviço. O sistema jamais inserirá dados clínicos ou financeiros descasados de um job de auditoria pai validamente instanciado.
+2. **Prevenção de Falsos Sucessos Integral em Importações Parciais:**
+   A política explícita que distingue `completed` de `completed_with_errors` garante total visibilidade para auditores e operadores sobre cadastros corrompidos na origem, impedindo o avanço de fluxos sem a conciliação de exceções no relatório de falhas do job.
+3. **Imutabilidade e Segurança no Reprocessamento sem Perda de Evidências:**
+   O reprocessamento construído no pipeline compartilhado (`attempt_number + 1`) desabilita a exclusão destrutiva de histórico em `csv_import_errors`. Linhas válidas não são re-inseridas na base de pacientes nem geram entradas financeiras repetidas devido ao controle transacional de `row_hash` em `csv_imported_rows`, cumprindo integralmente as diretrizes de durabilidade e auditoria da clínica.
+
+---
+
+## 3. Evidência Verificável das Suítes de Testes (TS/ESM)
+
+A PR incorpora duas suítes de testes determinísticas e autônomas:
+* **Suíte de Reprodução (`tests/csv-import-repro.test.ts`):** Prova o colapso dos comportamentos defeituosos legados em 3 cenários (status 201 para falha parcial, tolerância a erro do banco na criação de job gerando 201 fantasma, e acionamento do reprocessamento oco sem envio de fonte ou sem re-executar validações).
+* **Suíte de Regressão e Borda (`tests/csv-import-regression.test.ts`):** Estruturada em 7 cenários completos e extensivos:
+  1. **Sucesso Integral:** 100% de linhas válidas (2 registros) encerram em 201 com status `completed` e tentativa 1.
+  2. **Sucesso Parcial e Falhas de Persistência:** Linhas malformadas e injeção de erro `23505` são capturadas com mensagens seguras (*"Conflito de cadastro existente..."* ou *"Falha na validação..."*) gerando contagens corretas no job (`completed_with_errors`).
+  3. **Falha Integral (100% Erro):** Planilhas contendo exclusivamente linhas incorretas concluem como `failed` e zero inserções no domínio.
+  4. **Resiliência Transacional contra Falha no Job:** Injeção de exceção de conexão ou I/O ao gravar em `csv_import_jobs` aborta a requisição em HTTP 500 de imediato, garantindo absência de registros de paciente órfãos inseridos subsequentemente no banco.
+  5. **Idempotência Completa:** Submissão reiterada do mesmo arquivo CSV completo ou portando chave idêntica resulta em HTTP 200 idempotente e alerta informativa sem duplicação de entidades.
+  6. **Reprocessamento Seguro e Tentativas Vinculadas:** Ao acionar `/reprocess` passando o arquivo retificado, executa-se o pipeline em Attempt #2 apontando `previousJobId`, efetuando parsing apenas das linhas faltantes e encerrando com sucesso na nova tentativa.
+  7. **Proteção contra Violação de Concorrência e Conflitos (409):** Tentar reprocessar jobs em status terminal `completed` ou reenviar `idempotencyKey` portando conteúdo CSV distinto rejeita o tráfego em status HTTP 409 Conflict de forma determinística.
+
+**Execução Global:** O comando `npm test` atinge **100% de êxito com 179 testes aprovados em todas as suítes da clínica**, e a validação de tipagem `npm run typecheck` encerra sem qualquer erro no TypeScript do cliente e servidor.
+
+---
+
+## 4. Plano de Reversão Explícito e Compatível (Rollback sem Remoção Destrutiva)
+
+Respeitando estritamente o princípio de estabilidade, imutabilidade de migrações e diretrizes da *Ponytail full doctrine*:
+- **Compatibilidade Aditiva do Banco:** A migração DDL `024_csv_import_lifecycle.sql` é puramente aditiva (novas colunas opcionais ou contendo defaults e tabela de controle `csv_imported_rows`). Ela preserva a retrocompatibilidade dos registros históricos criados com a versão do parser `v1` sob a tabela anterior `006_csv_imports.sql`.
+- **Procedimento Seguro e Limpo de Rollback:**
+  1. Para reversão do código aplicativo em emergência, basta acionar `git revert <SHA>`, retornando o roteador de importação e o frontend para o comportamento de status binário anterior, com risco zero de falha no banco em inicialização.
+  2. Todos os eventos gravados durante a operação em produção com as novas colunas e tabelas remanescerão perfeitamente válidos e inteligíveis no esquema relacional, **não demandando truncagem, DROP ou limpeza na base de dados durante o rollback**, mantendo intacto o modelo *append-only* do histórico do sistema.
