@@ -87,7 +87,7 @@ test("PROMPT 06 — Reproduzir falhas do ciclo de vida da importação CSV: stat
       return { rows: [], rowCount: 1 };
     }
 
-    if (text.includes("SELECT id, status FROM csv_import_jobs WHERE id=$1")) {
+    if (text.includes("FROM csv_import_jobs WHERE id=$1")) {
       const j = importJobs[params?.[0]];
       return { rows: j ? [j] : [], rowCount: j ? 1 : 0 };
     }
@@ -162,7 +162,7 @@ test("PROMPT 06 — Reproduzir falhas do ciclo de vida da importação CSV: stat
       // Se não há fonte para reprocessar (nem fornecida na request nem em storage), deve retornar erro claro 400/422!
       // No código falho, ele apenas apaga os erros, põe status processing e retorna 200 reprocessed!
       assert.notEqual(res.statusCode, 200, "Deveria falhar com erro claro ao reprocessar sem fonte, mas retornou 200 oco!");
-      assert.equal(importErrors.length, 1, "Não deve apagar evidência histórica de erro antes de um retry real!");
+      assert.equal(importErrors.filter((e) => e.jobId === failedJobId).length, 1, "Não deve apagar evidência histórica de erro antes de um retry real!");
     });
   } finally {
     pool.query = originalQuery;
