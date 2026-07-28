@@ -101,7 +101,7 @@ export class InMemoryAttachmentStorage implements AttachmentStorage {
   }
 
   async health(): Promise<{ status: "ok" | "degraded" | "down"; details?: string }> {
-    return { status: "ok" };
+    return { status: "ok", details: "in-memory-isolated" };
   }
 
   async listKeys(): Promise<string[]> {
@@ -393,9 +393,33 @@ export class S3AttachmentStorage implements AttachmentStorage {
       await this.s3Client.send(new HeadBucketCommand({ Bucket: this.bucket }));
       return { status: "ok" };
     } catch (err: any) {
+      const statusCode = err?.$metadata?.httpStatusCode;
+      const errName = err?.name || err?.Code || "";
+      const errMsg = String(err?.message || "");
+      const isFatal =
+        statusCode === 404 ||
+        statusCode === 403 ||
+        statusCode === 401 ||
+        ["NoSuchBucket", "NotFound", "InvalidAccessKeyId", "AccessDenied", "CredentialsProviderError", "Forbidden"].some(
+          (token) => errName.includes(token) || errMsg.includes(token) || errMsg.includes("does not exist")
+        );
+
+      if (isFatal) {
+        let cause = `Bucket inexistente ou falha de credenciais no storage S3 (${errName || errMsg})`;
+        if (statusCode === 404 || ["NoSuchBucket", "NotFound"].some((t) => errName.includes(t) || errMsg.includes(t) || errMsg.includes("does not exist"))) {
+          cause = `NoSuchBucket / NotFound: bucket '${this.bucket}' inexistente ou inacessível (${errName || errMsg})`;
+        } else if (statusCode === 403 || statusCode === 401 || ["InvalidAccessKeyId", "AccessDenied", "CredentialsProviderError", "Forbidden"].some((t) => errName.includes(t) || errMsg.includes(t))) {
+          cause = `InvalidAccessKeyId / Forbidden: credenciais inválidas ou acesso negado no S3 (${errName || errMsg})`;
+        }
+        return {
+          status: "down",
+          details: cause,
+        };
+      }
+
       return {
         status: "degraded",
-        details: err?.message || "Falha na verificação do bucket S3 (HeadBucket)",
+        details: errMsg || "Falha transitória na verificação do bucket S3 (HeadBucket)",
       };
     }
   }
