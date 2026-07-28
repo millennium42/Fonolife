@@ -1,13 +1,13 @@
 import { randomUUID } from 'node:crypto';
 import { pool } from './pool.js';
 import { migrate } from './migrate.js';
-import { hashPassword } from '../domain/security.js';
+import { hashPassword, isPasswordPolicyValid, MIN_PASSWORD_LENGTH } from '../domain/security.js';
 
 const email = process.env.INITIAL_ADMIN_EMAIL?.trim().toLowerCase();
 const password = process.env.INITIAL_ADMIN_PASSWORD;
 const name = process.env.INITIAL_ADMIN_NAME?.trim() || 'Administrador';
 
-if (!email || !password || password.length < 12) throw new Error('Defina INITIAL_ADMIN_EMAIL e INITIAL_ADMIN_PASSWORD com ao menos 12 caracteres.');
+if (!email || !isPasswordPolicyValid(password)) throw new Error(`Defina INITIAL_ADMIN_EMAIL e INITIAL_ADMIN_PASSWORD com ao menos ${MIN_PASSWORD_LENGTH} caracteres.`);
 if (email.endsWith('@demo.invalid')) throw new Error('Identidades demonstrativas são proibidas para o administrador inicial.');
 
 await migrate();

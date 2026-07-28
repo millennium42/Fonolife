@@ -2,8 +2,21 @@ import { randomBytes, scrypt as scryptCallback, timingSafeEqual, createHash } fr
 import { promisify } from 'node:util';
 const scrypt = promisify(scryptCallback);
 
+export const MIN_PASSWORD_LENGTH = 8;
+
+export function isPasswordPolicyValid(password?: string | null): password is string {
+  return typeof password === 'string' && password.length >= MIN_PASSWORD_LENGTH;
+}
+
+export function validatePasswordPolicy(password?: string, label = 'senha'): string {
+  if (!isPasswordPolicyValid(password)) {
+    throw new Error(`A ${label} deve ter ao menos ${MIN_PASSWORD_LENGTH} caracteres`);
+  }
+  return password!;
+}
+
 export async function hashPassword(password: string) {
-  if (password.length < 8) throw new Error('A senha deve ter ao menos 8 caracteres');
+  validatePasswordPolicy(password, 'senha');
   const salt = randomBytes(16).toString('hex');
   const hash = await scrypt(password, salt, 64) as Buffer;
   return `scrypt:${salt}:${hash.toString('hex')}`;

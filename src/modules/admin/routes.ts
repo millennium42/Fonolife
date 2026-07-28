@@ -1,7 +1,7 @@
 import { randomUUID } from "node:crypto";
 import type { FastifyInstance } from "fastify";
 import { pool } from "../../db/pool.js";
-import { hashPassword } from "../../domain/security.js";
+import { hashPassword, isPasswordPolicyValid, MIN_PASSWORD_LENGTH } from "../../domain/security.js";
 import { audit } from "../audit/service.js";
 import { admin } from "../patients/authorization.js";
 
@@ -19,14 +19,20 @@ export async function adminRoutes(app: FastifyInstance) {
       name: string;
       email: string;
       password: string;
-      role: "admin" | "operator";
+      role: "admin" | "operator" | "doctor";
     };
   }>("/api/admin/users", { preHandler: admin }, async (request, reply) => {
     const { name, email, password, role } = request.body;
+    if (!isPasswordPolicyValid(password)) {
+      return reply
+        .code(400)
+        .type("application/problem+json")
+        .send({ title: `A senha deve possuir ao menos ${MIN_PASSWORD_LENGTH} caracteres`, status: 400 });
+    }
     if (
       !name?.trim() ||
       !email?.includes("@") ||
-      !["admin", "operator"].includes(role)
+      !["admin", "operator", "doctor"].includes(role)
     )
       return reply
         .code(400)
@@ -50,22 +56,22 @@ export async function adminRoutes(app: FastifyInstance) {
     Params: { id: string };
     Body: {
       active?: boolean;
-      role?: "admin" | "operator";
+      role?: "admin" | "operator" | "doctor";
       temporaryPassword?: string;
     };
   }>("/api/admin/users/:id", { preHandler: admin }, async (request, reply) => {
     const { active, role, temporaryPassword } = request.body ?? {};
-    if (role !== undefined && !["admin", "operator"].includes(role))
+    if (role !== undefined && !["admin", "operator", "doctor"].includes(role))
       return reply
         .code(400)
         .type("application/problem+json")
         .send({ title: "Perfil inválido", status: 400 });
-    if (temporaryPassword !== undefined && temporaryPassword.length < 8)
+    if (temporaryPassword !== undefined && !isPasswordPolicyValid(temporaryPassword))
       return reply
         .code(400)
         .type("application/problem+json")
         .send({
-          title: "A senha temporária deve ter ao menos 8 caracteres",
+          title: `A senha temporária deve ter ao menos ${MIN_PASSWORD_LENGTH} caracteres`,
           status: 400,
         });
     const client = await pool.connect();
