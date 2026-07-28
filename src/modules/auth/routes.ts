@@ -225,24 +225,35 @@ export async function authRoutes(app: FastifyInstance) {
       }
 
       const newHash = await hashPassword(newPassword);
-      try {
-        await pool.query(
-          "UPDATE users SET password_hash=$1, must_change_password=false, updated_at=now() WHERE id=$2",
-          [newHash, request.currentUser!.id]
-        );
-      } catch {}
-
-      // Decisão explícita de revogação de sessões: a sessão atual sobrevive e todas as DEMAIS sessões ativas do usuário são revogadas
       const currentToken = request.cookies.fonolife_session;
       const currentTokenHash = currentToken ? hashToken(currentToken) : undefined;
-      await revokeUserSessions(pool, request.currentUser!.id, currentTokenHash);
 
+      const client = await pool.connect();
       try {
-        await pool.query(
+        await client.query("BEGIN");
+        const updateResult = await client.query(
+          "UPDATE users SET password_hash=$1, must_change_password=false, updated_at=now() WHERE id=$2 AND active",
+          [newHash, request.currentUser!.id]
+        );
+        if (!updateResult.rowCount) {
+          await client.query("ROLLBACK");
+          return reply.code(409).type("application/problem+json").send({
+            title: "Não foi possível atualizar a senha. Tente novamente.",
+            status: 409,
+          });
+        }
+        await revokeUserSessions(client, request.currentUser!.id, currentTokenHash, true);
+        await client.query(
           "INSERT INTO audit_events(user_id,action,entity_type,entity_id,details) VALUES($1,'change_password','user',$2,$3)",
           [request.currentUser!.id, request.currentUser!.id, { revokedOtherSessions: true }]
         );
-      } catch {}
+        await client.query("COMMIT");
+      } catch (err) {
+        await client.query("ROLLBACK").catch(() => {});
+        throw err;
+      } finally {
+        client.release();
+      }
 
       return reply.code(204).send();
     }

@@ -1,5 +1,5 @@
 import { createHash } from "node:crypto";
-import type { Pool } from "pg";
+import type { Pool, PoolClient } from "pg";
 import { config } from "../../config.js";
 
 /**
@@ -111,7 +111,7 @@ export async function clearLoginFailures(
   Lança erro caso a revogação no PostgreSQL falhe em ambiente de produção.
  */
 export async function revokeUserSessions(
-  pool: Pool,
+  pool: Pool | PoolClient,
   userId: string,
   keepTokenHash?: string,
   allowFallback?: boolean

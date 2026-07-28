@@ -1,6 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { buildApp } from "../src/app.ts";
+import { hashPassword, verifyPassword } from "../src/domain/security.js";
 import {
   clearLoginFailures,
   getRateLimitKey,
@@ -112,5 +113,198 @@ test("Suíte de Autenticação Modular, Rate Limit Distribuído e Sessões (PR-0
       },
       /Já existe um administrador ativo/
     );
+  });
+
+  await t.test("Troca de senha (sucesso): atualiza hash, revoga demais sessões e preserva sessão atual", async () => {
+    const app = buildApp();
+    const originalQuery = pool.query.bind(pool);
+    const originalConnect = pool.connect.bind(pool);
+
+    let currentDbHash = await hashPassword("OldPassword123!");
+    let activeStatus = true;
+    let auditRecorded = false;
+    let otherSessionDeleted = false;
+
+    pool.connect = (async () => ({
+      query: pool.query,
+      release: () => {},
+    })) as any;
+
+    pool.query = (async (sql: any, params?: any[]) => {
+      const text = typeof sql === "string" ? sql : sql?.text || "";
+      if (text.includes("DELETE FROM user_sessions")) {
+        otherSessionDeleted = true;
+        return { rowCount: 2, rows: [] };
+      }
+      if (text.includes("SELECT") && text.includes("FROM user_sessions")) {
+        return {
+          rows: [{
+            id: "user-id-pwd-test",
+            name: "User Password Test",
+            email: "user_pwd@demo.local",
+            role: "operator",
+            must_change_password: false,
+            active: activeStatus,
+          }],
+          rowCount: 1,
+        };
+      }
+      if (text.includes("SELECT password_hash FROM users")) {
+        return { rows: activeStatus ? [{ password_hash: currentDbHash }] : [], rowCount: activeStatus ? 1 : 0 };
+      }
+      if (text.includes("UPDATE users SET password_hash")) {
+        if (activeStatus) {
+          currentDbHash = params![0];
+          return { rowCount: 1, rows: [] };
+        }
+        return { rowCount: 0, rows: [] };
+      }
+      if (text.includes("INSERT INTO audit_events") && text.includes("change_password")) {
+        auditRecorded = true;
+        return { rowCount: 1, rows: [] };
+      }
+      return { rows: [], rowCount: 0 };
+    }) as any;
+
+    try {
+      const res = await app.inject({
+        method: "POST",
+        url: "/api/auth/change-password",
+        headers: { origin: "http://localhost:5173", "content-type": "application/json", cookie: "fonolife_session=token-pwd-valid" },
+        payload: { currentPassword: "OldPassword123!", newPassword: "NewPassword456!" },
+      });
+
+      assert.equal(res.statusCode, 204, `Esperado 204 na troca de senha, obtido ${res.statusCode}`);
+      assert.equal(otherSessionDeleted, true, "Sessões paralelas deveriam ser revogadas");
+      assert.equal(auditRecorded, true, "Auditoria de change_password deveria ser registrada");
+
+      const oldVerify = await verifyPassword("OldPassword123!", currentDbHash);
+      const newVerify = await verifyPassword("NewPassword456!", currentDbHash);
+      assert.equal(oldVerify, false, "A senha antiga não deve mais ser válida com o novo hash");
+      assert.equal(newVerify, true, "A nova senha deve ser validada com sucesso pelo hash no banco");
+    } finally {
+      pool.query = originalQuery;
+      pool.connect = originalConnect;
+      await app.close();
+    }
+  });
+
+  await t.test("Troca de senha (falha no banco): exceção no UPDATE aborta transação e não retorna 204 nem auditoria", async () => {
+    const app = buildApp();
+    const originalQuery = pool.query.bind(pool);
+    const originalConnect = pool.connect.bind(pool);
+
+    const oldHash = await hashPassword("OldPassword123!");
+    let currentDbHash = oldHash;
+    let auditRecorded = false;
+    let rollbackCalled = false;
+
+    pool.connect = (async () => ({
+      query: pool.query,
+      release: () => {},
+    })) as any;
+
+    pool.query = (async (sql: any) => {
+      const text = typeof sql === "string" ? sql : sql?.text || "";
+      if (text.includes("SELECT") && text.includes("FROM user_sessions")) {
+        return {
+          rows: [{ id: "usr-err-1", name: "Err User", email: "err@demo.local", role: "operator", active: true }],
+          rowCount: 1,
+        };
+      }
+      if (text.includes("SELECT password_hash FROM users")) {
+        return { rows: [{ password_hash: currentDbHash }], rowCount: 1 };
+      }
+      if (text.includes("UPDATE users SET password_hash")) {
+        throw new Error("ERRO SIMULADO DO POSTGRESQL: falha no update");
+      }
+      if (text.includes("ROLLBACK")) {
+        rollbackCalled = true;
+        return { rowCount: 0, rows: [] };
+      }
+      if (text.includes("INSERT INTO audit_events") && text.includes("change_password")) {
+        auditRecorded = true;
+        return { rowCount: 1, rows: [] };
+      }
+      return { rows: [], rowCount: 0 };
+    }) as any;
+
+    try {
+      const res = await app.inject({
+        method: "POST",
+        url: "/api/auth/change-password",
+        headers: { origin: "http://localhost:5173", "content-type": "application/json", cookie: "fonolife_session=token-err" },
+        payload: { currentPassword: "OldPassword123!", newPassword: "NewPassword456!" },
+      });
+
+      assert.notEqual(res.statusCode, 204, "A resposta NUNCA deve ser 204 se o UPDATE falhar");
+      assert.equal(res.statusCode, 500);
+      assert.equal(rollbackCalled, true, "Deve executar ROLLBACK na transação");
+      assert.equal(auditRecorded, false, "Nenhum evento falso de auditoria deve ser gerado");
+      assert.equal(currentDbHash, oldHash, "O hash da senha no banco não pode ter mudado");
+    } finally {
+      pool.query = originalQuery;
+      pool.connect = originalConnect;
+      await app.close();
+    }
+  });
+
+  await t.test("Troca de senha (usuário inativado concorre ao update): rowCount=0 aborta transação com 409", async () => {
+    const app = buildApp();
+    const originalQuery = pool.query.bind(pool);
+    const originalConnect = pool.connect.bind(pool);
+
+    const oldHash = await hashPassword("OldPassword123!");
+    let auditRecorded = false;
+    let rollbackCalled = false;
+
+    pool.connect = (async () => ({
+      query: pool.query,
+      release: () => {},
+    })) as any;
+
+    pool.query = (async (sql: any) => {
+      const text = typeof sql === "string" ? sql : sql?.text || "";
+      if (text.includes("SELECT") && text.includes("FROM user_sessions")) {
+        return {
+          rows: [{ id: "usr-inac-1", name: "Inac User", email: "inac@demo.local", role: "operator", active: true }],
+          rowCount: 1,
+        };
+      }
+      if (text.includes("SELECT password_hash FROM users")) {
+        return { rows: [{ password_hash: oldHash }], rowCount: 1 };
+      }
+      if (text.includes("UPDATE users SET password_hash")) {
+        return { rowCount: 0, rows: [] };
+      }
+      if (text.includes("ROLLBACK")) {
+        rollbackCalled = true;
+        return { rowCount: 0, rows: [] };
+      }
+      if (text.includes("INSERT INTO audit_events") && text.includes("change_password")) {
+        auditRecorded = true;
+        return { rowCount: 1, rows: [] };
+      }
+      return { rows: [], rowCount: 0 };
+    }) as any;
+
+    try {
+      const res = await app.inject({
+        method: "POST",
+        url: "/api/auth/change-password",
+        headers: { origin: "http://localhost:5173", "content-type": "application/json", cookie: "fonolife_session=token-inac" },
+        payload: { currentPassword: "OldPassword123!", newPassword: "NewPassword456!" },
+      });
+
+      assert.equal(res.statusCode, 409, "Deve responder 409 se rowCount do UPDATE for 0");
+      const body = JSON.parse(res.payload);
+      assert.equal(body.title, "Não foi possível atualizar a senha. Tente novamente.");
+      assert.equal(rollbackCalled, true, "Deve executar ROLLBACK na transação");
+      assert.equal(auditRecorded, false, "Nenhum evento falso de auditoria deve ser gerado");
+    } finally {
+      pool.query = originalQuery;
+      pool.connect = originalConnect;
+      await app.close();
+    }
   });
 });
