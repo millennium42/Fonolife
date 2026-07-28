@@ -60,6 +60,18 @@ export function calculateCsvHash(content: string): string {
 }
 
 /**
+  Calcula o hash canônico de uma linha CSV (row_hash) para prevenção de duplicidade em retries.
+ */
+export function calculateRowHash(entityType: string, row: Record<string, string>): string {
+  if (!row || typeof row !== "object") return createHash("sha256").update(`${entityType}:empty`).digest("hex");
+  const normalized = Object.entries(row)
+    .sort(([a], [b]) => a.localeCompare(b))
+    .map(([k, v]) => `${k.toLowerCase().trim()}=${(v || "").trim()}`)
+    .join("&");
+  return createHash("sha256").update(`${entityType}:${normalized}`).digest("hex");
+}
+
+/**
   Sanitiza células para prevenir injeção de fórmulas (CSV / Formula Injection).
   Importante: Utilizado EXCLUSIVAMENTE para exportação de dados destinados a planilhas.
  */

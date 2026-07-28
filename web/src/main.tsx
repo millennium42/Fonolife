@@ -2701,7 +2701,13 @@ function CsvImport() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ entityType, csvContent }),
       });
-      setMessage({ type: "success", text: `Importação concluída com sucesso (${res.processedRows} processados).` });
+      if (res.status === "completed_with_errors") {
+        setMessage({ type: "error", text: `Importação parcialmente concluída (${res.processedRows} processados, ${res.errorCount} erros). Verifique o relatório do job para reprocessar as linhas falhas.` });
+      } else if (res.idempotent) {
+        setMessage({ type: "success", text: res.message || `Esta planilha já foi importada anteriormente com sucesso (${res.processedRows} processados).` });
+      } else {
+        setMessage({ type: "success", text: `Importação concluída com sucesso (${res.processedRows} processados).` });
+      }
     } catch (err: any) {
       setMessage({ type: "error", text: err.message });
     } finally {
