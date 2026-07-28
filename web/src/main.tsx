@@ -114,7 +114,7 @@ type ProductItem = {
   min_stock?: number;
   stock_balance: number;
   active: boolean;
-  version?: number;
+  version: number;
 };
 type FinanceSummary = {
   consolidated: {
@@ -233,7 +233,11 @@ async function api(path: string, options?: RequestInit) {
   const response = await fetch(path, options);
   if (response.status === 204) return null;
   const body = await response.json();
-  if (!response.ok) throw new Error(body.title ?? "Não foi possível concluir");
+  if (!response.ok) {
+    const err = new Error(body.title ?? "Não foi possível concluir") as any;
+    err.status = response.status;
+    throw err;
+  }
   return body;
 }
 
@@ -2210,6 +2214,9 @@ function Inventory({ user }: { user: User; openGlobalPatient?: (id: string) => v
       loadData();
     } catch (err: any) {
       setError(err.message);
+      if (err.status === 409 || err?.message?.includes("alterado por outro usuário") || err?.message?.includes("Recarregue")) {
+        loadData();
+      }
     }
   };
 

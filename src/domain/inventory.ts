@@ -49,8 +49,9 @@ export function validProduct(product: {
   model?: string;
   priceCents?: number;
   costCents?: number;
-  sku?: string;
+  sku?: string | null;
   minStock?: number;
+  active?: boolean;
 }): boolean {
   return (
     validProductName(product.name) &&
@@ -58,7 +59,9 @@ export function validProduct(product: {
     validProductModel(product.model) &&
     validCents(product.priceCents) &&
     (product.costCents === undefined || validNonNegativeCents(product.costCents)) &&
-    (product.minStock === undefined || (typeof product.minStock === "number" && Number.isInteger(product.minStock) && product.minStock >= 0))
+    (product.minStock === undefined || (typeof product.minStock === "number" && Number.isInteger(product.minStock) && product.minStock >= 0)) &&
+    (product.sku === undefined || product.sku === null || (typeof product.sku === "string" && product.sku.trim().length >= 1)) &&
+    (product.active === undefined || typeof product.active === "boolean")
   );
 }
 

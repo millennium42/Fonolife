@@ -63,59 +63,102 @@ export async function catalogRoutes(app: FastifyInstance) {
 
   app.patch<{
     Params: { id: string };
-    Body: { version?: number; name?: string; brand?: string; model?: string; sku?: string; priceCents?: number; costCents?: number; minStock?: number; active?: boolean };
+    Body: { version?: number; name?: string; brand?: string; model?: string; sku?: string | null; priceCents?: number; costCents?: number; minStock?: number; active?: boolean };
   }>("/api/admin/products/:id", { preHandler: admin }, async (request, reply) => {
     const { version, name, brand, model, sku, priceCents, costCents, minStock, active } = request.body ?? {};
 
-    if (version !== undefined && !Number.isInteger(version)) {
-      return reply.code(400).type("application/problem+json").send({ title: "Versão deve ser um número inteiro", status: 400 });
+    if (version === undefined || !Number.isInteger(version)) {
+      return reply.code(400).type("application/problem+json").send({ title: "Versão é obrigatória e deve ser um número inteiro", status: 400 });
     }
 
-    const versionCheck = version !== undefined ? "AND version = $8" : "";
-    const params = [
-      name?.trim() || null,
-      brand?.trim() || null,
-      model?.trim() || null,
-      sku?.trim() || null,
-      priceCents ?? null,
-      costCents ?? null,
-      minStock ?? null,
-      active ?? null,
-      request.params.id,
-    ];
-    if (version !== undefined) params.push(version);
-
-    const result = await pool.query(
-      `UPDATE products SET
-         name=COALESCE($1,name),
-         brand=COALESCE($2,brand),
-         model=COALESCE($3,model),
-         sku=COALESCE($4,sku),
-         price_cents=COALESCE($5,price_cents),
-         cost_cents=COALESCE($6,cost_cents),
-         min_stock=COALESCE($7,min_stock),
-         active=COALESCE($8,active),
-         version=version+1,
-         updated_at=now()
-       WHERE id=$9 ${versionCheck} RETURNING id, version`,
-      [name?.trim() || null, brand?.trim() || null, model?.trim() || null, sku?.trim() || null, priceCents ?? null, costCents ?? null, minStock ?? null, active ?? null, request.params.id, ...(version !== undefined ? [version] : [])]
-    );
-
-    if (!result.rowCount) {
-      const exists = await pool.query("SELECT 1 FROM products WHERE id=$1", [request.params.id]);
-      return reply
-        .code(exists.rowCount ? 409 : 404)
-        .type("application/problem+json")
-        .send({
-          title: exists.rowCount
-            ? "Produto alterado por outro usuário. Recarregue os dados."
-            : "Produto não encontrado",
-          status: exists.rowCount ? 409 : 404,
+    const client = await pool.connect();
+    try {
+      await client.query("BEGIN");
+      const current = await client.query("SELECT * FROM products WHERE id=$1", [request.params.id]);
+      if (!current.rowCount) {
+        await client.query("ROLLBACK");
+        return reply.code(404).type("application/problem+json").send({
+          title: "Produto não encontrado",
+          status: 404,
         });
-    }
+      }
 
-    await audit(request.currentUser!.id, "update", "product", request.params.id);
-    return reply.code(200).send({ version: result.rows[0].version });
+      const prod = current.rows[0];
+      if (prod.version !== version) {
+        await client.query("ROLLBACK");
+        return reply.code(409).type("application/problem+json").send({
+          title: "Produto alterado por outro usuário. Recarregue os dados.",
+          status: 409,
+        });
+      }
+
+      const finalName = name !== undefined ? (name === null ? undefined : name.trim()) : prod.name;
+      const finalBrand = brand !== undefined ? (brand === null ? undefined : brand.trim()) : prod.brand;
+      const finalModel = model !== undefined ? (model === null ? undefined : model.trim()) : prod.model;
+      const finalSku = sku === undefined ? prod.sku : (sku === null ? null : (sku.trim() || null));
+      const finalPriceCents = priceCents !== undefined ? priceCents : Number(prod.price_cents);
+      const finalCostCents = costCents !== undefined ? costCents : Number(prod.cost_cents);
+      const finalMinStock = minStock !== undefined ? minStock : Number(prod.min_stock);
+      const finalActive = active !== undefined ? active : prod.active;
+
+      const candidate = {
+        name: finalName,
+        brand: finalBrand,
+        model: finalModel,
+        sku: finalSku,
+        priceCents: finalPriceCents,
+        costCents: finalCostCents,
+        minStock: finalMinStock,
+        active: finalActive,
+      };
+
+      if (!validProduct(candidate)) {
+        await client.query("ROLLBACK");
+        return reply.code(400).type("application/problem+json").send({
+          title: "Dados do produto são inválidos",
+          status: 400,
+        });
+      }
+
+      const result = await client.query(
+        `UPDATE products SET
+           name=$1,
+           brand=$2,
+           model=$3,
+           sku=$4,
+           price_cents=$5,
+           cost_cents=$6,
+           min_stock=$7,
+           active=$8,
+           version=version+1,
+           updated_at=now()
+         WHERE id=$9 AND version=$10 RETURNING id, version`,
+        [candidate.name, candidate.brand, candidate.model, candidate.sku, candidate.priceCents, candidate.costCents, candidate.minStock, candidate.active, request.params.id, version]
+      );
+
+      if (!result.rowCount) {
+        await client.query("ROLLBACK");
+        const exists = await pool.query("SELECT 1 FROM products WHERE id=$1", [request.params.id]);
+        return reply
+          .code(exists.rowCount ? 409 : 404)
+          .type("application/problem+json")
+          .send({
+            title: exists.rowCount
+              ? "Produto alterado por outro usuário. Recarregue os dados."
+              : "Produto não encontrado",
+            status: exists.rowCount ? 409 : 404,
+          });
+      }
+
+      await audit(request.currentUser!.id, "update", "product", request.params.id, { version: result.rows[0].version }, client);
+      await client.query("COMMIT");
+      return reply.code(200).send({ version: result.rows[0].version });
+    } catch (error) {
+      await client.query("ROLLBACK");
+      throw error;
+    } finally {
+      client.release();
+    }
   });
 
   app.get("/api/inventory/movements", { preHandler: operatorOrAdmin }, async () => ({

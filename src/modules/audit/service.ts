@@ -6,8 +6,9 @@ export const audit = (
   entityType: string,
   entityId?: string,
   details = {},
+  queryable: { query: Function } = pool,
 ) =>
-  pool.query(
+  queryable.query(
     "INSERT INTO audit_events(user_id,action,entity_type,entity_id,details) VALUES($1,$2,$3,$4,$5)",
     [userId, action, entityType, entityId ?? null, details],
   );
