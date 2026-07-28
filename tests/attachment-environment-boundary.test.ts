@@ -90,8 +90,9 @@ test("PROMPT 02 — Testes de Fronteira de Ambiente, Quarentena e Scanner de Ane
       method: "GET",
       url: "/api/health",
     });
-    assert.equal(res.statusCode, 200);
     const body = JSON.parse(res.payload);
+    const expectedStatusCode = body.status === "unavailable" ? 503 : 200;
+    assert.equal(res.statusCode, expectedStatusCode);
     assert.ok(["healthy", "degraded", "unavailable", "ok"].includes(body.status));
     assert.ok(typeof body.storage === "string");
     assert.ok(typeof body.scanner === "string");

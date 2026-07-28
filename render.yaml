@@ -13,6 +13,12 @@ services:
         value: production
       - key: APP_ENV
         value: production
+      - key: APP_ORIGIN
+        sync: false
+      - key: ATTACHMENT_STORAGE_PROVIDER
+        value: s3
+      - key: ATTACHMENT_SCANNER_PROVIDER
+        value: clamav
       - key: DATABASE_URL
         fromDatabase:
           name: fonolife-db

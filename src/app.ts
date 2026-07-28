@@ -89,7 +89,7 @@ export function buildApp(customStorage?: AttachmentStorage, customScanner?: Atta
       .type("application/problem+json")
       .send({
         type: "about:blank",
-        title: status >= 500 ? "Erro interno" : failure.message,
+        title: status === 503 ? (failure.message || "Serviço indisponível") : status >= 500 ? "Erro interno" : failure.message,
         status,
       });
   });

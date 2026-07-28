@@ -1,7 +1,6 @@
 export type AppEnvironment = "test" | "development" | "demo" | "production";
 
 const appEnvironments = new Set<AppEnvironment>(["test", "development", "demo", "production"]);
-const secureRuntime = process.env.NODE_ENV === "production";
 const inferredAppEnv = process.env.NODE_ENV === "test"
   ? "test"
   : process.env.NODE_ENV === "production"
@@ -14,6 +13,12 @@ if (!appEnvironments.has(appEnv as AppEnvironment)) {
 }
 
 const production = appEnv === "production";
+
+if (production && process.env.NODE_ENV && process.env.NODE_ENV !== "production") {
+  throw new Error("CONFIG ERROR: NODE_ENV deve ser 'production' quando APP_ENV é 'production' (semântica unificada de segurança).");
+}
+
+const secureRuntime = production;
 const demo = appEnv === "demo";
 const authMemoryFallback =
   process.env.AUTH_MEMORY_FALLBACK === "true" ||
@@ -55,8 +60,23 @@ export function validateAttachmentConfig(options: {
   clamavHost?: string;
   clamavPort?: number;
   clamavTimeoutMs?: number;
+  origin?: string;
+  port?: number;
+  attachmentMaxBytes?: number;
+  attachmentDownloadTtlSeconds?: number;
 }) {
+  const checkPort = options.port ?? Number(process.env.PORT ?? 3000);
+  const checkMaxBytes = options.attachmentMaxBytes ?? Number(process.env.ATTACHMENT_MAX_BYTES ?? 10 * 1024 * 1024);
+  const checkTtl = options.attachmentDownloadTtlSeconds ?? Number(process.env.ATTACHMENT_DOWNLOAD_TTL_SECONDS ?? 300);
+  if (!Number.isFinite(checkPort) || checkPort <= 0 || !Number.isFinite(checkMaxBytes) || checkMaxBytes <= 0 || !Number.isFinite(checkTtl) || checkTtl <= 0) {
+    throw new Error("CONFIG ERROR: Valores numéricos de configuração (PORT, ATTACHMENT_MAX_BYTES, ATTACHMENT_DOWNLOAD_TTL_SECONDS) devem ser finitos positivos.");
+  }
+
   if (options.production) {
+    const checkOrigin = options.origin ?? process.env.APP_ORIGIN ?? process.env.RENDER_EXTERNAL_URL ?? "";
+    if (checkOrigin && !checkOrigin.startsWith("https://")) {
+      throw new Error("CONFIG ERROR: APP_ORIGIN obrigatoriamente deve utilizar HTTPS em ambiente de produção.");
+    }
     if (options.storageProvider === "local") {
       throw new Error("CONFIG ERROR: LocalAttachmentStorage não pode ser utilizado em ambiente de produção.");
     }
@@ -70,9 +90,9 @@ export function validateAttachmentConfig(options: {
       throw new Error(`CONFIG ERROR: Provider de scanner '${options.scannerProvider}' não pode ser utilizado em ambiente de produção (obrigatório 'clamav').`);
     }
     const checkHost = options.clamavHost ?? process.env.CLAMAV_HOST ?? "localhost";
-    const checkPort = options.clamavPort ?? Number(process.env.CLAMAV_PORT ?? 3310);
+    const checkPortClam = options.clamavPort ?? Number(process.env.CLAMAV_PORT ?? 3310);
     const checkTimeout = options.clamavTimeoutMs ?? Number(process.env.CLAMAV_TIMEOUT_MS ?? 10000);
-    if (!checkHost || isNaN(checkPort) || checkPort <= 0 || checkPort > 65535 || isNaN(checkTimeout) || checkTimeout <= 0) {
+    if (!checkHost || isNaN(checkPortClam) || !Number.isFinite(checkPortClam) || checkPortClam <= 0 || checkPortClam > 65535 || isNaN(checkTimeout) || !Number.isFinite(checkTimeout) || checkTimeout <= 0) {
       throw new Error("CONFIG ERROR: Configuração de host, porta ou timeout para ClamAV é inválida em produção.");
     }
     if (options.storageProvider === "s3") {
@@ -96,6 +116,10 @@ validateAttachmentConfig({
   clamavHost,
   clamavPort,
   clamavTimeoutMs,
+  origin: process.env.APP_ORIGIN ?? process.env.RENDER_EXTERNAL_URL ?? "http://localhost:5173",
+  port: Number(process.env.PORT ?? 3000),
+  attachmentMaxBytes,
+  attachmentDownloadTtlSeconds,
 });
 
 export const config = {
