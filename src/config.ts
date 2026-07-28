@@ -31,9 +31,9 @@ if ((production || demo) && process.env.AUTH_MEMORY_FALLBACK === "true") {
   throw new Error("CONFIG ERROR: AUTH_MEMORY_FALLBACK cannot be enabled in production or demo.");
 }
 
-const storageProvider = process.env.ATTACHMENT_STORAGE_PROVIDER ?? process.env.STORAGE_PROVIDER ?? (production ? 's3' : 'local');
+const storageProvider = process.env.ATTACHMENT_STORAGE_PROVIDER ?? process.env.STORAGE_PROVIDER ?? (production ? 's3' : demo ? 'demo' : 'local');
 const scannerProvider = process.env.ATTACHMENT_SCANNER_PROVIDER ?? (production ? 'clamav' : 'dev');
-const s3Bucket = process.env.S3_BUCKET ?? 'fonolife-attachments-private';
+const s3Bucket = process.env.S3_BUCKET ?? (production ? undefined : 'fonolife-attachments-private');
 const s3Region = process.env.S3_REGION ?? 'us-east-1';
 const s3Endpoint = process.env.S3_ENDPOINT;
 const s3ForcePathStyle = process.env.S3_FORCE_PATH_STYLE === 'true';
@@ -54,12 +54,17 @@ export function validateAttachmentConfig(options: {
     if (options.storageProvider === "local") {
       throw new Error("CONFIG ERROR: LocalAttachmentStorage não pode ser utilizado em ambiente de produção.");
     }
-    if (options.scannerProvider === "dev") {
+    if (options.storageProvider === "demo" || options.storageProvider === "memory" || options.storageProvider !== "s3") {
+      throw new Error(`CONFIG ERROR: Provider de storage '${options.storageProvider}' não pode ser utilizado em ambiente de produção (obrigatório 's3' e sem modo mock/memória).`);
+    }
+    if (options.scannerProvider === "dev" || options.scannerProvider === "mock") {
       throw new Error("CONFIG ERROR: DevAttachmentScanner não pode ser utilizado em ambiente de produção.");
     }
     if (options.storageProvider === "s3") {
-      if (!options.s3Bucket || !options.s3AccessKeyId || !options.s3SecretAccessKey) {
-        throw new Error("CONFIG ERROR: S3_BUCKET, S3_ACCESS_KEY_ID e S3_SECRET_ACCESS_KEY são obrigatórios para storage S3 em produção.");
+      const hasExplicitCreds = !!(options.s3AccessKeyId && options.s3SecretAccessKey);
+      const hasProviderChain = !!(process.env.AWS_ROLE_ARN || process.env.AWS_CONTAINER_CREDENTIALS_RELATIVE_URI || process.env.AWS_CONTAINER_CREDENTIALS_FULL_URI || process.env.AWS_WEB_IDENTITY_TOKEN_FILE);
+      if (!options.s3Bucket || (!hasExplicitCreds && !hasProviderChain)) {
+        throw new Error("CONFIG ERROR: S3_BUCKET, S3_ACCESS_KEY_ID e S3_SECRET_ACCESS_KEY são obrigatórios para storage S3 em produção (ou configuração de IAM provider chain).");
       }
     }
   }

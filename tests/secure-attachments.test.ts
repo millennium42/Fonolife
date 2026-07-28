@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import { Readable } from "node:stream";
 import {
   LocalAttachmentStorage,
+  InMemoryAttachmentStorage,
   S3AttachmentStorage,
   DevAttachmentScanner,
   validateBase64Strict,
@@ -40,20 +41,20 @@ test("Suíte de Anexos Clínicos Duráveis e Seguros (PR-02)", async (t) => {
     assert.equal(existsAfter, false);
   });
 
-  await t.test("S3AttachmentStorage (Contrato Mock): salva, verifica existência e lê stream", async () => {
-    const s3Storage = new S3AttachmentStorage({ bucket: "fonolife-test-bucket", mockMode: true });
-    const key = `attachments/s3_${Date.now()}.png`;
+  await t.test("InMemoryAttachmentStorage (Contrato Volátil): salva, verifica existência e lê stream", async () => {
+    const memoryStorage = new InMemoryAttachmentStorage();
+    const key = `attachments/mem_${Date.now()}.png`;
     const pngBuffer = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]);
 
-    const saveRes = await s3Storage.save(key, pngBuffer, "image/png");
+    const saveRes = await memoryStorage.save(key, pngBuffer, "image/png");
     assert.equal(saveRes.sizeBytes, pngBuffer.length);
-    assert.equal(await s3Storage.exists(key), true);
+    assert.equal(await memoryStorage.exists(key), true);
 
-    const stream = await s3Storage.getStream(key);
+    const stream = await memoryStorage.getStream(key);
     assert.ok(stream instanceof Readable);
 
-    await s3Storage.delete(key);
-    assert.equal(await s3Storage.exists(key), false);
+    await memoryStorage.delete(key);
+    assert.equal(await memoryStorage.exists(key), false);
   });
 
   await t.test("DevAttachmentScanner: valida PDF, JPEG, PNG, WEBP e bloqueia executável disfarçado", async () => {
