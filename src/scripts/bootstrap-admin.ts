@@ -1,6 +1,6 @@
 import { randomUUID } from "node:crypto";
 import { pool } from "../db/pool.js";
-import { hashPassword } from "../domain/security.js";
+import { hashPassword, isPasswordPolicyValid, MIN_PASSWORD_LENGTH } from "../domain/security.js";
 
 const memoryAdmins = new Set<string>();
 
@@ -9,8 +9,8 @@ export async function bootstrapFirstAdmin(options?: { email?: string; password?:
   const password = options?.password ?? process.env.ADMIN_INITIAL_PASSWORD;
   const force = options?.force ?? process.argv.includes("--force");
 
-  if (!password || password.length < 8) {
-    throw new Error("ADMIN BOOTSTRAP ERROR: A senha inicial do administrador deve ter ao menos 8 caracteres (defina a variável de ambiente ADMIN_INITIAL_PASSWORD).");
+  if (!isPasswordPolicyValid(password)) {
+    throw new Error(`ADMIN BOOTSTRAP ERROR: A senha inicial do administrador deve ter ao menos ${MIN_PASSWORD_LENGTH} caracteres (defina a variável de ambiente ADMIN_INITIAL_PASSWORD).`);
   }
 
   try {

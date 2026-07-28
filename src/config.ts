@@ -21,8 +21,9 @@ if (production && process.env.NODE_ENV && process.env.NODE_ENV !== "production")
 const secureRuntime = production;
 const demo = appEnv === "demo";
 const authMemoryFallback =
-  process.env.AUTH_MEMORY_FALLBACK === "true" ||
-  ((appEnv === "development" || appEnv === "test") && process.env.AUTH_MEMORY_FALLBACK !== "false");
+  (production || demo)
+    ? false
+    : (process.env.AUTH_MEMORY_FALLBACK === "true" || ((appEnv === "development" || appEnv === "test") && process.env.AUTH_MEMORY_FALLBACK !== "false"));
 
 if (production && process.env.DEMO_MODE === "true") {
   throw new Error("CONFIG ERROR: demo features cannot be enabled in production.");
