@@ -4,8 +4,8 @@ import { pool } from "../../db/pool.js";
 import { idempotencyFingerprint } from "../../domain/idempotency.js";
 import { validInventoryMovement, validProduct } from "../../domain/inventory.js";
 import { validService } from "../../domain/services.js";
-import { audit } from "../audit/service.js";
-import { admin, authenticated } from "../patients/authorization.js";
+import { audit, auditDenial } from "../audit/service.js";
+import { admin, authenticated, operatorOrAdmin } from "../patients/authorization.js";
 
 export async function catalogRoutes(app: FastifyInstance) {
   app.get<{ Querystring: { lowStock?: string; search?: string } }>(
@@ -118,7 +118,7 @@ export async function catalogRoutes(app: FastifyInstance) {
     return reply.code(200).send({ version: result.rows[0].version });
   });
 
-  app.get("/api/inventory/movements", { preHandler: authenticated }, async () => ({
+  app.get("/api/inventory/movements", { preHandler: operatorOrAdmin }, async () => ({
     movements: (
       await pool.query(
         `SELECT m.id,m.product_id,p.name product_name,p.sku product_sku,m.movement_type,m.quantity,m.notes,m.client_request_id,m.created_at,u.name created_by_name
@@ -132,6 +132,16 @@ export async function catalogRoutes(app: FastifyInstance) {
 
   const handleInventoryMovement = async (request: FastifyRequest, reply: any) => {
     const { productId, movementType, quantity, notes, clientRequestId } = (request.body as { productId?: string; movementType?: string; quantity?: number; notes?: string; clientRequestId?: string }) ?? {};
+    if (movementType === "sale_deduction") {
+      await auditDenial(request.currentUser!.id, "forged_sale_deduction_denied", "inventory_movement");
+      return reply
+        .code(403)
+        .type("application/problem+json")
+        .send({
+          title: "O tipo de movimentação sale_deduction é reservado à geração interna por vendas e não pode ser criado manualmente",
+          status: 403,
+        });
+    }
     if (!validInventoryMovement({ productId, movementType, quantity, notes }))
       return reply
         .code(400)
@@ -219,8 +229,8 @@ export async function catalogRoutes(app: FastifyInstance) {
     }
   };
 
-  app.post("/api/inventory/movements", { preHandler: authenticated }, handleInventoryMovement);
-  app.post("/api/admin/inventory/movements", { preHandler: admin }, handleInventoryMovement);
+  app.post("/api/inventory/movements", { preHandler: operatorOrAdmin }, handleInventoryMovement);
+  app.post("/api/admin/inventory/movements", { preHandler: operatorOrAdmin }, handleInventoryMovement);
 
   app.get("/api/services", { preHandler: authenticated }, async () => {
     const services = await pool.query(
@@ -255,7 +265,7 @@ export async function catalogRoutes(app: FastifyInstance) {
       executionTimeMinutes?: number;
       products?: { productId: string; quantity: number }[];
     };
-  }>("/api/services", { preHandler: authenticated }, async (request, reply) => {
+  }>("/api/services", { preHandler: operatorOrAdmin }, async (request, reply) => {
     const { name, description, priceCents, cmvCents, executionTimeMinutes, products } = request.body ?? {};
     if (!validService({ name, priceCents, cmvCents, executionTimeMinutes })) {
       return reply
@@ -317,7 +327,7 @@ export async function catalogRoutes(app: FastifyInstance) {
       active?: boolean;
       products?: { productId: string; quantity: number }[];
     };
-  }>("/api/services/:id", { preHandler: authenticated }, async (request, reply) => {
+  }>("/api/services/:id", { preHandler: operatorOrAdmin }, async (request, reply) => {
     const { version, name, description, priceCents, cmvCents, executionTimeMinutes, active, products } = request.body ?? {};
     const client = await pool.connect();
     try {
