@@ -17,18 +17,22 @@ export const authenticated = async (request: FastifyRequest) => {
 
 export const admin = async (request: FastifyRequest) => {
   await authenticated(request);
-  if (request.currentUser?.role !== "admin")
+  if (request.currentUser?.role !== "admin") {
+    await auditDenial(request.currentUser!.id, "rbac_access_denied", "route", request.url);
     throw Object.assign(new Error("Acesso restrito ao administrador"), {
       statusCode: 403,
     });
+  }
 };
 
 export const operatorOrAdmin = async (request: FastifyRequest) => {
   await authenticated(request);
-  if (!["admin", "operator"].includes(request.currentUser!.role))
+  if (!["admin", "operator"].includes(request.currentUser!.role)) {
+    await auditDenial(request.currentUser!.id, "rbac_access_denied", "route", request.url);
     throw Object.assign(new Error("Acesso restrito à operação financeira"), {
       statusCode: 403,
     });
+  }
 };
 
 export const loadAndAuthorizePatient = async (
