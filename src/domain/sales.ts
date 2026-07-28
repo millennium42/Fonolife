@@ -1,6 +1,8 @@
 export const PAYMENT_METHODS = ['cash','pix','debit_card','credit_card','bank_transfer','boleto','other'] as const;
 export const DELIVERY_STATUSES = ['pending','delivered','adaptation','completed'] as const;
 
+import { lastDayOfMonth } from "./calendar.js";
+
 export type SaleInstallment = { amountCents: number; paymentMethod: string; dueOn: string; receivedOn?: string };
 
 export function validCents(value: unknown): value is number {
@@ -22,7 +24,7 @@ export function splitMonthly(totalAmountCents: number, count: number, firstDueOn
     const targetMonth = month - 1 + index;
     const y = year + Math.floor(targetMonth / 12);
     const m = targetMonth % 12;
-    const lastDay = new Date(Date.UTC(y, m + 1, 0)).getUTCDate();
+    const lastDay = lastDayOfMonth(y, m + 1);
     return { amountCents: index === count - 1 ? totalAmountCents - base * (count - 1) : base, dueOn: `${y}-${String(m + 1).padStart(2,'0')}-${String(Math.min(day,lastDay)).padStart(2,'0')}` };
   });
 }

@@ -2,6 +2,7 @@ import { randomUUID } from "node:crypto";
 import type { FastifyInstance } from "fastify";
 import { pool } from "../../db/pool.js";
 import { ANONYMIZED_TEXT_PLACEHOLDER } from "../../domain/privacy.js";
+import { lastDayOfMonth } from "../../domain/calendar.js";
 import { authenticated, loadAndAuthorizePatient } from "../patients/authorization.js";
 
 export async function doctorRoutes(app: FastifyInstance) {
@@ -16,14 +17,23 @@ export async function doctorRoutes(app: FastifyInstance) {
   app.get<{ Querystring: { year?: string; month?: string } }>(
     "/api/doctor/schedule",
     { preHandler: authenticated },
-    async (request) => {
+    async (request, reply) => {
       const year = Number(request.query.year ?? new Date().getFullYear());
       const month = Number(request.query.month ?? new Date().getMonth() + 1);
+
+      if (!Number.isInteger(year) || year < 2000 || year > 2100 || !Number.isInteger(month) || month < 1 || month > 12) {
+        return reply.code(400).type("application/problem+json").send({
+          title: "Ano ou mês inválido",
+          status: 400,
+        });
+      }
+
       const doctorId = request.currentUser!.id;
       const isAdminOrOperator = ["admin", "operator"].includes(request.currentUser!.role);
 
+      const lastDay = lastDayOfMonth(year, month);
       const startDate = `${year}-${String(month).padStart(2, "0")}-01`;
-      const endDate = `${year}-${String(month).padStart(2, "0")}-31`;
+      const endDate = `${year}-${String(month).padStart(2, "0")}-${String(lastDay).padStart(2, "0")}`;
 
       const tasks = await pool.query(
         `SELECT t.id task_id, t.patient_id, p.name patient_name, p.phone, t.title, t.due_on, t.completed_at,
