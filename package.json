@@ -20,7 +20,10 @@
     "test:e2e": "playwright test",
     "repo:hygiene": "node scripts/check-repository-hygiene.mjs",
     "ci:check": "node scripts/run-ci-check.mjs",
-    "ci:check:full": "node scripts/run-ci-check.mjs --full"
+    "ci:check:full": "node scripts/run-ci-check.mjs --full",
+    "demo:up": "docker compose up --build --wait",
+    "demo:clean": "docker compose down -v --remove-orphans",
+    "demo:logs": "docker compose logs -f"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.1096.0",

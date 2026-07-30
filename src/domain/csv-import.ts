@@ -12,6 +12,8 @@ import {
   FINANCE_CATEGORIES,
 } from "./finance.js";
 import { PAYMENT_METHODS } from "./sales.js";
+import { CRM_ACCOUNT_TYPES, CRM_OPPORTUNITY_PRIORITIES, CRM_OPPORTUNITY_STATUSES, validAccountType, validOpportunityPriority, validOpportunityStatus, validUuid as validCrmUuid } from "./crm.js";
+import { validAppointmentWindow, validBookingMode } from "./appointments.js";
 
 export type CsvPatientRow = {
   name: string;
@@ -33,6 +35,68 @@ export type CsvFinancialRow = {
   category: string;
   paymentMethod: string;
   paidAt?: string;
+};
+
+export type CsvCrmAccountRow = {
+  name: string;
+  accountType: string;
+  document?: string;
+  phone?: string;
+  email?: string;
+  notes?: string;
+};
+
+export type CsvCrmContactRow = {
+  accountId?: string;
+  patientId?: string;
+  name: string;
+  phone?: string;
+  email?: string;
+  roleTitle?: string;
+  notes?: string;
+};
+
+export type CsvCrmOpportunityRow = {
+  pipelineId: string;
+  stageId: string;
+  accountId?: string;
+  contactId?: string;
+  patientId?: string;
+  title: string;
+  priority: string;
+  status: string;
+  estimatedValueCents: number;
+  probabilityPercent: number;
+  leadSource?: string;
+  expectedCloseOn?: string;
+  notes?: string;
+};
+
+export type CsvAppointmentRow = {
+  patientId?: string;
+  opportunityId?: string;
+  doctorId: string;
+  unitName?: string;
+  roomName?: string;
+  specialty?: string;
+  appointmentType: string;
+  bookingMode: string;
+  scheduledStart: string;
+  scheduledEnd: string;
+  notes?: string;
+};
+
+export type CsvPayableRow = {
+  vendorAccountId?: string;
+  vendorName: string;
+  companyAccountId: string;
+  description: string;
+  category: string;
+  amountCents: number;
+  competenceOn: string;
+  dueOn: string;
+  paymentMethod: string;
+  notes?: string;
 };
 
 export type ParsedCsv = {
@@ -57,18 +121,6 @@ export function calculateVersionedCsvHash(entityType: string, content: string, v
  */
 export function calculateCsvHash(content: string): string {
   return calculateVersionedCsvHash("generic", content, "v1");
-}
-
-/**
-  Calcula o hash canônico de uma linha CSV (row_hash) para prevenção de duplicidade em retries.
- */
-export function calculateRowHash(entityType: string, row: Record<string, string>): string {
-  if (!row || typeof row !== "object") return createHash("sha256").update(`${entityType}:empty`).digest("hex");
-  const normalized = Object.entries(row)
-    .sort(([a], [b]) => a.localeCompare(b))
-    .map(([k, v]) => `${k.toLowerCase().trim()}=${(v || "").trim()}`)
-    .join("&");
-  return createHash("sha256").update(`${entityType}:${normalized}`).digest("hex");
 }
 
 /**
@@ -364,6 +416,167 @@ export function validateFinancialCsvRow(
       category,
       paymentMethod,
       paidAt: paidAt || undefined,
+    },
+  };
+}
+
+export function validateCrmAccountCsvRow(
+  row: Record<string, string>,
+  rowNumber: number,
+): { valid: boolean; data?: CsvCrmAccountRow; error?: string } {
+  const name = (row.nome || row.name || "").trim();
+  const accountType = (row.tipo || row.accounttype || "company").trim().toLowerCase();
+  if (!validPatientName(name)) return { valid: false, error: `Linha ${rowNumber}: Nome da conta CRM é obrigatório.` };
+  if (!validAccountType(accountType)) return { valid: false, error: `Linha ${rowNumber}: Tipo da conta CRM inválido. Opções: ${CRM_ACCOUNT_TYPES.join(", ")}.` };
+  return {
+    valid: true,
+    data: {
+      name,
+      accountType,
+      document: (row.documento || row.document || "").trim() || undefined,
+      phone: (row.telefone || row.phone || "").trim() || undefined,
+      email: (row.email || "").trim() || undefined,
+      notes: (row.observacoes || row.notes || "").trim() || undefined,
+    },
+  };
+}
+
+export function validateCrmContactCsvRow(
+  row: Record<string, string>,
+  rowNumber: number,
+): { valid: boolean; data?: CsvCrmContactRow; error?: string } {
+  const name = (row.nome || row.name || "").trim();
+  const accountId = (row.contaid || row.accountid || "").trim();
+  const patientId = (row.patientid || row.pacienteid || "").trim();
+  if (!validPatientName(name)) return { valid: false, error: `Linha ${rowNumber}: Nome do contato CRM é obrigatório.` };
+  if (accountId && !validCrmUuid(accountId)) return { valid: false, error: `Linha ${rowNumber}: accountId inválido.` };
+  if (patientId && !validCrmUuid(patientId)) return { valid: false, error: `Linha ${rowNumber}: patientId inválido.` };
+  return {
+    valid: true,
+    data: {
+      accountId: accountId || undefined,
+      patientId: patientId || undefined,
+      name,
+      phone: (row.telefone || row.phone || "").trim() || undefined,
+      email: (row.email || "").trim() || undefined,
+      roleTitle: (row.cargo || row.roletitle || "").trim() || undefined,
+      notes: (row.observacoes || row.notes || "").trim() || undefined,
+    },
+  };
+}
+
+export function validateCrmOpportunityCsvRow(
+  row: Record<string, string>,
+  rowNumber: number,
+): { valid: boolean; data?: CsvCrmOpportunityRow; error?: string } {
+  const pipelineId = (row.pipelineid || "").trim();
+  const stageId = (row.stageid || "").trim();
+  const title = (row.titulo || row.title || "").trim();
+  const priority = (row.prioridade || row.priority || "medium").trim().toLowerCase();
+  const status = (row.status || "open").trim().toLowerCase();
+  const estimatedValueCents = Number((row.valorcentavos || row.estimatedvaluecents || "0").trim());
+  const probabilityPercent = Number((row.probabilidade || row.probabilitypercent || "0").trim());
+  if (!validCrmUuid(pipelineId) || !validCrmUuid(stageId)) return { valid: false, error: `Linha ${rowNumber}: pipelineId e stageId válidos são obrigatórios.` };
+  if (!validPatientName(title)) return { valid: false, error: `Linha ${rowNumber}: Título da oportunidade é obrigatório.` };
+  if (!validOpportunityPriority(priority)) return { valid: false, error: `Linha ${rowNumber}: Prioridade inválida. Opções: ${CRM_OPPORTUNITY_PRIORITIES.join(", ")}.` };
+  if (!validOpportunityStatus(status)) return { valid: false, error: `Linha ${rowNumber}: Status inválido. Opções: ${CRM_OPPORTUNITY_STATUSES.join(", ")}.` };
+  if (!Number.isSafeInteger(estimatedValueCents) || estimatedValueCents < 0) return { valid: false, error: `Linha ${rowNumber}: Valor em centavos inválido.` };
+  if (!Number.isInteger(probabilityPercent) || probabilityPercent < 0 || probabilityPercent > 100) return { valid: false, error: `Linha ${rowNumber}: Probabilidade deve ficar entre 0 e 100.` };
+  const accountId = (row.contaid || row.accountid || "").trim();
+  const contactId = (row.contactid || "").trim();
+  const patientId = (row.patientid || row.pacienteid || "").trim();
+  if (accountId && !validCrmUuid(accountId)) return { valid: false, error: `Linha ${rowNumber}: accountId inválido.` };
+  if (contactId && !validCrmUuid(contactId)) return { valid: false, error: `Linha ${rowNumber}: contactId inválido.` };
+  if (patientId && !validCrmUuid(patientId)) return { valid: false, error: `Linha ${rowNumber}: patientId inválido.` };
+  const expectedCloseOn = (row.previsao || row.expectedcloseon || "").trim();
+  if (expectedCloseOn && !isValidCivilDate(expectedCloseOn)) return { valid: false, error: `Linha ${rowNumber}: expectedCloseOn inválida.` };
+  return {
+    valid: true,
+    data: {
+      pipelineId,
+      stageId,
+      accountId: accountId || undefined,
+      contactId: contactId || undefined,
+      patientId: patientId || undefined,
+      title,
+      priority,
+      status,
+      estimatedValueCents,
+      probabilityPercent,
+      leadSource: (row.origem || row.leadsource || "").trim() || undefined,
+      expectedCloseOn: expectedCloseOn || undefined,
+      notes: (row.observacoes || row.notes || "").trim() || undefined,
+    },
+  };
+}
+
+export function validateAppointmentCsvRow(
+  row: Record<string, string>,
+  rowNumber: number,
+): { valid: boolean; data?: CsvAppointmentRow; error?: string } {
+  const patientId = (row.patientid || row.pacienteid || "").trim();
+  const opportunityId = (row.opportunityid || "").trim();
+  const doctorId = (row.doctorid || row.medicoid || "").trim();
+  const bookingMode = (row.bookingmode || row.modalidade || "normal").trim().toLowerCase();
+  const scheduledStart = (row.scheduledstart || row.inicio || "").trim();
+  const scheduledEnd = (row.scheduledend || row.fim || "").trim();
+  if (!validCrmUuid(doctorId)) return { valid: false, error: `Linha ${rowNumber}: doctorId válido é obrigatório.` };
+  if (patientId && !validCrmUuid(patientId)) return { valid: false, error: `Linha ${rowNumber}: patientId inválido.` };
+  if (opportunityId && !validCrmUuid(opportunityId)) return { valid: false, error: `Linha ${rowNumber}: opportunityId inválido.` };
+  if (!validBookingMode(bookingMode)) return { valid: false, error: `Linha ${rowNumber}: bookingMode inválido.` };
+  if (!validAppointmentWindow(scheduledStart, scheduledEnd)) return { valid: false, error: `Linha ${rowNumber}: intervalo do appointment inválido.` };
+  return {
+    valid: true,
+    data: {
+      patientId: patientId || undefined,
+      opportunityId: opportunityId || undefined,
+      doctorId,
+      unitName: (row.unidade || row.unitname || "").trim() || undefined,
+      roomName: (row.sala || row.roomname || "").trim() || undefined,
+      specialty: (row.especialidade || row.specialty || "").trim() || undefined,
+      appointmentType: (row.tipo || row.appointmenttype || "consultation").trim(),
+      bookingMode,
+      scheduledStart,
+      scheduledEnd,
+      notes: (row.observacoes || row.notes || "").trim() || undefined,
+    },
+  };
+}
+
+export function validatePayableCsvRow(
+  row: Record<string, string>,
+  rowNumber: number,
+): { valid: boolean; data?: CsvPayableRow; error?: string } {
+  const vendorAccountId = (row.vendoraccountid || row.fornecedorcontaid || "").trim();
+  const vendorName = (row.vendorname || row.fornecedor || "").trim();
+  const companyAccountId = (row.companyaccountid || row.contaid || "").trim();
+  const description = (row.description || row.descricao || "").trim();
+  const category = (row.category || row.categoria || "").trim().toLowerCase();
+  const amountCents = Number((row.amountcents || row.valorcentavos || "").trim());
+  const competenceOn = (row.competenceon || row.datacompetencia || "").trim();
+  const dueOn = (row.dueon || row.datavencimento || "").trim();
+  const paymentMethod = (row.paymentmethod || row.formapagamento || "").trim().toLowerCase();
+  if (vendorAccountId && !validCrmUuid(vendorAccountId)) return { valid: false, error: `Linha ${rowNumber}: vendorAccountId inválido.` };
+  if (!validPatientName(vendorName)) return { valid: false, error: `Linha ${rowNumber}: fornecedor é obrigatório.` };
+  if (!validCrmUuid(companyAccountId)) return { valid: false, error: `Linha ${rowNumber}: companyAccountId inválido.` };
+  if (!validPatientName(description)) return { valid: false, error: `Linha ${rowNumber}: descrição obrigatória.` };
+  if (!category) return { valid: false, error: `Linha ${rowNumber}: categoria obrigatória.` };
+  if (!Number.isSafeInteger(amountCents) || amountCents <= 0) return { valid: false, error: `Linha ${rowNumber}: amountCents inválido.` };
+  if (!isValidCivilDate(competenceOn) || !isValidCivilDate(dueOn)) return { valid: false, error: `Linha ${rowNumber}: competência ou vencimento inválidos.` };
+  if (!isOneOf(paymentMethod, PAYMENT_METHODS)) return { valid: false, error: `Linha ${rowNumber}: forma de pagamento inválida.` };
+  return {
+    valid: true,
+    data: {
+      vendorAccountId: vendorAccountId || undefined,
+      vendorName,
+      companyAccountId,
+      description,
+      category,
+      amountCents,
+      competenceOn,
+      dueOn,
+      paymentMethod,
+      notes: (row.notes || row.observacoes || "").trim() || undefined,
     },
   };
 }

@@ -28,6 +28,8 @@ import { doctorRoutes } from "./modules/doctors/routes.js";
 import { reportRoutes } from "./modules/reports/routes.js";
 import { privacyRoutes } from "./modules/privacy/routes.js";
 import { adminRoutes } from "./modules/admin/routes.js";
+import { crmRoutes } from "./modules/crm/routes.js";
+import { appointmentRoutes } from "./modules/appointments/routes.js";
 
 type User = {
   id: string;
@@ -158,6 +160,8 @@ export function buildApp(customStorage?: AttachmentStorage, customScanner?: Atta
   app.register(catalogRoutes);
   app.register(financeRoutes);
   app.register(doctorRoutes);
+  app.register(crmRoutes);
+  app.register(appointmentRoutes);
   app.register(reportRoutes);
   app.register(privacyRoutes);
   app.register(adminRoutes);

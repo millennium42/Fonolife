@@ -47,4 +47,21 @@ describe("isolamento do ambiente demonstrativo", () => {
     assert.notEqual(result.status, 0);
     assert.match(`${result.stderr}${result.stdout}`, /demo features cannot be enabled in production/);
   });
+  test("seed demonstrativa é idempotente", () => {
+    const runSeed = () => spawnSync(process.execPath, ["--import", "tsx", "src/db/seed.ts"], {
+      cwd: process.cwd(),
+      env: { 
+        ...process.env, 
+        APP_ENV: "demo",
+        DATABASE_URL: process.env.DATABASE_URL || "postgres://fonolife:fonolife@localhost:5432/fonolife_demo"
+      },
+      encoding: "utf8",
+    });
+
+    const run1 = runSeed();
+    assert.equal(run1.status, 0, `Primeira execução da seed não deve falhar. Stderr: ${run1.stderr} Stdout: ${run1.stdout}`);
+    
+    const run2 = runSeed();
+    assert.equal(run2.status, 0, `Segunda execução da seed não deve falhar (idempotência). Stderr: ${run2.stderr}`);
+  });
 });

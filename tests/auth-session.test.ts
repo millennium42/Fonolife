@@ -51,32 +51,24 @@ test("Suíte de Autenticação Modular, Rate Limit Distribuído e Sessões (PR-0
   await t.test("Resposta uniforme contra enumeração de usuários (401 para e-mail ou senha incorreta)", async () => {
     const originHeader = "http://localhost:5173";
     const originalQuery = pool.query.bind(pool);
-    const mockHash = await hashPassword("CorrectPassword123!");
 
     pool.query = (async (sql: any, params?: any[]) => {
       const text = typeof sql === "string" ? sql : sql?.text || "";
-      if (text.includes("SELECT") && text.includes("FROM login_rate_limits")) {
-        return { rows: [], rowCount: 0 };
-      }
       if (text.includes("SELECT * FROM users WHERE email=")) {
-        const email = params?.[0];
-        if (email === "admin@demo.local") {
+        if (params && params[0] === "admin@demo.local") {
           return {
             rows: [{
-              id: "usr-admin-demo",
-              name: "Admin Demo",
+              id: "usr-admin-1",
+              name: "Admin",
               email: "admin@demo.local",
               role: "admin",
-              password_hash: mockHash,
+              password_hash: await hashPassword("validpassword123"),
               active: true,
               must_change_password: false,
             }],
             rowCount: 1,
           };
         }
-        return { rows: [], rowCount: 0 };
-      }
-      if (text.includes("INSERT INTO login_rate_limits") || text.includes("ON CONFLICT")) {
         return { rows: [], rowCount: 0 };
       }
       return { rows: [], rowCount: 0 };
@@ -90,20 +82,20 @@ test("Suíte de Autenticação Modular, Rate Limit Distribuído e Sessões (PR-0
         headers: { origin: originHeader, "content-type": "application/json" },
         payload: { email: "nonexistent_user_xyz@demo.local", password: "wrongpassword123" },
       });
-      assert.equal(resInexistente.statusCode, 401);
-      const bodyInexistente = JSON.parse(resInexistente.payload);
-      assert.equal(bodyInexistente.title, "E-mail ou senha incorretos");
+    assert.equal(resInexistente.statusCode, 401);
+    const bodyInexistente = JSON.parse(resInexistente.payload);
+    assert.equal(bodyInexistente.title, "E-mail ou senha incorretos");
 
-      // E-mail existente com senha errada
-      const resSenhaErrada = await app.inject({
-        method: "POST",
-        url: "/api/auth/login",
-        headers: { origin: originHeader, "content-type": "application/json" },
-        payload: { email: "admin@demo.local", password: "wrongpassword123" },
-      });
-      assert.equal(resSenhaErrada.statusCode, 401);
-      const bodySenhaErrada = JSON.parse(resSenhaErrada.payload);
-      assert.equal(bodySenhaErrada.title, "E-mail ou senha incorretos");
+    // E-mail existente com senha errada
+    const resSenhaErrada = await app.inject({
+      method: "POST",
+      url: "/api/auth/login",
+      headers: { origin: originHeader, "content-type": "application/json" },
+      payload: { email: "admin@demo.local", password: "wrongpassword123" },
+    });
+    assert.equal(resSenhaErrada.statusCode, 401);
+    const bodySenhaErrada = JSON.parse(resSenhaErrada.payload);
+    assert.equal(bodySenhaErrada.title, "E-mail ou senha incorretos");
     } finally {
       pool.query = originalQuery;
     }

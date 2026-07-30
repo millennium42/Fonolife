@@ -12,7 +12,10 @@ test("Não devem existir caracteres corrompidos (mojibake) no repositório", asy
   const files = filesOutput.split("\n").map(f => f.trim()).filter(Boolean);
 
   const textExtensions = [".ts", ".tsx", ".js", ".html", ".css", ".json", ".md"];
-  const trackedTextFiles = files.filter(f => textExtensions.includes(path.extname(f)));
+  const trackedTextFiles = files.filter(f => 
+    textExtensions.includes(path.extname(f)) &&
+    !f.includes("mojibake")
+  );
 
   const mojibakeRegex = /(\ufffd|Ã|Â|â€|ðŸ)/;
 

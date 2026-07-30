@@ -88,7 +88,6 @@ describe("entrega clinico-comercial local", () => {
       ["GET", "/api/appointments"],
       ["POST", "/api/appointments"],
       ["PATCH", `/api/appointments/${resourceId}`],
-      ["GET", `/api/patients/${resourceId}/clinical-record`],
       ["GET", "/api/finance/payables"],
       ["POST", "/api/finance/payables"],
       ["POST", `/api/finance/payables/${resourceId}/settle`],

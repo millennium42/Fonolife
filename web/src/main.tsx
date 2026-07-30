@@ -15,6 +15,8 @@ import {
   Sidebar,
   TopBar,
 } from "./components/ui";
+import { DashboardCalendar } from "./features/calendar/DashboardCalendar";
+import { AgendaPage } from "./features/calendar/AgendaPage";
 import "./style.css";
 
 type User = {
@@ -1209,76 +1211,87 @@ function Finance({ user, openGlobalPatient }: { user: User; openGlobalPatient: (
   );
 }
 
-function Patients({ initialPatientId, user, openGlobalPatient }: { initialPatientId?: string | null; user: User; openGlobalPatient: (id: string) => void }) {
+function Patients({ user, openGlobalPatient, onSchedule }: { user: User; openGlobalPatient: (id: string) => void; onSchedule: (id: string) => void }) {
   const [patients, setPatients] = useState<Patient[]>([]);
-  const [selectedId, setSelectedId] = useState<string | null>(initialPatientId || null);
   const [search, setSearch] = useState("");
   const [showAddForm, setShowAddForm] = useState(false);
 
   const loadPatients = () => {
-    api(`/api/patients?search=${encodeURIComponent(search)}`).then((d) => setPatients(d.patients || [])).catch(() => {});
+    const endpoint = user.role === "doctor" ? "/api/doctor/patients" : `/api/patients?search=${encodeURIComponent(search)}`;
+    api(endpoint).then((d) => setPatients(d.patients || [])).catch(() => {});
   };
 
   useEffect(() => {
     loadPatients();
-  }, [search]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [search, user.role]);
+
+  const statuses: Record<string, string> = { prospect: "Interessado", adaptation: "Adaptação", active: "Ativo", inactive: "Inativo" };
 
   return (
     <div>
-      {selectedId ? (
-        <PatientRecord id={selectedId} user={user} onBack={() => setSelectedId(null)} />
-      ) : (
-        <section className="card">
-          <div className="section-title">
-            <div>
-              <h2>👥 Cadastro de Pacientes & Prontuários</h2>
-              <p>Gerencie informações clínicas, agendamentos e histórico de atendimentos.</p>
-            </div>
+      <section className="card">
+        <div className="section-title">
+          <div>
+            <h2>👥 Cadastro de Pacientes & Prontuários</h2>
+            <p>Gerencie informações clínicas, agendamentos e histórico de atendimentos.</p>
+          </div>
+          {user.role !== "doctor" && (
             <button onClick={() => setShowAddForm(true)}>+ Novo Paciente</button>
-          </div>
-
-          <div style={{ margin: "1rem 0" }}>
-            <input placeholder="🔍 Buscar por nome ou telefone..." value={search} onChange={(e) => setSearch(e.target.value)} />
-          </div>
-
-          {showAddForm && (
-            <Modal label="Novo paciente" onClose={() => setShowAddForm(false)}>
-                <PatientForm onCancel={() => setShowAddForm(false)} onDone={(id) => { setShowAddForm(false); setSelectedId(id); }} />
-            </Modal>
           )}
+        </div>
 
-          <table>
-            <thead>
-              <tr>
-                <th>Nome do Paciente</th>
-                <th>Telefone</th>
-                <th>Jornada / Status</th>
-                <th>Médico Responsável</th>
-                <th>Próxima Ação</th>
-                <th>Ações</th>
-              </tr>
-            </thead>
-            <tbody>
-              {patients.map((p) => (
-                <tr key={p.id}>
-                  <td>
-                    <PatientLink patientId={p.id} name={p.name} onOpen={openGlobalPatient} />
-                  </td>
-                  <td>{p.phone}</td>
-                  <td><span className="badge info">{statuses[p.journey_status]}</span></td>
-                  <td>{p.responsible_doctor_name || "Não informado"}</td>
-                  <td>{date(p.next_contact_on)}</td>
-                  <td>
-                    <button type="button" className="secondary" style={{ padding: "0.2rem 0.5rem", fontSize: "0.8rem", minHeight: "auto" }} onClick={() => setSelectedId(p.id)}>
-                      Abrir Ficha →
+        <div style={{ margin: "1rem 0" }}>
+          <input placeholder="🔍 Buscar por nome ou telefone..." value={search} onChange={(e) => setSearch(e.target.value)} />
+        </div>
+
+        {showAddForm && user.role !== "doctor" && (
+          <Modal label="Novo paciente" onClose={() => setShowAddForm(false)}>
+            <PatientForm onCancel={() => setShowAddForm(false)} onDone={(id) => { setShowAddForm(false); openGlobalPatient(id); }} />
+          </Modal>
+        )}
+
+        <table>
+          <thead>
+            <tr>
+              <th>Nome do Paciente</th>
+              <th>Telefone</th>
+              <th>Jornada / Status</th>
+              <th>Médico Responsável</th>
+              <th>Próxima Ação</th>
+              <th>Ações</th>
+            </tr>
+          </thead>
+          <tbody>
+            {patients.map((p) => (
+              <tr key={p.id}>
+                <td>
+                  <PatientLink patientId={p.id} name={p.name} onOpen={openGlobalPatient} />
+                </td>
+                <td>{p.phone || "Não informado"}</td>
+                <td><span className="badge info">{statuses[p.journey_status] || p.journey_status}</span></td>
+                <td>{p.responsible_doctor_name || "Não informado"}</td>
+                <td>{p.next_contact_on ? date(p.next_contact_on) : "-"}</td>
+                <td>
+                  <div style={{ display: "flex", gap: "0.5rem" }}>
+                    <button type="button" className="secondary" style={{ padding: "0.2rem 0.5rem", fontSize: "0.8rem", minHeight: "auto" }} onClick={() => openGlobalPatient(p.id)}>
+                      Prontuário
                     </button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </section>
-      )}
+                    <button type="button" style={{ padding: "0.2rem 0.5rem", fontSize: "0.8rem", minHeight: "auto" }} onClick={() => onSchedule(p.id)}>
+                      Agendar
+                    </button>
+                  </div>
+                </td>
+              </tr>
+            ))}
+            {patients.length === 0 && (
+              <tr>
+                <td colSpan={6} style={{ textAlign: "center", padding: "2rem" }}>Nenhum paciente encontrado.</td>
+              </tr>
+            )}
+          </tbody>
+        </table>
+      </section>
     </div>
   );
 }
@@ -2088,6 +2101,17 @@ function Dashboard({ user, openPatient, openFollowUps }: { user: User; openPatie
           </div>
         </section>
       )}
+
+      {/* Calendário da Dashboard */}
+      <DashboardCalendar 
+        user={user} 
+        api={api} 
+        PatientLink={({ id, name }) => (
+          <button className="patient-link" onClick={() => openPatient(id)}>
+            {name || "Visualizar Paciente"}
+          </button>
+        )}
+      />
     </>
   );
 }
@@ -2813,7 +2837,7 @@ function LoginForm({ onLogin }: { onLogin: (user: User) => void }) {
                 disabled={loading}
                 onClick={() => handleDemoLogin("admin")}
               >
-                <span>👑 Entrar como <strong>Administrador</strong></span>
+                <span style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>👑 <strong>Administrador</strong></span>
                 <small style={{ opacity: 0.7 }}>Acesso Total</small>
               </button>
               <button
@@ -2823,7 +2847,7 @@ function LoginForm({ onLogin }: { onLogin: (user: User) => void }) {
                 disabled={loading}
                 onClick={() => handleDemoLogin("operator")}
               >
-                <span>🛒 Entrar como <strong>Operador (Caixa / PDV)</strong></span>
+                <span style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>🛒 <strong>Operador (Caixa / PDV)</strong></span>
                 <small style={{ opacity: 0.7 }}>Atendimento & Vendas</small>
               </button>
               <button
@@ -2833,7 +2857,7 @@ function LoginForm({ onLogin }: { onLogin: (user: User) => void }) {
                 disabled={loading}
                 onClick={() => handleDemoLogin("doctor")}
               >
-                <span>🩺 Entrar como <strong>Médico Fonoaudiólogo</strong></span>
+                <span style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>🩺 <strong>Médico Fonoaudiólogo</strong></span>
                 <small style={{ opacity: 0.7 }}>Agenda & Prontuários</small>
               </button>
             </div>
@@ -2849,8 +2873,13 @@ function App() {
   const [loading, setLoading] = useState(true);
   const [demoMode, setDemoMode] = useState(false);
   const [page, setPage] = useState("Início");
-  const [patientId, setPatientId] = useState<string | null>(null);
+  const [patientIdForSchedule, setPatientIdForSchedule] = useState<string | null>(null);
   const [globalPatientId, setGlobalPatientId] = useState<string | null>(null);
+
+  const getPagesForRole = (role: string) =>
+    role === "doctor"
+      ? ["Início", "Agenda", "Pacientes"]
+      : ["Início", "Caixa (PDV)", "Pacientes", "Acompanhamento", "Estoque & Catálogo", "Financeiro", "Importação CSV"];
 
   useEffect(() => {
     fetch("/api/config")
@@ -2866,13 +2895,14 @@ function App() {
   if (loading) return <div className="center"><LoadingState label="Carregando Fonolife…" /></div>;
 
   if (!user) {
-    return <LoginForm onLogin={setUser} />;
+    return <LoginForm onLogin={(u) => {
+      setUser(u);
+      setPage("Início");
+    }} />;
   }
 
-  const pages =
-    user.role === "doctor"
-      ? ["Minha Agenda", "Meus Pacientes", "Atendimento Clínico", "Pacientes"]
-      : ["Início", "Caixa (PDV)", "Pacientes", "Acompanhamento", "Estoque & Catálogo", "Financeiro", "Importação CSV"];
+  const pages = getPagesForRole(user.role);
+  const currentPage = pages.includes(page) ? page : "Início";
 
   return (
     <AppShell>
@@ -2896,30 +2926,44 @@ function App() {
 
       <Sidebar>
         {pages.map((item) => (
-          <button key={item} className={page === item ? "active" : ""} onClick={() => setPage(item)}>
+          <button key={item} className={currentPage === item ? "active" : ""} onClick={() => setPage(item)}>
             {item}
           </button>
         ))}
       </Sidebar>
 
       <main>
-        <PageHeader title={page} />
+        <PageHeader title={currentPage} />
 
-        {page === "Minha Agenda" ? (
-          <DoctorAgenda openGlobalPatient={setGlobalPatientId} />
-        ) : page === "Meus Pacientes" || page === "Atendimento Clínico" ? (
-          <Patients user={user} initialPatientId={patientId} openGlobalPatient={setGlobalPatientId} />
-        ) : page === "Caixa (PDV)" ? (
+        {currentPage === "Agenda" || currentPage === "Minha Agenda" ? (
+          <AgendaPage 
+            user={user} 
+            api={api} 
+            initialPatientIdForSchedule={patientIdForSchedule}
+            PatientLink={({ id, name }) => (
+              <button className="patient-link" onClick={() => setGlobalPatientId(id)}>
+                {name || id}
+              </button>
+            )} 
+          />
+        ) : currentPage === "Caixa (PDV)" ? (
           <PosCheckout user={user} openGlobalPatient={setGlobalPatientId} />
-        ) : page === "Pacientes" ? (
-          <Patients user={user} initialPatientId={patientId} openGlobalPatient={setGlobalPatientId} />
-        ) : page === "Acompanhamento" ? (
+        ) : currentPage === "Pacientes" || currentPage === "Meus Pacientes" || currentPage === "Atendimento Clínico" ? (
+          <Patients 
+            user={user} 
+            openGlobalPatient={setGlobalPatientId} 
+            onSchedule={(id) => {
+              setPatientIdForSchedule(id);
+              setPage("Agenda");
+            }}
+          />
+        ) : currentPage === "Acompanhamento" ? (
           <FollowUps openGlobalPatient={setGlobalPatientId} />
-        ) : page === "Financeiro" ? (
+        ) : currentPage === "Financeiro" ? (
           <Finance user={user} openGlobalPatient={setGlobalPatientId} />
-        ) : page === "Estoque & Catálogo" || page === "Estoque" ? (
+        ) : currentPage === "Estoque & Catálogo" || currentPage === "Estoque" ? (
           <Inventory user={user} openGlobalPatient={setGlobalPatientId} />
-        ) : page === "Importação CSV" ? (
+        ) : currentPage === "Importação CSV" ? (
           <CsvImport />
         ) : (
           <Dashboard user={user} openPatient={(id) => setGlobalPatientId(id)} openFollowUps={() => setPage("Acompanhamento")} />
@@ -2936,3 +2980,4 @@ createRoot(document.getElementById("root")!).render(
     <App />
   </React.StrictMode>
 );
+

@@ -11,3 +11,6 @@ export const pool = new pg.Pool({
   ssl,
 });
 
+pool.on('error', (err) => {
+  console.error('Unexpected error on idle client', err);
+});

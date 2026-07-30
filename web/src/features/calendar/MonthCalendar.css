@@ -1,0 +1,197 @@
+.month-calendar {
+  display: flex;
+  flex-direction: column;
+  background: var(--card-bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  overflow: hidden;
+  box-shadow: var(--shadow);
+}
+
+.month-calendar-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1rem;
+  border-bottom: 1px solid var(--border);
+  flex-wrap: wrap;
+  gap: 1rem;
+}
+
+.month-calendar-title {
+  font-size: 1.25rem;
+  font-weight: 700;
+  text-transform: capitalize;
+  margin: 0;
+}
+
+.month-calendar-nav {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.month-calendar-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  border-bottom: 1px solid var(--border);
+  background: var(--border);
+  gap: 1px; /* Creates the border effect between cells */
+}
+
+.month-calendar-weekday {
+  background: var(--card-bg);
+  padding: 0.5rem;
+  text-align: center;
+  font-weight: 600;
+  font-size: 0.85rem;
+  color: var(--text-muted);
+}
+
+.month-calendar-cell {
+  background: var(--card-bg);
+  min-height: 100px;
+  padding: 0.5rem;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  transition: background-color 0.15s;
+}
+
+.month-calendar-cell.out-of-month {
+  background: var(--bg);
+  opacity: 0.6;
+}
+
+.month-calendar-cell.today .day-number {
+  background: var(--primary);
+  color: white;
+  border-radius: var(--radius-pill);
+  min-width: 24px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.month-calendar-day-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.25rem;
+}
+
+.day-number {
+  font-weight: 600;
+  font-size: 0.9rem;
+  padding: 0.15rem 0.4rem;
+}
+
+.day-action-button {
+  background: transparent;
+  border: none;
+  color: transparent;
+  cursor: pointer;
+  padding: 0;
+  font-size: 1.1rem;
+  line-height: 1;
+}
+
+.month-calendar-cell:hover .day-action-button {
+  color: var(--primary);
+}
+
+.appointments-list {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  flex: 1;
+  overflow: hidden;
+}
+
+.appointment-chip {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 0.75rem;
+  padding: 4px 6px;
+  border-radius: 6px;
+  font-weight: 500;
+  background: var(--primary-light);
+  color: var(--primary-hover);
+  border: none;
+  width: 100%;
+  text-align: left;
+  cursor: pointer;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.appointment-chip:hover {
+  background: #bae6fd;
+}
+
+.appointment-chip.status-cancelled {
+  background: var(--danger-bg);
+  color: var(--danger);
+  text-decoration: line-through;
+}
+.appointment-chip.status-completed {
+  background: var(--success-bg);
+  color: var(--success);
+}
+
+.appointment-time {
+  font-weight: 700;
+  opacity: 0.8;
+}
+
+.appointment-patient {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.more-button {
+  background: transparent;
+  border: none;
+  color: var(--text-muted);
+  font-size: 0.75rem;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 2px;
+  text-align: left;
+}
+.more-button:hover {
+  text-decoration: underline;
+  color: var(--primary);
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .month-calendar-cell {
+    min-height: 80px;
+    padding: 2px;
+  }
+  .appointment-chip {
+    font-size: 0.65rem;
+  }
+  .month-calendar-weekday {
+    font-size: 0.75rem;
+    padding: 0.25rem;
+  }
+}
+
+@media (max-width: 360px) {
+  .month-calendar-cell {
+    min-height: 60px;
+  }
+  .appointment-time {
+    display: none; /* Hide time on very small screens to save space */
+  }
+  .month-calendar-header {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .month-calendar-nav {
+    justify-content: space-between;
+  }
+}

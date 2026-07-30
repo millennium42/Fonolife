@@ -45,6 +45,7 @@ export async function seedDemo() {
     const realAdminId = userMap.get("demo-admin@demo.invalid") || adminId;
     const realDoctor1Id = userMap.get("demo-doctor-1@demo.invalid") || doctor1Id;
     const realDoctor2Id = userMap.get("demo-doctor-2@demo.invalid") || doctor2Id;
+    const realDoctor3Id = realDoctor1Id; // Fallback since demo only has 2 doctors
 
     // 2. Contas Jurídicas / Caixas
     const account1Id = "20000000-0000-4000-8000-000000000001";
@@ -134,11 +135,29 @@ export async function seedDemo() {
     const pat1Id = "50000000-0000-4000-8000-000000000001";
     const pat2Id = "50000000-0000-4000-8000-000000000002";
     const pat3Id = "50000000-0000-4000-8000-000000000003";
+    const pat4Id = "50000000-0000-4000-8000-000000000004";
+    const pat5Id = "50000000-0000-4000-8000-000000000005";
+    const pat6Id = "50000000-0000-4000-8000-000000000006";
+    const pat7Id = "50000000-0000-4000-8000-000000000007";
+    const pat8Id = "50000000-0000-4000-8000-000000000008";
+    const pat9Id = "50000000-0000-4000-8000-000000000009";
+    const pat10Id = "50000000-0000-4000-8000-000000000010";
+    const pat11Id = "50000000-0000-4000-8000-000000000011";
+    const pat12Id = "50000000-0000-4000-8000-000000000012";
 
     const patientsData = [
       [pat1Id, "Dona Maria Lurdes Santos", "11987654321", "1952-04-12", "João Santos (Filho)", "referral", "adaptation", "Usuária de aparelho auditivo Phonak. Relata ótima adaptação.", "Sensibilidade a sons agudos", realDoctor1Id],
       [pat2Id, "Seu Antônio Ferreira", "11976543210", "1948-09-25", null, "whatsapp", "proposal", "Em teste comparativo de aparelhos Oticon e Phonak.", "Dificuldade motora leve nas mãos", realDoctor1Id],
       [pat3Id, "Juliana Mendes", "11965432109", "1989-02-18", null, "google", "new_lead", "Procurou a clínica após resultado de audiometria alterado.", "", realDoctor2Id],
+      [pat4Id, "Sr. Roberto Alves", "11911223344", "1960-03-10", null, "google", "follow_up", "Usa aparelho há 2 anos, mas quer trocar.", "", realDoctor1Id],
+      [pat5Id, "Helena Souza", "11922334455", "1992-07-21", null, "referral", "screening", "Zumbido constante no ouvido esquerdo.", "Cuidado com zumbido", realDoctor3Id],
+      [pat6Id, "Jorge Martins", "11933445566", "1955-11-05", "Filha Camila", "instagram", "adaptation", "Teste de audição bilateral.", "", realDoctor2Id],
+      [pat7Id, "Luciana Costa", "11944556677", "1980-08-30", null, "whatsapp", "follow_up", "Retorno anual de acompanhamento.", "", realDoctor1Id],
+      [pat8Id, "Marcos Lima", "11955667788", "1975-01-14", null, "google", "screening", "Primeira consulta para avaliar perda súbita.", "", realDoctor3Id],
+      [pat9Id, "Beatriz Silva", "11966778899", "1940-12-01", "Neto Carlos", "referral", "follow_up", "Adaptação de aparelho novo Oticon.", "", realDoctor2Id],
+      [pat10Id, "Felipe Nogueira", "11977889900", "1985-05-19", null, "instagram", "adaptation", "Regulagem fina pós-compra.", "", realDoctor1Id],
+      [pat11Id, "Sandra Dias", "11988990011", "1968-09-08", null, "whatsapp", "follow_up", "Manutenção preventiva do aparelho.", "", realDoctor3Id],
+      [pat12Id, "Vítor Mendes", "11999001122", "1972-04-26", null, "google", "screening", "Consulta para orçamento de prótese.", "", realDoctor2Id],
     ] as const;
 
     for (const [id, name, phone, birth, guardian, source, status, notes, alert, doctorId] of patientsData) {
@@ -183,6 +202,37 @@ export async function seedDemo() {
       "UPDATE sales SET product_id=$1,cost_amount_cents=320000 WHERE id=$2",
       [prod1Id, saleId],
     );
+
+    // 7. Agendamentos de Demonstração (Appointments)
+    const app1Id = "70000000-0000-4000-8000-000000000001";
+    const app2Id = "70000000-0000-4000-8000-000000000002";
+    
+    // Appointment 1: Today, doctor 1, patient 1
+    const existingApp1 = await client.query("SELECT 1 FROM appointments WHERE id=$1", [app1Id]);
+    if (!existingApp1.rowCount) {
+      await client.query(
+        `INSERT INTO appointments(id, doctor_id, patient_id, scheduled_start, scheduled_end, appointment_type, status, notes, created_by)
+         VALUES($1, $2, $3, 
+          CURRENT_DATE + TIME '10:00:00',
+          CURRENT_DATE + TIME '11:00:00',
+          'adaptation', 'scheduled', 'Primeira regulagem', $4)`,
+        [app1Id, realDoctor1Id, realPat1Id, realAdminId]
+      );
+    }
+    
+    // Appointment 2: Tomorrow, doctor 2, patient 3
+    const pat3MapId = patMap.get("11965432109") || pat3Id;
+    const existingApp2 = await client.query("SELECT 1 FROM appointments WHERE id=$1", [app2Id]);
+    if (!existingApp2.rowCount) {
+      await client.query(
+        `INSERT INTO appointments(id, doctor_id, patient_id, scheduled_start, scheduled_end, appointment_type, status, notes, created_by)
+         VALUES($1, $2, $3, 
+          CURRENT_DATE + INTERVAL '1 day' + TIME '14:00:00',
+          CURRENT_DATE + INTERVAL '1 day' + TIME '15:00:00',
+          'screening', 'confirmed', 'Avaliação inicial', $4)`,
+        [app2Id, realDoctor2Id, pat3MapId, realAdminId]
+      );
+    }
 
     await client.query("COMMIT");
     console.log("✅ Banco de Dados Fonolife povoado com sucesso com dados realistas de demonstração!");

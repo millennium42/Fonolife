@@ -130,7 +130,7 @@ legend { font-weight: 700; }
 }
 .shell header .brand { color: white; }
 .shell nav {
-  position: fixed; width: 230px; top: 64px; bottom: 0; padding: 1.25rem 0.75rem;
+  position: fixed; width: 250px; top: 64px; bottom: 0; padding: 1.25rem 0.75rem;
   background: var(--navy-light); border-right: 1px solid #334155;
 }
 .shell nav button {
@@ -140,13 +140,13 @@ legend { font-weight: 700; }
 .shell nav button:hover { background: rgba(255, 255, 255, 0.05); color: white; }
 .shell nav .active { background: var(--primary); color: white; }
 
-.shell main { margin-left: 230px; padding: 2rem; max-width: 1300px; }
+.shell main { margin-left: 250px; padding: 2rem; max-width: 1440px; margin-right: auto; }
 .title { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; }
 .title h1 { font-size: 1.8rem; margin: 0; }
 .title p { margin: 0.2rem 0 0; color: var(--text-muted); font-size: 0.95rem; }
 
 .dashboard-cards, .finance-summary, .finance-accounts {
-  display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; margin: 1rem 0;
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 1.5rem; margin: 1.5rem 0;
 }
 .dashboard-card, .kpi-card {
   background: white; border: 1px solid var(--border); border-radius: var(--radius);
