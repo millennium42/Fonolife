@@ -2,21 +2,12 @@ import { randomBytes, randomUUID } from "node:crypto";
 import type { FastifyInstance, FastifyRequest } from "fastify";
 import { pool } from "../../db/pool.js";
 import { config } from "../../config.js";
-import {
-  hashPassword,
-  hashToken,
-  verifyPassword,
-  isPasswordPolicyValid,
-  MIN_PASSWORD_LENGTH,
-} from "../../domain/security.js";
+import { hashPassword, hashToken, verifyPassword } from "../../domain/security.js";
 import {
   clearLoginFailures,
   isLoginRateLimited,
   recordLoginFailure,
   revokeUserSessions,
-  setSessionCookie,
-  clearSessionCookie,
-  SESSION_COOKIE_NAME,
 } from "./middleware.js";
 
 export async function authRoutes(app: FastifyInstance) {
@@ -66,28 +57,23 @@ export async function authRoutes(app: FastifyInstance) {
           });
         }
 
+        await clearLoginFailures(pool, ip, rateLimitKey);
         const token = randomBytes(32).toString("base64url");
-        const client = await pool.connect();
-        try {
-          await client.query("BEGIN");
-          await clearLoginFailures(client, ip, rateLimitKey);
-          await client.query(
-            `INSERT INTO user_sessions(id,user_id,token_hash,expires_at) VALUES($1,$2,$3,now()+interval '8 hours')`,
-            [randomUUID(), user.id, hashToken(token)],
-          );
-          await client.query(
-            "INSERT INTO audit_events(user_id,action,entity_type,entity_id,details) VALUES($1,'demo_session','user',$2,$3)",
-            [user.id, user.id, { ip, role }],
-          );
-          await client.query("COMMIT");
-        } catch (err) {
-          await client.query("ROLLBACK").catch(() => {});
-          throw err;
-        } finally {
-          client.release();
-        }
-
-        setSessionCookie(reply, token);
+        await pool.query(
+          `INSERT INTO user_sessions(id,user_id,token_hash,expires_at) VALUES($1,$2,$3,now()+interval '8 hours')`,
+          [randomUUID(), user.id, hashToken(token)],
+        );
+        await pool.query(
+          "INSERT INTO audit_events(user_id,action,entity_type,entity_id,details) VALUES($1,'demo_session','user',$2,$3)",
+          [user.id, user.id, { ip, role }],
+        );
+        reply.setCookie("fonolife_session", token, {
+          httpOnly: true,
+          sameSite: "lax",
+          secure: config.secureRuntime,
+          path: "/",
+          maxAge: 28_800,
+        });
         return { user: { ...user, mustChangePassword: user.must_change_password } };
       },
     );
@@ -108,6 +94,16 @@ export async function authRoutes(app: FastifyInstance) {
           .send({ title: "Muitas tentativas de login falhas. Aguarde 15 minutos.", status: 429 });
       }
 
+      let user: {
+        id: string;
+        name: string;
+        email: string;
+        role: "admin" | "operator" | "doctor";
+        password_hash: string;
+        active: boolean;
+        must_change_password: boolean;
+      } | undefined;
+
       const result = email
         ? await pool.query<{
             id: string;
@@ -119,7 +115,7 @@ export async function authRoutes(app: FastifyInstance) {
             must_change_password: boolean;
           }>("SELECT * FROM users WHERE email=$1 AND active", [email])
         : { rows: [] };
-      const user = result.rows[0];
+      user = result.rows[0];
 
       const isPasswordValid = user && password
         ? await verifyPassword(password, user.password_hash).catch(() => false)
@@ -133,30 +129,27 @@ export async function authRoutes(app: FastifyInstance) {
           .send({ title: "E-mail ou senha incorretos", status: 401 });
       }
 
+      // Reseta falhas acumuladas após autenticação bem-sucedida
+      await clearLoginFailures(pool, ip, email);
+
       const token = randomBytes(32).toString("base64url");
       const tokenHash = hashToken(token);
+      await pool.query(
+        `INSERT INTO user_sessions(id,user_id,token_hash,expires_at) VALUES($1,$2,$3,now()+interval '8 hours')`,
+        [randomUUID(), user.id, tokenHash]
+      );
+      await pool.query(
+        "INSERT INTO audit_events(user_id,action,entity_type,entity_id,details) VALUES($1,'login','user',$2,$3)",
+        [user.id, user.id, { ip }]
+      );
 
-      const client = await pool.connect();
-      try {
-        await client.query("BEGIN");
-        await clearLoginFailures(client, ip, email);
-        await client.query(
-          `INSERT INTO user_sessions(id,user_id,token_hash,expires_at) VALUES($1,$2,$3,now()+interval '8 hours')`,
-          [randomUUID(), user.id, tokenHash]
-        );
-        await client.query(
-          "INSERT INTO audit_events(user_id,action,entity_type,entity_id,details) VALUES($1,'login','user',$2,$3)",
-          [user.id, user.id, { ip }]
-        );
-        await client.query("COMMIT");
-      } catch (err) {
-        await client.query("ROLLBACK").catch(() => {});
-        throw err;
-      } finally {
-        client.release();
-      }
-
-      setSessionCookie(reply, token);
+      reply.setCookie("fonolife_session", token, {
+        httpOnly: true,
+        sameSite: "lax",
+        secure: config.secureRuntime,
+        path: "/",
+        maxAge: 28_800,
+      });
 
       return {
         user: {
@@ -171,39 +164,21 @@ export async function authRoutes(app: FastifyInstance) {
   );
 
   app.post("/api/auth/logout", async (request, reply) => {
-    const token = request.cookies[SESSION_COOKIE_NAME] ?? request.cookies.fonolife_session;
-    clearSessionCookie(reply);
-
+    const token = request.cookies.fonolife_session;
     if (token) {
-      const tokenHash = hashToken(token);
       try {
-        const client = await pool.connect();
-        try {
-          await client.query("BEGIN");
-          const delRes = await client.query<{ user_id: string }>(
-            "DELETE FROM user_sessions WHERE token_hash=$1 RETURNING user_id",
-            [tokenHash]
-          );
-          const userId = delRes.rows[0]?.user_id || (delRes.rowCount && request.currentUser?.id);
-          if (delRes.rowCount && delRes.rowCount > 0 && userId) {
-            await client.query(
-              "INSERT INTO audit_events(user_id,action,entity_type,entity_id,details) VALUES($1,'logout','user',$2,$3)",
-              [userId, userId, {}]
-            );
-          }
-          await client.query("COMMIT");
-        } catch (txErr) {
-          await client.query("ROLLBACK").catch(() => {});
-          throw txErr;
-        } finally {
-          client.release();
-        }
-      } catch (err) {
-        if (config.production) {
-          throw err;
-        }
-      }
+        await pool.query("DELETE FROM user_sessions WHERE token_hash=$1", [hashToken(token)]);
+      } catch {}
     }
+    if (request.currentUser) {
+      try {
+        await pool.query(
+          "INSERT INTO audit_events(user_id,action,entity_type,entity_id,details) VALUES($1,'logout','user',$2,$3)",
+          [request.currentUser.id, request.currentUser.id, {}]
+        );
+      } catch {}
+    }
+    reply.clearCookie("fonolife_session", { path: "/" });
     return reply.code(204).send();
   });
 
@@ -216,18 +191,21 @@ export async function authRoutes(app: FastifyInstance) {
     { preHandler: authenticated },
     async (request, reply) => {
       const { currentPassword, newPassword } = request.body ?? {};
-      if (!currentPassword || !newPassword || !isPasswordPolicyValid(newPassword)) {
+      if (!currentPassword || !newPassword || newPassword.length < 8) {
         return reply.code(400).type("application/problem+json").send({
-          title: `A nova senha deve possuir ao menos ${MIN_PASSWORD_LENGTH} caracteres`,
+          title: "A nova senha deve possuir ao menos 8 caracteres",
           status: 400,
         });
       }
 
-      const userRes = await pool.query<{ password_hash: string }>(
-        "SELECT password_hash FROM users WHERE id=$1 AND active",
-        [request.currentUser!.id]
-      );
-      const storedHash = userRes.rows[0]?.password_hash;
+      let storedHash: string | undefined;
+      try {
+        const userRes = await pool.query<{ password_hash: string }>(
+          "SELECT password_hash FROM users WHERE id=$1 AND active",
+          [request.currentUser!.id]
+        );
+        storedHash = userRes.rows[0]?.password_hash;
+      } catch {}
 
       const isValid = storedHash
         ? await verifyPassword(currentPassword, storedHash).catch(() => false)
@@ -241,7 +219,7 @@ export async function authRoutes(app: FastifyInstance) {
       }
 
       const newHash = await hashPassword(newPassword);
-      const currentToken = request.cookies[SESSION_COOKIE_NAME] ?? request.cookies.fonolife_session;
+      const currentToken = request.cookies.fonolife_session;
       const currentTokenHash = currentToken ? hashToken(currentToken) : undefined;
 
       const client = await pool.connect();
