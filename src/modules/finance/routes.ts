@@ -59,7 +59,7 @@ const idempotencyRetry = (
   row.request_fingerprint === requestFingerprint
     ? reply.code(200).send({ id: row.id, idempotent: true })
     : reply.code(409).type("application/problem+json").send({
-        title: "Chave de idempotÃªncia reutilizada com payload diferente",
+        title: "Chave de idempotência reutilizada com payload diferente",
         status: 409,
       });
 
@@ -88,7 +88,7 @@ export async function financeRoutes(app: FastifyInstance) {
     async (request, reply) => {
       const digits = request.body.cnpj?.replace(/\D/g, "");
       if (!validCnpj(digits ?? ""))
-        return reply.code(400).send({ title: "CNPJ invÃ¡lido", status: 400 });
+        return reply.code(400).send({ title: "CNPJ inválido", status: 400 });
       const id = randomUUID();
       await pool.query(
         "INSERT INTO company_accounts(id,trade_name,cnpj,short_label) VALUES($1,$2,$3,$4)",
@@ -186,7 +186,7 @@ export async function financeRoutes(app: FastifyInstance) {
           );
           if (!appointment.rowCount || ["cancelled", "no_show"].includes(appointment.rows[0].status)) {
             await client.query("ROLLBACK");
-            return reply.code(404).type("application/problem+json").send({ title: "Appointment nÃ£o encontrado para vincular a venda", status: 404 });
+            return reply.code(404).type("application/problem+json").send({ title: "Appointment não encontrado para vincular a venda", status: 404 });
           }
           if (body.patientId && appointment.rows[0].patient_id && appointment.rows[0].patient_id !== body.patientId) {
             await client.query("ROLLBACK");
@@ -197,7 +197,7 @@ export async function financeRoutes(app: FastifyInstance) {
         if (body.productId && body.serviceId) {
           await client.query("ROLLBACK");
           return reply.code(400).type("application/problem+json").send({
-            title: "Selecione produto ou serviÃ§o, nÃ£o ambos",
+            title: "Selecione produto ou serviço, não ambos",
             status: 400,
           });
         }
@@ -211,7 +211,7 @@ export async function financeRoutes(app: FastifyInstance) {
           if (!product.rowCount) {
             await client.query("ROLLBACK");
             return reply.code(404).type("application/problem+json").send({
-              title: "Produto ativo nÃ£o encontrado",
+              title: "Produto ativo não encontrado",
               status: 404,
             });
           }
@@ -302,7 +302,7 @@ export async function financeRoutes(app: FastifyInstance) {
               randomUUID(),
               body.productId,
               -Math.abs(Number(body.quantity)),
-              `Baixa automÃ¡tica pela Venda ${saleId}`,
+              `Baixa automática pela Venda ${saleId}`,
               request.currentUser!.id,
             ]
           );
@@ -317,7 +317,7 @@ export async function financeRoutes(app: FastifyInstance) {
                 randomUUID(),
                 sp.product_id,
                 deductionQty,
-                `Consumo de insumo pelo ServiÃ§o na Venda ${saleId}`,
+                `Consumo de insumo pelo Serviço na Venda ${saleId}`,
                 request.currentUser!.id,
               ]
             );
@@ -356,9 +356,9 @@ export async function financeRoutes(app: FastifyInstance) {
         }
         if (body.patientId) {
           for (const [days, title] of [
-            [7, "Contato pÃ³s-venda (7 dias)"],
-            [30, "Retorno pÃ³s-venda (30 dias)"],
-            [90, "Acompanhamento pÃ³s-venda (90 dias)"],
+            [7, "Contato pós-venda (7 dias)"],
+            [30, "Retorno pós-venda (30 dias)"],
+            [90, "Acompanhamento pós-venda (90 dias)"],
           ] as const)
             await client.query(
               `INSERT INTO follow_up_tasks(id,patient_id,title,due_on,notes,created_by,sale_id) VALUES($1,$2,$3,$4::date+$5::integer,'Gerado automaticamente pela venda',$6,$7)`,
@@ -427,7 +427,7 @@ export async function financeRoutes(app: FastifyInstance) {
         return reply
           .code(404)
           .type("application/problem+json")
-          .send({ title: "Venda nÃ£o encontrada", status: 404 });
+          .send({ title: "Venda não encontrada", status: 404 });
 
       if (sale.rows[0].patient_id) {
         const authorized = await loadAndAuthorizePatient(request, reply, sale.rows[0].patient_id, "read");
@@ -488,7 +488,7 @@ export async function financeRoutes(app: FastifyInstance) {
         return reply
           .code(400)
           .type("application/problem+json")
-          .send({ title: "SituaÃ§Ã£o de entrega invÃ¡lida", status: 400 });
+          .send({ title: "Situação de entrega inválida", status: 400 });
       const changed = await pool.query(
         `WITH updated AS (UPDATE sales SET delivery_status=$2 WHERE id=$1 AND cancelled_at IS NULL RETURNING id),audited AS (INSERT INTO audit_events(user_id,action,entity_type,entity_id,details) SELECT $3,'update_delivery','sale',id,jsonb_build_object('deliveryStatus',$2::text) FROM updated) SELECT id FROM updated`,
         [
@@ -501,7 +501,7 @@ export async function financeRoutes(app: FastifyInstance) {
         return reply
           .code(409)
           .type("application/problem+json")
-          .send({ title: "Venda nÃ£o encontrada ou cancelada", status: 409 });
+          .send({ title: "Venda não encontrada ou cancelada", status: 409 });
       return reply.code(204).send();
     },
   );
@@ -529,7 +529,7 @@ export async function financeRoutes(app: FastifyInstance) {
             .code(409)
             .type("application/problem+json")
             .send({
-              title: "Venda nÃ£o encontrada ou jÃ¡ cancelada",
+              title: "Venda não encontrada ou já cancelada",
               status: 409,
             });
         }
@@ -618,7 +618,7 @@ export async function financeRoutes(app: FastifyInstance) {
 
   app.post<{ Body: { clientRequestId?: string; entryType?: string; category?: string; description?: string; amountCents?: number; competenceOn?: string; occurredOn?: string; paymentMethod?: string; companyAccountId?: string; patientId?: string; notes?: string } }>("/api/finance/entries", { preHandler: operatorOrAdmin }, async (request, reply) => {
     const body = request.body ?? {};
-    if (!validFinancialEntry(body)) return reply.code(400).type("application/problem+json").send({ title: "Confira tipo, categoria, descriÃ§Ã£o, valor, datas, pagamento e caixa", status: 400 });
+    if (!validFinancialEntry(body)) return reply.code(400).type("application/problem+json").send({ title: "Confira tipo, categoria, descrição, valor, datas, pagamento e caixa", status: 400 });
     const requestFingerprint = idempotencyFingerprint({
       entryType: body.entryType,
       category: body.category,
@@ -637,7 +637,7 @@ export async function financeRoutes(app: FastifyInstance) {
       const retry = await client.query("SELECT id,request_fingerprint FROM financial_entries WHERE client_request_id=$1", [body.clientRequestId]);
       if (retry.rowCount) { await client.query("COMMIT"); return idempotencyRetry(reply, retry.rows[0], requestFingerprint); }
       const account = await client.query("SELECT id FROM company_accounts WHERE id=$1 AND active", [body.companyAccountId]);
-      if (!account.rowCount) { await client.query("ROLLBACK"); return reply.code(404).type("application/problem+json").send({ title: "Caixa ativo nÃ£o encontrado", status: 404 }); }
+      if (!account.rowCount) { await client.query("ROLLBACK"); return reply.code(404).type("application/problem+json").send({ title: "Caixa ativo não encontrado", status: 404 }); }
       const id = randomUUID();
       await client.query(`INSERT INTO financial_entries(id,client_request_id,request_fingerprint,entry_type,category,description,amount_cents,competence_on,occurred_on,payment_method,company_account_id,patient_id,notes,created_by) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14)`, [id,body.clientRequestId,requestFingerprint,body.entryType,body.category,body.description!.trim(),body.amountCents,body.competenceOn,body.occurredOn,body.paymentMethod,body.companyAccountId,body.patientId || null,body.notes?.trim() ?? "",request.currentUser!.id]);
       await client.query("INSERT INTO audit_events(user_id,action,entity_type,entity_id,details) VALUES($1,'create','financial_entry',$2,$3)", [request.currentUser!.id,id,{ entryType: body.entryType, amountCents: body.amountCents }]);
@@ -679,7 +679,7 @@ export async function financeRoutes(app: FastifyInstance) {
       const retry = await client.query("SELECT id,request_fingerprint FROM financial_entries WHERE client_request_id=$1", [clientRequestId]);
       if (retry.rowCount) { await client.query("COMMIT"); return idempotencyRetry(reply, retry.rows[0], requestFingerprint); }
       const installment = await client.query(`SELECT r.*,s.product,s.sold_on,s.company_account_id,s.patient_id,s.cancelled_at FROM receivable_installments r JOIN sales s ON s.id=r.sale_id WHERE r.id=$1 FOR UPDATE OF r`, [request.params.id]);
-      if (!installment.rowCount || installment.rows[0].cancelled_at) { await client.query("ROLLBACK"); return reply.code(409).type("application/problem+json").send({ title: "Parcela nÃ£o encontrada ou venda cancelada", status: 409 }); }
+      if (!installment.rowCount || installment.rows[0].cancelled_at) { await client.query("ROLLBACK"); return reply.code(409).type("application/problem+json").send({ title: "Parcela não encontrada ou venda cancelada", status: 409 }); }
       const retryAfterLock = await client.query("SELECT id,request_fingerprint FROM financial_entries WHERE client_request_id=$1", [clientRequestId]);
       if (retryAfterLock.rowCount) { await client.query("COMMIT"); return idempotencyRetry(reply, retryAfterLock.rows[0], requestFingerprint); }
       const row = installment.rows[0], id = randomUUID();
@@ -794,7 +794,7 @@ export async function financeRoutes(app: FastifyInstance) {
       const retry = await client.query("SELECT id,request_fingerprint FROM accounts_payable WHERE client_request_id=$1", [body.clientRequestId]);
       if (retry.rowCount) { await client.query("COMMIT"); return idempotencyRetry(reply, retry.rows[0], requestFingerprint); }
       const account = await client.query("SELECT id FROM company_accounts WHERE id=$1 AND active", [body.companyAccountId]);
-      if (!account.rowCount) { await client.query("ROLLBACK"); return reply.code(404).type("application/problem+json").send({ title: "Caixa ativo nÃ£o encontrado", status: 404 }); }
+      if (!account.rowCount) { await client.query("ROLLBACK"); return reply.code(404).type("application/problem+json").send({ title: "Caixa ativo não encontrado", status: 404 }); }
       const id = randomUUID();
       await client.query(
         `INSERT INTO accounts_payable(id,client_request_id,request_fingerprint,vendor_account_id,vendor_name,company_account_id,description,category,amount_cents,competence_on,due_on,payment_method,notes,created_by)
@@ -819,7 +819,7 @@ export async function financeRoutes(app: FastifyInstance) {
   app.post<{ Params: { id: string }; Body: { clientRequestId?: string; amountCents?: number; occurredOn?: string; companyAccountId?: string; paymentMethod?: string } }>("/api/finance/payables/:id/settle", { preHandler: operatorOrAdmin }, async (request, reply) => {
     const { clientRequestId, amountCents, occurredOn, companyAccountId, paymentMethod } = request.body ?? {};
     if (!/^[0-9a-f-]{36}$/i.test(clientRequestId ?? "") || !Number.isSafeInteger(amountCents) || Number(amountCents) <= 0 || !/^\d{4}-\d{2}-\d{2}$/.test(occurredOn ?? "")) {
-      return reply.code(400).type("application/problem+json").send({ title: "Informe chave, valor e data vÃ¡lidos para a baixa", status: 400 });
+      return reply.code(400).type("application/problem+json").send({ title: "Informe chave, valor e data válidos para a baixa", status: 400 });
     }
     const requestFingerprint = idempotencyFingerprint({
       payableId: request.params.id,
@@ -839,7 +839,7 @@ export async function financeRoutes(app: FastifyInstance) {
       );
       if (!payable.rowCount || payable.rows[0].cancelled_at) {
         await client.query("ROLLBACK");
-        return reply.code(404).type("application/problem+json").send({ title: "Conta a pagar nÃ£o encontrada ou cancelada", status: 404 });
+        return reply.code(404).type("application/problem+json").send({ title: "Conta a pagar não encontrada ou cancelada", status: 404 });
       }
       const row = payable.rows[0];
       const settlements = await client.query<{ settled_amount_cents: string }>(
@@ -952,7 +952,7 @@ export async function financeRoutes(app: FastifyInstance) {
     const finalClientRequestId = clientRequestId || randomUUID();
     const finalOccurredOn = occurredOn || new Intl.DateTimeFormat("en-CA", { timeZone: "America/Sao_Paulo" }).format(new Date());
 
-    if (!finalReason || finalReason.length < 3) return reply.code(400).type("application/problem+json").send({ title: "Informe a justificativa do estorno (mÃ­nimo 3 caracteres)", status: 400 });
+    if (!finalReason || finalReason.length < 3) return reply.code(400).type("application/problem+json").send({ title: "Informe a justificativa do estorno (mínimo 3 caracteres)", status: 400 });
     if (!/^[0-9a-f-]{36}$/i.test(finalClientRequestId) || !/^\d{4}-\d{2}-\d{2}$/.test(finalOccurredOn)) return reply.code(400).type("application/problem+json").send({ title: "Confira a chave e a data do estorno", status: 400 });
     const requestFingerprint = idempotencyFingerprint({
       financialEntryId: request.params.id,
@@ -976,7 +976,7 @@ export async function financeRoutes(app: FastifyInstance) {
          SELECT id FROM reversed`,
         [randomUUID(), finalClientRequestId, requestFingerprint, finalOccurredOn, finalReason, request.currentUser!.id, request.params.id]
       );
-      if (!result.rowCount) return reply.code(409).type("application/problem+json").send({ title: "LanÃ§amento nÃ£o encontrado ou jÃ¡ estornado", status: 409 });
+      if (!result.rowCount) return reply.code(409).type("application/problem+json").send({ title: "Lançamento não encontrado ou já estornado", status: 409 });
       return reply.code(201).send({ id: result.rows[0].id });
     } catch (error: any) {
       if (error?.code === "23505") {
