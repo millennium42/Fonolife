@@ -1,7 +1,7 @@
 import { randomUUID } from "node:crypto";
 import type { FastifyInstance } from "fastify";
 import { pool } from "../../db/pool.js";
-import { hashPassword, isPasswordPolicyValid, MIN_PASSWORD_LENGTH } from "../../domain/security.js";
+import { hashPassword } from "../../domain/security.js";
 import { audit } from "../audit/service.js";
 import { admin } from "../patients/authorization.js";
 
@@ -19,24 +19,22 @@ export async function adminRoutes(app: FastifyInstance) {
       name: string;
       email: string;
       password: string;
-      role: "admin" | "operator" | "doctor";
+      role: "admin" | "operator";
     };
   }>("/api/admin/users", { preHandler: admin }, async (request, reply) => {
     const { name, email, password, role } = request.body;
-    if (!isPasswordPolicyValid(password)) {
+    if (!name?.trim() || !email?.includes("@") || !["admin", "operator", "doctor"].includes(role)) {
       return reply
         .code(400)
         .type("application/problem+json")
-        .send({ title: `A senha deve possuir ao menos ${MIN_PASSWORD_LENGTH} caracteres`, status: 400 });
+        .send({ title: "Confira nome, e-mail e perfil", status: 400 });
     }
-    if (
-      !name?.trim() ||
-      !email?.includes("@") ||
-      !["admin", "operator", "doctor"].includes(role)
-    )
+    if (!password || password.length < 8) {
       return reply
         .code(400)
-        .send({ title: "Confira nome, e-mail e perfil", status: 400 });
+        .type("application/problem+json")
+        .send({ title: "A senha deve ter ao menos 8 caracteres", status: 400 });
+    }
     const id = randomUUID();
     await pool.query(
       "INSERT INTO users(id,name,email,password_hash,role,must_change_password) VALUES($1,$2,$3,$4,$5,true)",
@@ -56,22 +54,22 @@ export async function adminRoutes(app: FastifyInstance) {
     Params: { id: string };
     Body: {
       active?: boolean;
-      role?: "admin" | "operator" | "doctor";
+      role?: "admin" | "operator";
       temporaryPassword?: string;
     };
   }>("/api/admin/users/:id", { preHandler: admin }, async (request, reply) => {
     const { active, role, temporaryPassword } = request.body ?? {};
-    if (role !== undefined && !["admin", "operator", "doctor"].includes(role))
+    if (role !== undefined && !["admin", "operator"].includes(role))
       return reply
         .code(400)
         .type("application/problem+json")
         .send({ title: "Perfil inválido", status: 400 });
-    if (temporaryPassword !== undefined && !isPasswordPolicyValid(temporaryPassword))
+    if (temporaryPassword !== undefined && temporaryPassword.length < 8)
       return reply
         .code(400)
         .type("application/problem+json")
         .send({
-          title: `A senha temporária deve ter ao menos ${MIN_PASSWORD_LENGTH} caracteres`,
+          title: "A senha temporária deve ter ao menos 8 caracteres",
           status: 400,
         });
     const client = await pool.connect();
